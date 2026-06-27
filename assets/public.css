@@ -1,28 +1,16 @@
-.mme-form-shell,
-.mme-form-shell * {
+.mme-form-wrapper,
+.mme-form-wrapper * {
   box-sizing: border-box;
 }
 
-.mme-form-shell {
-  --mme-button: #0f766e;
-  --mme-accent: #14b8a6;
-  --mme-bg: #fff;
-  --mme-text: #0f172a;
-  --mme-font: Inter, ui-sans-serif, system-ui, sans-serif;
-  display: grid;
-  grid-template-columns: minmax(180px, .68fr) minmax(320px, 1.32fr);
+.mme-form-wrapper {
+  position: relative;
   width: 100%;
-  max-width: 860px;
-  margin: 0 auto;
-  overflow: hidden;
-  color: var(--mme-text);
-  background: var(--mme-bg);
-  border: 1px solid color-mix(in srgb, var(--mme-text) 10%, transparent);
-  border-radius: 18px;
-  box-shadow: 0 18px 50px rgba(15, 23, 42, .11);
   font-family: var(--mme-font);
   line-height: 1.42;
-  position: relative;
+  color: var(--mme-text);
+  overflow: hidden;
+  padding: 20px 0;
 }
 
 .mme-form-bg-blob {
@@ -52,43 +40,40 @@
   filter: blur(100px);
 }
 
-.mme-form-layout {
-  display: contents;
-  z-index: 10;
+.mme-layout-grid {
   position: relative;
-}
-
-.mme-form-shell.mme-image-right {
-  grid-template-columns: minmax(320px, 1.32fr) minmax(180px, .68fr);
-}
-
-.mme-form-shell.mme-image-right .mme-form-visual {
-  order: 2;
-}
-
-.mme-form-shell.mme-image-top {
+  z-index: 10;
+  display: grid;
   grid-template-columns: 1fr;
+  row-gap: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  align-items: start;
 }
 
-.mme-form-shell.no-image {
-  grid-template-columns: 1fr;
-  max-width: 620px;
+@media (min-width: 1024px) {
+  .mme-layout-grid {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 64px;
+    row-gap: 40px;
+  }
 }
 
-.mme-form-visual {
-  min-height: 100%;
-  padding: 40px 30px;
-  background: color-mix(in srgb, var(--mme-accent) 4%, #ffffff);
+.mme-layout-right .mme-area-form {
+  order: -1;
+}
+
+/* Khu vực 1: Heading */
+.mme-area-heading {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  position: relative;
-  z-index: 10;
 }
 
-.mme-form-info-content {
-  max-width: 380px;
-  margin: 0 auto;
+@media (min-width: 1024px) {
+  .mme-area-heading {
+    grid-column: 1;
+    grid-row: 1;
+  }
 }
 
 .mme-form-badge {
@@ -96,29 +81,35 @@
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  background: color-mix(in srgb, var(--mme-accent) 10%, #f1f5f9);
+  background: color-mix(in srgb, var(--mme-button) 15%, transparent);
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
-  color: color-mix(in srgb, var(--mme-text) 80%, transparent);
-  letter-spacing: .05em;
+  color: var(--mme-text);
   margin-bottom: 24px;
+  align-self: flex-start;
 }
 
 .mme-badge-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--mme-accent);
+  background: var(--mme-button);
+  animation: mme-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes mme-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .5; transform: scale(1.1); }
 }
 
 .mme-form-main-heading {
   margin: 0 0 16px;
-  font-size: clamp(32px, 4vw, 42px);
+  font-size: clamp(32px, 4vw, 48px);
   font-weight: 800;
   line-height: 1.15;
   color: var(--mme-text);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
 }
 
 .mme-highlight {
@@ -126,164 +117,59 @@
 }
 
 .mme-form-main-desc {
-  margin: 0 0 24px;
-  font-size: 15px;
-  line-height: 1.5;
-  color: color-mix(in srgb, var(--mme-text) 75%, transparent);
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--mme-text) 70%, transparent);
 }
 
-.mme-form-trust-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+/* Khu vực 2: Form Card */
+.mme-area-form {
+  width: 100%;
 }
 
-.mme-form-trust-list li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  color: color-mix(in srgb, var(--mme-text) 85%, transparent);
-}
-
-.mme-trust-icon {
-  display: flex;
-  color: var(--mme-secondary);
-  align-items: center;
-  justify-content: center;
-}
-
-.mme-trust-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.mme-form-contact-boxes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.mme-contact-box {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, .04);
-  border: 1px solid color-mix(in srgb, var(--mme-text) 6%, transparent);
-  flex: 1 1 100%;
-}
-
-@media (min-width: 480px) {
-  .mme-contact-box {
-    flex: 1 1 200px;
+@media (min-width: 1024px) {
+  .mme-area-form {
+    grid-column: 2;
+    grid-row: 1 / span 3;
   }
 }
 
-.mme-contact-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mme-phone-icon {
-  background: linear-gradient(180deg, var(--mme-button), var(--mme-secondary));
-  color: #fff;
-}
-
-.mme-email-icon {
-  background: linear-gradient(180deg, var(--mme-secondary), var(--mme-button));
-  color: #fff;
-}
-
-.mme-contact-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.mme-contact-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: color-mix(in srgb, var(--mme-text) 50%, transparent);
-  text-transform: uppercase;
-  letter-spacing: .05em;
-}
-
-.mme-contact-value {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--mme-text);
-  text-decoration: none;
-}
-
-.mme-contact-value:hover {
-  text-decoration: underline;
-}
-
 .mme-form-card {
-  min-width: 0;
-  padding: 40px 30px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  background: #fff;
+  background: var(--mme-bg);
+  border-radius: 28px;
+  padding: 32px;
+  box-shadow: 0 20px 60px -15px rgba(0,0,0,0.1);
+  border: 1px solid color-mix(in srgb, var(--mme-text) 10%, transparent);
   position: relative;
-  z-index: 10;
+  overflow: hidden;
 }
 
-.mme-form-header {
-  margin-bottom: 24px;
-}
-
-.mme-form-shell svg {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 auto;
+@media (max-width: 639px) {
+  .mme-form-card {
+    padding: 24px;
+    border-radius: 22px;
+  }
 }
 
 .mme-form-header h2 {
-  margin: 0;
-  color: var(--mme-text);
-  font: 700 clamp(18px, 2.5vw, 22px)/1.2 var(--mme-font);
-  letter-spacing: -.02em;
+  margin: 0 0 24px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-.mme-form-secure-text {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin-top: 16px;
-  font-size: 11px;
-  font-weight: 500;
-  color: color-mix(in srgb, var(--mme-text) 60%, transparent);
-}
-
-.mme-form-secure-text svg {
-  width: 14px;
-  height: 14px;
-  color: var(--mme-accent);
-}
-
+/* Fields */
 .mme-form-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 12px;
+  grid-template-columns: 1fr;
+  gap: 16px;
 }
 
-.mme-form-field {
-  min-width: 0;
+@media (min-width: 640px) {
+  .mme-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .mme-field-textarea,
@@ -301,49 +187,98 @@
 
 .mme-form-field > label {
   display: block;
-  margin: 0 0 4px;
-  color: color-mix(in srgb, var(--mme-text) 82%, transparent);
-  font-size: 11px;
-  font-weight: 720;
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mme-text);
 }
 
 .mme-form-field > label span {
-  margin-left: 2px;
   color: #dc2626;
+  margin-left: 2px;
+}
+
+.mme-input-wrapper {
+  position: relative;
+}
+
+.mme-input-wrapper.mme-has-icon .mme-input-icon-left {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  color: color-mix(in srgb, var(--mme-text) 40%, transparent);
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+
+.mme-input-wrapper.mme-has-icon .mme-input-icon-right {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: color-mix(in srgb, var(--mme-text) 40%, transparent);
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+
+.mme-input-wrapper.mme-has-icon .mme-input-icon-left svg,
+.mme-input-wrapper.mme-has-icon .mme-input-icon-right svg {
+  width: 100%;
+  height: 100%;
 }
 
 .mme-form-field input:not([type="radio"]),
 .mme-form-field textarea,
 .mme-form-field select {
-  display: block;
   width: 100%;
-  margin: 0;
-  border: 1px solid color-mix(in srgb, var(--mme-text) 17%, transparent);
-  border-radius: 9px;
-  outline: 0;
-  background: color-mix(in srgb, var(--mme-bg) 94%, #f1f5f9);
+  border: 1px solid color-mix(in srgb, var(--mme-text) 15%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--mme-bg) 95%, transparent);
   color: var(--mme-text);
-  font: 500 13px/1.35 var(--mme-font);
-  transition: border-color .16s ease, box-shadow .16s ease;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
 }
 
 .mme-form-field input:not([type="radio"]),
 .mme-form-field select {
-  height: 40px;
-  padding: 0 11px;
+  height: 44px;
+  padding: 0 16px;
+}
+
+.mme-input-wrapper.mme-has-icon input,
+.mme-input-wrapper.mme-has-icon select {
+  padding-left: 40px;
+}
+
+.mme-input-wrapper.mme-has-icon select {
+  appearance: none;
+  padding-right: 36px;
 }
 
 .mme-form-field textarea {
-  min-height: 72px;
-  padding: 9px 11px;
+  min-height: 80px;
+  padding: 12px 16px;
   resize: vertical;
 }
 
 .mme-form-field input:focus,
 .mme-form-field textarea:focus,
 .mme-form-field select:focus {
-  border-color: var(--mme-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mme-accent) 18%, transparent);
+  border-color: var(--mme-button);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--mme-button) 15%, transparent);
+  background: var(--mme-bg);
+}
+
+.mme-input-wrapper:focus-within .mme-input-icon-left,
+.mme-input-wrapper:focus-within .mme-input-icon-right {
+  color: var(--mme-button);
 }
 
 .mme-form-field .iti {
@@ -351,47 +286,57 @@
 }
 
 .mme-form-field .iti__country-list {
-  border-radius: 9px;
-  box-shadow: 0 4px 20px rgba(15, 23, 42, .15);
-  border: 1px solid color-mix(in srgb, var(--mme-text) 17%, transparent);
-  font: 500 13px/1.35 var(--mme-font);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  border: 1px solid color-mix(in srgb, var(--mme-text) 15%, transparent);
+  font-family: inherit;
+  font-size: 14px;
 }
 
+.mme-form-field .iti input {
+  padding-left: 85px !important;
+}
+
+/* Radios */
 .mme-radio-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 10px;
 }
 
 .mme-radio-option {
   position: relative;
-  display: inline-flex;
   cursor: pointer;
 }
 
 .mme-radio-option input {
   position: absolute;
   opacity: 0;
-  pointer-events: none;
 }
 
 .mme-radio-option span {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  padding: 5px 10px;
+  justify-content: center;
+  height: 38px;
+  padding: 0 18px;
   border: 1px solid color-mix(in srgb, var(--mme-text) 15%, transparent);
   border-radius: 999px;
-  color: color-mix(in srgb, var(--mme-text) 78%, transparent);
-  background: color-mix(in srgb, var(--mme-bg) 95%, #f1f5f9);
-  font-size: 11px;
-  font-weight: 650;
+  color: color-mix(in srgb, var(--mme-text) 70%, transparent);
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
 .mme-radio-option input:checked + span {
-  border-color: var(--mme-accent);
+  border-color: var(--mme-button);
   color: var(--mme-button);
-  background: color-mix(in srgb, var(--mme-accent) 12%, var(--mme-bg));
+  background: color-mix(in srgb, var(--mme-button) 5%, transparent);
+}
+
+/* Submit */
+.mme-form-submit-wrap {
+  margin-top: 24px;
 }
 
 .mme-form-submit {
@@ -400,156 +345,271 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
-  min-height: 48px;
-  margin-top: 12px;
-  padding: 8px 24px;
-  border: 0;
-  border-radius: 10px;
-  cursor: pointer;
-  color: #fff;
+  height: 48px;
+  border: none;
+  border-radius: 12px;
   background: var(--mme-button);
-  box-shadow: 0 8px 22px color-mix(in srgb, var(--mme-button) 28%, transparent);
-  font: 750 13px/1 var(--mme-font);
-  transition: background-color .2s ease, filter .15s ease;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 10px 25px color-mix(in srgb, var(--mme-button) 30%, transparent);
+}
+
+.mme-form-submit svg {
+  width: 18px;
+  height: 18px;
 }
 
 .mme-form-submit:hover {
-  background-color: var(--mme-secondary);
+  background: var(--mme-secondary);
   box-shadow: 0 10px 25px color-mix(in srgb, var(--mme-secondary) 30%, transparent);
 }
 
 .mme-form-submit:disabled {
+  opacity: 0.7;
   cursor: wait;
-  opacity: .65;
-  transform: none;
+}
+
+.mme-form-secure-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--mme-text) 60%, transparent);
+}
+
+.mme-form-secure-text svg {
+  width: 16px;
+  height: 16px;
+  color: var(--mme-button);
 }
 
 .mme-form-status {
-  min-height: 0;
-  margin-top: 8px;
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 16px;
 }
 
 .mme-form-status.is-success {
-  color: #047857;
+  color: #10b981;
 }
 
 .mme-form-status.is-error {
-  color: #b91c1c;
+  color: #ef4444;
 }
 
 .mme-form-honeypot {
   position: absolute !important;
   left: -10000px !important;
-  width: 1px !important;
-  height: 1px !important;
   opacity: 0 !important;
 }
 
+/* Chat toggle */
 .mme-form-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
+  margin-top: 20px;
 }
-
 .mme-form-chat-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 0;
   border: 0;
-  cursor: pointer;
-  color: var(--mme-button);
   background: transparent;
-  font: 700 11px/1.2 var(--mme-font);
+  color: var(--mme-button);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
-
 .mme-form-chat-toggle svg {
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
 }
-
 .mme-form-chat-panel {
-  flex: 1 0 100%;
+  margin-top: 16px;
+  border-radius: 16px;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--mme-text) 12%, transparent);
-  border-radius: 12px;
-  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--mme-text) 15%, transparent);
 }
-
 .mme-form-chat-panel iframe {
-  display: block;
   width: 100%;
-  height: 430px;
-  border: 0;
+  height: 450px;
+  border: none;
+  display: block;
 }
 
-.mme-form-socials {
-  display: inline-flex;
-  gap: 6px;
+/* Khu vực 3: Trust List */
+@media (min-width: 1024px) {
+  .mme-area-trust {
+    grid-column: 1;
+    grid-row: 2;
+  }
 }
 
-.mme-social {
-  display: inline-flex;
+.mme-form-trust-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mme-form-trust-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--mme-text) 80%, transparent);
+}
+
+.mme-trust-icon {
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  color: color-mix(in srgb, var(--mme-text) 65%, transparent);
-  background: color-mix(in srgb, var(--mme-text) 6%, transparent);
+  width: 24px;
+  height: 24px;
+  color: var(--mme-secondary);
 }
 
-.mme-social:hover {
+.mme-trust-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Khu vực 4: Contact Cards */
+.mme-area-contact {
+  max-width: 520px;
+}
+
+@media (min-width: 1024px) {
+  .mme-area-contact {
+    grid-column: 1;
+    grid-row: 3;
+    margin-top: auto;
+  }
+}
+
+.mme-form-contact-boxes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 640px) {
+  .mme-form-contact-boxes {
+    flex-direction: row;
+  }
+}
+
+.mme-contact-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--mme-bg);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  border: 1px solid color-mix(in srgb, var(--mme-text) 5%, transparent);
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  flex: 1;
+}
+
+.mme-contact-box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+}
+
+.mme-contact-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.mme-contact-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.mme-phone-icon {
+  background: linear-gradient(180deg, var(--mme-button) 0%, var(--mme-secondary) 100%);
   color: #fff;
+}
+
+.mme-email-icon {
+  background: linear-gradient(180deg, var(--mme-secondary) 0%, var(--mme-button) 100%);
+  color: #fff;
+}
+
+.mme-contact-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.mme-contact-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--mme-text) 50%, transparent);
+  margin-bottom: 2px;
+}
+
+.mme-contact-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--mme-text);
+  text-decoration: none;
+}
+
+/* Social */
+.mme-social-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  text-decoration: none;
+}
+
+.mme-social-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.mme-social-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--mme-text);
+}
+
+.mme-social-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--mme-text) 10%, transparent);
+  color: color-mix(in srgb, var(--mme-text) 60%, transparent);
+  transition: all 0.2s ease;
+}
+
+.mme-social-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.mme-social-card:hover .mme-social-icon {
   background: var(--mme-button);
-}
-
-.mme-social svg {
-  width: 14px;
-  height: 14px;
-}
-
-.mme-form-embed-page {
-  margin: 0;
-  padding: 8px;
-  background: transparent;
-}
-
-@media (max-width: 680px) {
-  .mme-form-embed-page {
-    padding: 0;
-  }
-  .mme-form-shell,
-  .mme-form-shell.mme-image-right {
-    grid-template-columns: 1fr;
-    border-radius: 16px;
-    border: 1px solid color-mix(in srgb, var(--mme-text) 10%, transparent);
-    box-shadow: 0 4px 20px rgba(15, 23, 42, .08);
-    background: color-mix(in srgb, var(--mme-accent) 4%, #ffffff);
-  }
-  .mme-form-shell.mme-image-right .mme-form-visual {
-    order: 0;
-  }
-  .mme-form-visual {
-    padding: 24px 16px;
-  }
-  .mme-form-card {
-    border-radius: 0;
-    padding: 24px 16px;
-  }
-}
-
-@media (max-width: 440px) {
-  .mme-form-grid {
-    grid-template-columns: 1fr;
-  }
-  .mme-field-textarea,
-  .mme-field-radio {
-    grid-column: auto;
-  }
+  color: #fff;
 }

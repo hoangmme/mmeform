@@ -66,12 +66,17 @@ final class MME_Form_Renderer
         ?>
         <section
             id="<?php echo esc_attr($instance_id); ?>"
-            class="mme-form-shell mme-layout-<?php echo esc_attr($image_position); ?><?php echo !empty($args['embed']) ? ' is-embed' : ''; ?>"
+            class="mme-form-wrapper <?php echo !empty($args['embed']) ? 'is-embed' : ''; ?>"
             style="<?php echo esc_attr($style); ?>"
             data-form-id="<?php echo esc_attr((string) $form_id); ?>"
         >
-            <div class="mme-form-visual mme-form-info-col">
-                <div class="mme-form-info-content">
+            <div class="mme-form-bg-blob mme-bg-blob-primary"></div>
+            <div class="mme-form-bg-blob mme-bg-blob-secondary"></div>
+
+            <div class="mme-layout-grid mme-layout-<?php echo esc_attr($image_position); ?>">
+                
+                <!-- Khu vực 1: Heading & Mô tả -->
+                <div class="mme-area-heading">
                     <?php if (!empty($settings['kicker'])) : ?>
                         <div class="mme-form-badge">
                             <span class="mme-badge-dot"></span>
@@ -88,7 +93,70 @@ final class MME_Form_Renderer
                     <?php if (!empty($settings['description'])) : ?>
                         <p class="mme-form-main-desc"><?php echo wp_kses_post($settings['description']); ?></p>
                     <?php endif; ?>
-                    
+                </div>
+
+                <!-- Khu vực 2: Form Card -->
+                <div class="mme-area-form">
+                    <div class="mme-form-card">
+                        <?php if (!empty($settings['form_heading'])) : ?>
+                            <header class="mme-form-header">
+                                <h2><?php echo esc_html($settings['form_heading']); ?></h2>
+                            </header>
+                        <?php endif; ?>
+
+                        <form
+                            class="mme-form"
+                            data-endpoint="<?php echo esc_url(rest_url('mme-form/v1/submit/' . $form_id)); ?>"
+                            novalidate
+                        >
+                            <input type="hidden" name="form_id" value="<?php echo esc_attr((string) $form_id); ?>">
+                            <input type="hidden" name="current_url" value="<?php echo esc_attr($parent_url); ?>">
+                            <input type="hidden" name="referrer_url" value="">
+                            <input type="hidden" name="started_at" value="">
+                            <input type="text" class="mme-form-honeypot" name="website" value="" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+                            <div class="mme-form-grid">
+                                <?php foreach ($fields as $field) : ?>
+                                    <?php echo self::render_field($field); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <div class="mme-form-submit-wrap">
+                                <button class="mme-form-submit" type="submit">
+                                    <span><?php echo esc_html($settings['button_text']); ?></span>
+                                    <?php echo self::icon('arrow'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                </button>
+                            </div>
+                            
+                            <?php if (!empty($settings['form_footer'])) : ?>
+                                <div class="mme-form-secure-text">
+                                    <?php echo self::icon('shield-check'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                    <span><?php echo esc_html($settings['form_footer']); ?></span>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="mme-form-status" role="status" aria-live="polite" data-success="<?php echo esc_attr($settings['success_message']); ?>"></div>
+                        </form>
+
+                        <div class="mme-form-footer">
+                            <?php if ($settings['chatbot_enabled'] === 'yes' && $settings['chatbot_base_url'] && $settings['chatbot_tenant']) : ?>
+                                <button
+                                    type="button"
+                                    class="mme-form-chat-toggle"
+                                    data-chat-base="<?php echo esc_url($settings['chatbot_base_url']); ?>"
+                                    data-chat-tenant="<?php echo esc_attr($settings['chatbot_tenant']); ?>"
+                                >
+                                    <?php echo self::icon('chat'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                    <?php echo esc_html($settings['chatbot_button_text']); ?>
+                                </button>
+                                <div class="mme-form-chat-panel" hidden></div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Khu vực 3: Benefit List -->
+                <div class="mme-area-trust">
                     <?php if (!empty($settings['trust_items']) && is_array($settings['trust_items'])) : ?>
                         <ul class="mme-form-trust-list">
                             <?php foreach (array_slice($settings['trust_items'], 0, 4) as $item) : ?>
@@ -99,85 +167,37 @@ final class MME_Form_Renderer
                             <?php endforeach; ?>
                         </ul>
                     <?php endif; ?>
-                    
+                </div>
+
+                <!-- Khu vực 4: Contact Cards -->
+                <div class="mme-area-contact">
                     <div class="mme-form-contact-boxes">
                         <?php if (!empty($settings['hotline'])) : ?>
-                            <div class="mme-contact-box">
-                                <div class="mme-contact-icon mme-phone-icon"><?php echo self::icon('phone-call'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+                            <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $settings['hotline'])); ?>" class="mme-contact-box group">
+                                <div class="mme-contact-icon mme-phone-icon">
+                                    <?php echo self::icon('phone-call'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                </div>
                                 <div class="mme-contact-text">
                                     <span class="mme-contact-label"><?php echo esc_html($settings['hotline_label']); ?></span>
-                                    <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $settings['hotline'])); ?>" class="mme-contact-value"><?php echo esc_html($settings['hotline']); ?></a>
+                                    <span class="mme-contact-value"><?php echo esc_html($settings['hotline']); ?></span>
                                 </div>
-                            </div>
+                            </a>
                         <?php endif; ?>
                         
                         <?php if (!empty($settings['support_email'])) : ?>
-                            <div class="mme-contact-box">
-                                <div class="mme-contact-icon mme-email-icon"><?php echo self::icon('mail'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+                            <a href="mailto:<?php echo esc_attr($settings['support_email']); ?>" class="mme-contact-box group">
+                                <div class="mme-contact-icon mme-email-icon">
+                                    <?php echo self::icon('mail'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                </div>
                                 <div class="mme-contact-text">
                                     <span class="mme-contact-label"><?php echo esc_html($settings['email_label']); ?></span>
-                                    <a href="mailto:<?php echo esc_attr($settings['support_email']); ?>" class="mme-contact-value"><?php echo esc_html($settings['support_email']); ?></a>
+                                    <span class="mme-contact-value"><?php echo esc_html($settings['support_email']); ?></span>
                                 </div>
-                            </div>
+                            </a>
                         <?php endif; ?>
+                        
+                        <?php echo self::render_social_links($settings); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                     </div>
-                    
-                    <?php echo self::render_social_links($settings); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                </div>
-            </div>
-
-            <div class="mme-form-card">
-                <?php if (!empty($settings['form_heading'])) : ?>
-                    <header class="mme-form-header">
-                        <h2><?php echo esc_html($settings['form_heading']); ?></h2>
-                    </header>
-                <?php endif; ?>
-
-                <form
-                    class="mme-form"
-                    data-endpoint="<?php echo esc_url(rest_url('mme-form/v1/submit/' . $form_id)); ?>"
-                    novalidate
-                >
-                    <input type="hidden" name="form_id" value="<?php echo esc_attr((string) $form_id); ?>">
-                    <input type="hidden" name="current_url" value="<?php echo esc_attr($parent_url); ?>">
-                    <input type="hidden" name="referrer_url" value="">
-                    <input type="hidden" name="started_at" value="">
-                    <input type="text" class="mme-form-honeypot" name="website" value="" tabindex="-1" autocomplete="off" aria-hidden="true">
-
-                    <div class="mme-form-grid">
-                        <?php foreach ($fields as $field) : ?>
-                            <?php echo self::render_field($field); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                        <?php endforeach; ?>
-                    </div>
-
-                    <button class="mme-form-submit" type="submit">
-                        <span><?php echo esc_html($settings['button_text']); ?></span>
-                        <?php echo self::icon('arrow'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                    </button>
-                    
-                    <?php if (!empty($settings['form_footer'])) : ?>
-                        <div class="mme-form-secure-text">
-                            <?php echo self::icon('shield-check'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                            <span><?php echo esc_html($settings['form_footer']); ?></span>
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="mme-form-status" role="status" aria-live="polite" data-success="<?php echo esc_attr($settings['success_message']); ?>"></div>
-                </form>
-
-                <div class="mme-form-footer">
-                    <?php if ($settings['chatbot_enabled'] === 'yes' && $settings['chatbot_base_url'] && $settings['chatbot_tenant']) : ?>
-                        <button
-                            type="button"
-                            class="mme-form-chat-toggle"
-                            data-chat-base="<?php echo esc_url($settings['chatbot_base_url']); ?>"
-                            data-chat-tenant="<?php echo esc_attr($settings['chatbot_tenant']); ?>"
-                        >
-                            <?php echo self::icon('chat'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                            <?php echo esc_html($settings['chatbot_button_text']); ?>
-                        </button>
-                        <div class="mme-form-chat-panel" hidden></div>
-                    <?php endif; ?>
                 </div>
             </div>
             
@@ -216,14 +236,24 @@ final class MME_Form_Renderer
             </label>
 
             <?php if ($type === 'textarea') : ?>
-                <textarea id="<?php echo esc_attr($id); ?>" name="fields[<?php echo esc_attr($name); ?>]" placeholder="<?php echo esc_attr($placeholder); ?>" rows="3" <?php echo $required ? 'required' : ''; ?>></textarea>
+                <div class="mme-input-wrapper">
+                    <textarea id="<?php echo esc_attr($id); ?>" name="fields[<?php echo esc_attr($name); ?>]" placeholder="<?php echo esc_attr($placeholder); ?>" rows="3" <?php echo $required ? 'required' : ''; ?>></textarea>
+                </div>
             <?php elseif ($type === 'select') : ?>
-                <select id="<?php echo esc_attr($id); ?>" name="fields[<?php echo esc_attr($name); ?>]" <?php echo $required ? 'required' : ''; ?>>
-                    <option value=""><?php echo esc_html($placeholder ?: 'Chọn một phương án'); ?></option>
-                    <?php foreach ($options as $option) : ?>
-                        <option value="<?php echo esc_attr($option); ?>"><?php echo esc_html($option); ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="mme-input-wrapper mme-has-icon">
+                    <div class="mme-input-icon-left">
+                        <?php echo self::icon('list'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                    </div>
+                    <select id="<?php echo esc_attr($id); ?>" name="fields[<?php echo esc_attr($name); ?>]" <?php echo $required ? 'required' : ''; ?>>
+                        <option value=""><?php echo esc_html($placeholder ?: 'Chọn một phương án'); ?></option>
+                        <?php foreach ($options as $option) : ?>
+                            <option value="<?php echo esc_attr($option); ?>"><?php echo esc_html($option); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <div class="mme-input-icon-right pointer-events-none">
+                        <?php echo self::icon('chevron-down'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                    </div>
+                </div>
             <?php elseif ($type === 'radio') : ?>
                 <div class="mme-radio-group" id="<?php echo esc_attr($id); ?>">
                     <?php foreach ($options as $index => $option) : ?>
@@ -234,7 +264,17 @@ final class MME_Form_Renderer
                     <?php endforeach; ?>
                 </div>
             <?php else : ?>
-                <input id="<?php echo esc_attr($id); ?>" type="<?php echo esc_attr($type); ?>" name="fields[<?php echo esc_attr($name); ?>]" placeholder="<?php echo esc_attr($placeholder); ?>" <?php echo $required ? 'required' : ''; ?>>
+                <div class="mme-input-wrapper mme-has-icon">
+                    <div class="mme-input-icon-left">
+                        <?php 
+                        $icon_name = 'user';
+                        if ($type === 'tel') $icon_name = 'phone-input';
+                        if ($type === 'email') $icon_name = 'mail';
+                        echo self::icon($icon_name); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped 
+                        ?>
+                    </div>
+                    <input id="<?php echo esc_attr($id); ?>" type="<?php echo esc_attr($type); ?>" name="fields[<?php echo esc_attr($name); ?>]" placeholder="<?php echo esc_attr($placeholder); ?>" <?php echo $required ? 'required' : ''; ?>>
+                </div>
             <?php endif; ?>
         </div>
         <?php
@@ -255,14 +295,20 @@ final class MME_Form_Renderer
                 continue;
             }
             $html .= sprintf(
-                '<a class="mme-social" href="%s" target="_blank" rel="noopener noreferrer" aria-label="%s">%s</a>',
+                '<a class="mme-social-card" href="%s" target="_blank" rel="noopener noreferrer" aria-label="%s">',
                 esc_url($settings[$key]),
-                esc_attr($config['label']),
-                self::icon($config['icon'])
+                esc_attr($config['label'])
             );
+            $html .= '<div class="mme-social-text">';
+            $html .= '<span class="mme-contact-label">' . esc_html($settings['social_label'] ?? $config['label']) . '</span>';
+            $html .= '<span class="mme-social-title">' . esc_html($config['label']) . '</span>';
+            $html .= '</div>';
+            $html .= '<div class="mme-social-icon">';
+            $html .= self::icon($config['icon']);
+            $html .= '</div></a>';
         }
 
-        return $html ? '<nav class="mme-form-socials" aria-label="Mạng xã hội">' . $html . '</nav>' : '';
+        return $html;
     }
 
     private static function icon(string $name): string
@@ -280,7 +326,11 @@ final class MME_Form_Renderer
             'check-circle' => '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
             'phone-call' => '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><path d="M14.05 2a9 9 0 0 1 8 7.94"/><path d="M14.05 6A5 5 0 0 1 18 10"/>',
             'mail' => '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
-            'shield-check' => '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2-1 4-2 7-2 2.5 0 4.5 1 6.5 2a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>'
+            'shield-check' => '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2-1 4-2 7-2 2.5 0 4.5 1 6.5 2a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+            'user' => '<path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>',
+            'phone-input' => '<path d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>',
+            'list' => '<path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>',
+            'chevron-down' => '<path d="M19 9l-7 7-7-7"/>'
         );
         $path = $paths[$name] ?? $paths['check'];
 
