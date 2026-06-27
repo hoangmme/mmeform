@@ -280,6 +280,54 @@ final class MME_Form_Submissions
         return array('success' => $status >= 200 && $status < 300, 'status_code' => $status);
     }
 
+    private function get_twenty_person_fields(array $settings): array
+    {
+        $base_url = untrailingslashit(esc_url_raw($settings['twenty_base_url']));
+        $api_key = sanitize_text_field($settings['twenty_api_key']);
+        $cache_key = 'mme_twenty_person_fields_' . md5($base_url . $api_key);
+        
+        $cached = get_transient($cache_key);
+        if (is_array($cached)) {
+            return $cached;
+        }
+        
+        $url = $base_url . (str_ends_with(strtolower($base_url), '/rest') ? '/metadata/objects' : '/rest/metadata/objects');
+        $response = wp_remote_get($url, array(
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type' => 'application/json',
+            ),
+            'timeout' => 5,
+        ));
+        
+        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+            return array();
+        }
+        
+        $data = json_decode(wp_remote_retrieve_body($response), true);
+        if (empty($data['data']) || !is_array($data['data'])) {
+            return array();
+        }
+        
+        $fields = array();
+        foreach ($data['data'] as $obj) {
+            if (($obj['nameSingular'] ?? '') === 'person' && !empty($obj['fields'])) {
+                foreach ($obj['fields'] as $field) {
+                    if (!empty($field['name'])) {
+                        $fields[] = $field['name'];
+                    }
+                }
+                break;
+            }
+        }
+        
+        if ($fields) {
+            set_transient($cache_key, $fields, HOUR_IN_SECONDS);
+        }
+        
+        return $fields;
+    }
+
     private function send_twenty(array $settings, array $payload): array
     {
         if (($settings['twenty_enabled'] ?? 'no') !== 'yes') {
@@ -314,6 +362,40 @@ final class MME_Form_Submissions
                 $phone = '+84' . substr($phone, 1);
             }
             $person['phones'] = array('primaryPhoneNumber' => $phone);
+        }
+        
+        $allowed_fields = $this->get_twenty_person_fields($settings);
+        $unmapped_text = array();
+        
+        if (!empty($lead['need'])) {
+            if (in_array('need', $allowed_fields, true)) {
+                $person['need'] = $lead['need'];
+            } elseif (in_array('needCustom', $allowed_fields, true)) {
+                $person['needCustom'] = $lead['need'];
+            } else {
+                $unmapped_text[] = 'Nhu cầu: ' . $lead['need'];
+            }
+        }
+        
+        $standard_keys = array('full_name', 'name', 'fullname', 'ho_ten', 'hoten', 'phone', 'telephone', 'mobile', 'so_dien_thoai', 'sdt', 'email', 'email_address', 'need');
+        foreach ((array) $payload['fields'] as $k => $v) {
+            if (in_array($k, $standard_keys, true)) {
+                continue;
+            }
+            if (in_array($k, $allowed_fields, true)) {
+                $person[$k] = $v;
+            } elseif (in_array($k . 'Custom', $allowed_fields, true)) {
+                $person[$k . 'Custom'] = $v;
+            } else {
+                $unmapped_text[] = $k . ': ' . $v;
+            }
+        }
+        
+        if (!empty($unmapped_text)) {
+            $extra_str = implode(' | ', $unmapped_text);
+            if (in_array('jobTitle', $allowed_fields, true)) {
+                $person['jobTitle'] = mb_substr($extra_str, 0, 255);
+            }
         }
 
         $base_url = untrailingslashit(esc_url_raw($settings['twenty_base_url']));
