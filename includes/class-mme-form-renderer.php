@@ -300,7 +300,7 @@ final class MME_Form_Renderer
                 esc_attr($config['label'])
             );
             $html .= '<div class="mme-social-text">';
-            $html .= '<span class="mme-contact-label">' . esc_html($settings['social_label'] ?? $config['label']) . '</span>';
+            $html .= '<span class="mme-social-label">' . esc_html($settings['social_label'] ?? $config['label']) . '</span>';
             $html .= '<span class="mme-social-title">' . esc_html($config['label']) . '</span>';
             $html .= '</div>';
             $html .= '<div class="mme-social-icon">';
