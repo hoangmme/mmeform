@@ -100,6 +100,8 @@ final class MME_Form_Admin
             <?php $this->url_input('facebook_url', 'Facebook URL', $settings['facebook_url']); ?>
             <?php $this->url_input('zalo_url', 'Zalo URL', $settings['zalo_url']); ?>
             <?php $this->url_input('linkedin_url', 'LinkedIn URL', $settings['linkedin_url']); ?>
+            <?php $this->url_input('tiktok_url', 'TikTok URL', $settings['tiktok_url']); ?>
+            <?php $this->url_input('youtube_url', 'YouTube URL', $settings['youtube_url']); ?>
 
             <h4 class="mme-admin-span-2" style="margin-top: 15px; margin-bottom: 0; padding-bottom: 5px; border-bottom: 1px solid #ddd;">Cột bên phải (Form)</h4>
             <?php $this->text_input('form_heading', 'Tiêu đề Form', $settings['form_heading']); ?>
@@ -358,10 +360,10 @@ function doPost(e) {
         $current = $this->settings($post_id);
         $settings = MME_Form_Plugin::default_settings();
 
-        foreach (array('kicker', 'heading', 'description', 'form_heading', 'form_footer', 'hotline', 'support_email', 'button_text', 'success_message', 'chatbot_tenant', 'chatbot_button_text') as $key) {
+        foreach (array('kicker', 'heading', 'subheading', 'description', 'form_heading', 'form_footer', 'hotline', 'support_email', 'social_label', 'button_text', 'success_message', 'chatbot_tenant', 'chatbot_button_text') as $key) {
             $settings[$key] = sanitize_text_field($submitted[$key] ?? $current[$key] ?? '');
         }
-        foreach (array('facebook_url', 'zalo_url', 'linkedin_url', 'chatbot_base_url', 'webhook_url', 'twenty_base_url') as $key) {
+        foreach (array('facebook_url', 'zalo_url', 'linkedin_url', 'tiktok_url', 'youtube_url', 'chatbot_base_url', 'webhook_url', 'twenty_base_url') as $key) {
             $settings[$key] = esc_url_raw($submitted[$key] ?? ($current[$key] ?? ''));
         }
         foreach (array('button_color', 'accent_color', 'background_color', 'text_color') as $key) {

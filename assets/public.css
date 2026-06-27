@@ -709,11 +709,11 @@
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
-.mme-social-icon:hover {
-  background: var(--mme-button);
-  border-color: var(--mme-button);
-  color: #fff;
-}
+.mme-social-icon-facebook:hover { background: #1877F2; border-color: #1877F2; color: #fff; }
+.mme-social-icon-zalo:hover { background: #0068FF; border-color: #0068FF; color: #fff; }
+.mme-social-icon-linkedin:hover { background: #0A66C2; border-color: #0A66C2; color: #fff; }
+.mme-social-icon-tiktok:hover { background: #000000; border-color: #000000; color: #fff; }
+.mme-social-icon-youtube:hover { background: #FF0000; border-color: #FF0000; color: #fff; }
 
 .mme-social-icon svg {
   width: 20px;

@@ -297,6 +297,8 @@ final class MME_Form_Renderer
             'facebook_url' => array('label' => 'Facebook', 'icon' => 'facebook'),
             'zalo_url' => array('label' => 'Zalo', 'icon' => 'zalo'),
             'linkedin_url' => array('label' => 'LinkedIn', 'icon' => 'linkedin'),
+            'tiktok_url' => array('label' => 'TikTok', 'icon' => 'tiktok'),
+            'youtube_url' => array('label' => 'YouTube', 'icon' => 'youtube'),
         );
 
         $configured = array();
@@ -320,7 +322,8 @@ final class MME_Form_Renderer
         
         foreach ($configured as $config) {
             $html .= sprintf(
-                '<a class="mme-social-icon group" href="%s" target="_blank" rel="noopener noreferrer" aria-label="%s">',
+                '<a class="mme-social-icon group mme-social-icon-%s" href="%s" target="_blank" rel="noopener noreferrer" aria-label="%s">',
+                esc_attr($config['icon']),
                 esc_url($config['url']),
                 esc_attr($config['label'])
             );
@@ -342,8 +345,10 @@ final class MME_Form_Renderer
             'check' => '<path d="m5 12 4 4L19 6"/>',
             'arrow' => '<path d="M5 12h14M13 6l6 6-6 6"/>',
             'facebook' => '<path d="M14 8h3V4h-3c-3 0-5 2-5 5v3H6v4h3v6h4v-6h3l1-4h-4V9c0-.7.3-1 1-1Z"/>',
-            'zalo' => '<path d="M4 5h16v14H4z"/><path d="m7 9 4 6M11 9l-4 6M13 15V9h4M13 12h3"/>',
+            'zalo' => '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.5 8.5 0 0 1 8.5 8.5z"/>',
             'linkedin' => '<path d="M6 9v10M6 5v.01M10 19V9h4v2c1-2 5-2 5 2v6"/>',
+            'tiktok' => '<path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93v7.2c0 1.63-.52 3.23-1.47 4.54-1.22 1.67-3.08 2.79-5.11 3.04-1.95.24-4.01-.1-5.65-1.15-2.2-1.41-3.64-3.85-3.84-6.49-.24-3.07 1.56-6.07 4.41-7.23 2.12-.86 4.62-.77 6.64.29v4.18c-.89-.5-1.94-.7-2.94-.53-1.07.18-2.04.79-2.61 1.69-.58.91-.71 2.08-.34 3.09.43 1.19 1.49 2.08 2.76 2.3 1.25.21 2.59-.09 3.51-.9.99-.86 1.56-2.17 1.55-3.52V.02z"/>',
+            'youtube' => '<path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.501 5.814a3.016 3.016 0 0 0 2.122 2.136c1.872.55 9.377.55 9.377.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>',
             'check-circle' => '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
             'phone-call' => '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><path d="M14.05 2a9 9 0 0 1 8 7.94"/><path d="M14.05 6A5 5 0 0 1 18 10"/>',
             'mail' => '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',

@@ -178,6 +178,8 @@ final class MME_Form_Plugin
             'facebook_url' => '',
             'zalo_url' => '',
             'linkedin_url' => '',
+            'tiktok_url' => '',
+            'youtube_url' => '',
             'chatbot_enabled' => 'yes',
             'chatbot_base_url' => 'https://chat.mme.vn',
             'chatbot_tenant' => 'mme',
