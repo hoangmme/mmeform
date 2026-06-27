@@ -190,7 +190,7 @@
   }
 
   function init() {
-    document.querySelectorAll(".mme-form-shell").forEach(setupForm);
+    document.querySelectorAll(".mme-form-wrapper").forEach(setupForm);
   }
 
   if (document.readyState === "loading") {

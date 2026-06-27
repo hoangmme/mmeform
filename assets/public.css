@@ -89,12 +89,6 @@
   flex-direction: column;
 }
 
-@media (min-width: 1024px) {
-  .mme-area-heading {
-    grid-column: 1;
-    grid-row: 1;
-  }
-}
 
 .mme-form-badge {
   display: inline-flex;
@@ -156,12 +150,6 @@
   width: 100%;
 }
 
-@media (min-width: 1024px) {
-  .mme-area-form {
-    grid-column: 2;
-    grid-row: 1 / span 3;
-  }
-}
 
 .mme-form-card {
   background: #ffffff;
@@ -334,7 +322,37 @@
   padding-left: 85px !important;
 }
 
-/* Radios */
+/* Status */
+.mme-form-status {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  display: none;
+}
+
+.mme-form-status:not(:empty) {
+  display: block;
+}
+
+.is-submitting .mme-form-status {
+  background: color-mix(in srgb, var(--mme-button) 10%, transparent);
+  color: var(--mme-button);
+}
+
+.mme-form-status.is-success {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.mme-form-status.is-error {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Chatbot */
 .mme-radio-group {
   display: flex;
   flex-wrap: wrap;
@@ -365,10 +383,14 @@
   transition: all 0.2s ease;
 }
 
-.mme-radio-option input:checked + span {
-  border-color: var(--mme-button);
-  color: var(--mme-button);
-  background: color-mix(in srgb, var(--mme-button) 5%, transparent);
+.mme-radio-option input[type="radio"]:checked + span {
+  border-color: var(--mme-secondary);
+  background: color-mix(in srgb, var(--mme-secondary) 5%, transparent);
+}
+
+.iti {
+  width: 100%;
+  display: block;
 }
 
 /* Submit */

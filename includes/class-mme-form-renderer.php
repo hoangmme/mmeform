@@ -273,15 +273,16 @@ final class MME_Form_Renderer
 
 
             <?php else : ?>
-                <div class="mme-input-wrapper mme-has-icon">
-                    <div class="mme-input-icon-left">
-                        <?php 
-                        $icon_name = 'user';
-                        if ($type === 'tel') $icon_name = 'phone-input';
-                        if ($type === 'email') $icon_name = 'mail';
-                        echo self::icon($icon_name); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped 
-                        ?>
-                    </div>
+                <div class="mme-input-wrapper <?php echo $type !== 'tel' ? 'mme-has-icon' : ''; ?>">
+                    <?php if ($type !== 'tel') : ?>
+                        <div class="mme-input-icon-left">
+                            <?php 
+                            $icon_name = 'user';
+                            if ($type === 'email') $icon_name = 'mail';
+                            echo self::icon($icon_name); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped 
+                            ?>
+                        </div>
+                    <?php endif; ?>
                     <input id="<?php echo esc_attr($id); ?>" type="<?php echo esc_attr($type); ?>" name="fields[<?php echo esc_attr($name); ?>]" placeholder="<?php echo esc_attr($placeholder); ?>" <?php echo $required ? 'required' : ''; ?>>
                 </div>
             <?php endif; ?>
