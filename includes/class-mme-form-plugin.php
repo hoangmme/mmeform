@@ -155,7 +155,8 @@ final class MME_Form_Plugin
     {
         return array(
             'kicker' => 'HỖ TRỢ 24/7',
-            'heading' => 'Sẵn sàng để chuyển đổi số?',
+            'heading' => 'Sẵn sàng để',
+            'subheading' => 'chuyển đổi số?',
             'description' => 'Để lại thông tin, chuyên viên của MMe sẽ liên hệ hỗ trợ bạn thiết lập hệ thống Bot AI và tư vấn lộ trình tự động hóa hoàn toàn miễn phí.',
             'form_heading' => 'Nhận tư vấn giải pháp MMe Suite cho doanh nghiệp bạn',
             'form_footer' => 'Thông tin của bạn được bảo mật tuyệt đối.',

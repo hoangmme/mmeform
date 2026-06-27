@@ -69,7 +69,14 @@
   order: -1;
 }
 
-/* Khu vực 1: Heading */
+/* Khu vực 1: Trái */
+.mme-area-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
 .mme-area-heading {
   display: flex;
   flex-direction: column;
@@ -100,7 +107,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--mme-button);
+  background: var(--mme-secondary);
   animation: mme-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
@@ -120,6 +127,14 @@
 
 .mme-highlight {
   color: var(--mme-button);
+}
+
+.mme-gradient-text {
+  background: linear-gradient(90deg, var(--mme-button) 0%, var(--mme-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
 }
 
 .mme-form-main-desc {
@@ -459,11 +474,8 @@
 }
 
 /* Khu vực 3: Trust List */
-@media (min-width: 1024px) {
-  .mme-area-trust {
-    grid-column: 1;
-    grid-row: 2;
-  }
+.mme-area-trust {
+  margin-top: 32px;
 }
 
 .mme-form-trust-list {
@@ -501,15 +513,7 @@
 /* Khu vực 4: Contact Cards */
 .mme-area-contact {
   max-width: 520px;
-  margin-top: 32px;
-}
-
-@media (min-width: 1024px) {
-  .mme-area-contact {
-    grid-column: 1;
-    grid-row: 3;
-    margin-top: auto;
-  }
+  margin-top: 40px;
 }
 
 .mme-form-contact-boxes {

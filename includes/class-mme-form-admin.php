@@ -84,6 +84,7 @@ final class MME_Form_Admin
             <h4 class="mme-admin-span-2" style="margin-bottom: 0; padding-bottom: 5px; border-bottom: 1px solid #ddd;">Cột bên trái (Thông tin)</h4>
             <?php $this->text_input('kicker', 'Chữ nhỏ trên đầu', $settings['kicker']); ?>
             <?php $this->text_input('heading', 'Tiêu đề trái', $settings['heading']); ?>
+            <?php $this->text_input('subheading', 'Tiêu đề trái (dưới)', $settings['subheading']); ?>
             <?php $this->text_input('description', 'Mô tả ngắn', $settings['description']); ?>
             <?php $this->text_input('hotline_label', 'Nhãn Hotline', $settings['hotline_label']); ?>
             <?php $this->text_input('hotline', 'Hotline', $settings['hotline']); ?>
