@@ -211,5 +211,21 @@
         frame.open();
       });
     }
+
+    var copyGasButton = document.getElementById("mme-copy-gas");
+    if (copyGasButton) {
+      copyGasButton.addEventListener("click", function () {
+        var template = document.getElementById("mme-gas-template");
+        if (template && navigator.clipboard) {
+          navigator.clipboard.writeText(template.innerHTML.trim()).then(function () {
+            var originalText = copyGasButton.textContent;
+            copyGasButton.textContent = "Đã copy thành công!";
+            setTimeout(function () {
+              copyGasButton.textContent = originalText;
+            }, 3000);
+          });
+        }
+      });
+    }
   });
 })();

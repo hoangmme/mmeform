@@ -150,7 +150,105 @@ final class MME_Form_Admin
                 <?php $this->url_input('webhook_url', 'Webhook URL', $settings['webhook_url']); ?>
                 <?php $this->password_input('webhook_secret', 'Signing secret', !empty($settings['webhook_secret'])); ?>
             </div>
-            <p class="description">Google Apps Script có thể dùng URL dạng <code>.../exec?secret=...</code>. Payload dùng chuẩn <code>lead_collected</code> giống mmechatbot.</p>
+            <p class="description">
+                Google Apps Script có thể dùng URL dạng <code>.../exec?secret=...</code>. Payload dùng chuẩn <code>lead_collected</code> giống mmechatbot.<br>
+                <button type="button" class="button button-small" id="mme-copy-gas" style="margin-top:8px;">Copy mã Google Apps Script (tự động tạo Sheet & cột)</button>
+            </p>
+            <script type="text/template" id="mme-gas-template">
+function doPost(e) {
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return ContentService.createTextOutput(JSON.stringify({success: false, error: "No data"}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var data = JSON.parse(e.postData.contents);
+    if (data.event !== "lead_collected") {
+      return ContentService.createTextOutput(JSON.stringify({success: false, error: "Not lead_collected event"}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // 1. Secret verification (tuỳ chọn, thay bằng secret bạn nhập trong cấu hình plugin)
+    var EXPECTED_SECRET = ""; 
+    if (EXPECTED_SECRET && data.secret !== EXPECTED_SECRET) {
+      return ContentService.createTextOutput(JSON.stringify({success: false, error: "Invalid secret"}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // 2. Mở hoặc tạo sheet "data"
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("data");
+    if (!sheet) {
+      sheet = ss.insertSheet("data");
+    }
+    
+    // 3. Xây dựng dữ liệu dòng
+    var rowData = {};
+    rowData["Date"] = new Date();
+    
+    if (data.contact) {
+      if (data.contact.name) rowData["Name"] = data.contact.name;
+      if (data.contact.phone) rowData["Phone"] = data.contact.phone;
+      if (data.contact.email) rowData["Email"] = data.contact.email;
+    }
+    
+    if (data.lead && data.lead.need) {
+      rowData["Need"] = data.lead.need;
+    }
+    
+    if (data.fields) {
+      for (var key in data.fields) {
+        rowData[key] = data.fields[key];
+      }
+    }
+    
+    if (data.source) {
+      if (data.source.url) rowData["Source URL"] = data.source.url;
+      if (data.source.referrer) rowData["Referrer"] = data.source.referrer;
+    }
+    if (data.attribution) {
+      for (var key in data.attribution) {
+        rowData[key] = data.attribution[key];
+      }
+    }
+    
+    // 4. Cập nhật tiêu đề cột (Headers) động
+    var lastColumn = sheet.getLastColumn();
+    var headers = [];
+    if (lastColumn > 0) {
+      headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+    }
+    
+    var headersUpdated = false;
+    for (var key in rowData) {
+      if (headers.indexOf(key) === -1) {
+        headers.push(key);
+        headersUpdated = true;
+      }
+    }
+    
+    if (headersUpdated) {
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
+    }
+    
+    // 5. Thêm dòng mới
+    var newRow = [];
+    for (var i = 0; i < headers.length; i++) {
+      var header = headers[i];
+      newRow.push(rowData[header] !== undefined ? rowData[header] : "");
+    }
+    sheet.appendRow(newRow);
+    
+    return ContentService.createTextOutput(JSON.stringify({success: true}))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+            </script>
         </div>
 
         <div class="mme-integration-card">

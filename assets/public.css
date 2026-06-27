@@ -367,7 +367,9 @@
   .mme-form-shell,
   .mme-form-shell.mme-image-right {
     grid-template-columns: 1fr;
-    border-radius: 14px;
+    border-radius: 0;
+    border: 0;
+    box-shadow: none;
   }
   .mme-form-shell.mme-image-right .mme-form-visual {
     order: 0;
