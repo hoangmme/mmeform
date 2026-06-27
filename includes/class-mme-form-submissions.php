@@ -316,7 +316,13 @@ final class MME_Form_Submissions
             $person['phones'] = array('primaryPhoneNumber' => $phone);
         }
 
-        $url = untrailingslashit(esc_url_raw($settings['twenty_base_url'])) . '/rest/people';
+        $base_url = untrailingslashit(esc_url_raw($settings['twenty_base_url']));
+        if (str_ends_with(strtolower($base_url), '/rest')) {
+            $url = $base_url . '/people';
+        } else {
+            $url = $base_url . '/rest/people';
+        }
+        
         $response = wp_remote_post($url, array(
             'headers' => array(
                 'Authorization' => 'Bearer ' . sanitize_text_field($settings['twenty_api_key']),
