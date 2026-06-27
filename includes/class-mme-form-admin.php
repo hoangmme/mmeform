@@ -502,7 +502,13 @@ function doPost(e) {
             } elseif (in_array($name, $twenty_fields, true) || in_array($name . 'Custom', $twenty_fields, true)) {
                 $status = 'green';
             } else {
-                $all_good = false;
+                // Check camelCase for hidden fields
+                $camel_name = lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $name))));
+                if (in_array($camel_name, $twenty_fields, true) || in_array($camel_name . 'Custom', $twenty_fields, true)) {
+                    $status = 'green';
+                } else {
+                    $all_good = false;
+                }
             }
             
             $results[] = array(

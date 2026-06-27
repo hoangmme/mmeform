@@ -394,10 +394,15 @@ final class MME_Form_Submissions
         );
         foreach ($hidden_fields as $k => $v) {
             if ($v !== '') {
+                $camel = lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $k))));
                 if (in_array($k, $allowed_fields, true)) {
                     $person[$k] = $v;
+                } elseif (in_array($camel, $allowed_fields, true)) {
+                    $person[$camel] = $v;
                 } elseif (in_array($k . 'Custom', $allowed_fields, true)) {
                     $person[$k . 'Custom'] = $v;
+                } elseif (in_array($camel . 'Custom', $allowed_fields, true)) {
+                    $person[$camel . 'Custom'] = $v;
                 }
             }
         }
