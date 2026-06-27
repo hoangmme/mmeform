@@ -255,7 +255,7 @@
         var statusSpan = document.getElementById("mme-twenty-check-status");
         var resultsDiv = document.getElementById("mme-twenty-check-results");
         
-        statusSpan.textContent = "Đang kiểm tra...";
+        statusSpan.textContent = "Đang giả lập gửi dữ liệu Test đến CRM...";
         statusSpan.style.color = "#444";
         resultsDiv.style.display = "none";
         checkTwentyBtn.disabled = true;
@@ -282,14 +282,31 @@
           }
           
           if (res.data.all_good) {
-            statusSpan.textContent = "Tất cả các Field đã chuẩn khớp!";
+            statusSpan.textContent = "Kiểm tra lý thuyết: Các Field đã khớp!";
             statusSpan.style.color = "#00a32a";
           } else {
-            statusSpan.textContent = "Có Field chưa khớp (Cần tạo thêm trên Twenty CRM)";
+            statusSpan.textContent = "Kiểm tra lý thuyết: Có Field chưa khớp!";
             statusSpan.style.color = "#d63638";
           }
           
-          var html = '<ul style="margin: 0; padding-left: 20px;">';
+          var html = '';
+          if (res.data.test_result) {
+              if (res.data.test_result.success) {
+                  html += '<div style="margin-bottom: 15px; padding: 12px; background: #e5f5ea; border-left: 4px solid #00a32a;">';
+                  html += '<p style="margin: 0; color: #00a32a; font-weight: 600; font-size: 14px;">✅ Thành công 100%!</p>';
+                  html += '<p style="margin: 5px 0 0; color: #333; font-size: 13px;">Dữ liệu test giả lập đã được Twenty CRM chấp nhận không có lỗi. Các field của bạn đã hoạt động hoàn hảo!</p>';
+                  html += '</div>';
+              } else {
+                  html += '<div style="margin-bottom: 15px; padding: 12px; background: #fcf0f1; border-left: 4px solid #d63638;">';
+                  html += '<p style="margin: 0; color: #d63638; font-weight: 600; font-size: 14px;">❌ Lỗi gửi dữ liệu Test đến Twenty CRM!</p>';
+                  html += '<p style="margin: 5px 0 0; color: #333; font-size: 13px;">Lý thuyết thì tên Field khớp, nhưng lúc gửi thật thì CRM từ chối nhận. Lỗi từ CRM:</p>';
+                  var err = res.data.test_result.error || JSON.stringify(res.data.test_result.response || 'Không xác định');
+                  html += '<pre style="margin: 10px 0 0; background: #fff; padding: 10px; border: 1px solid #ffcdd2; color: #c62828; white-space: pre-wrap; font-size: 12px; font-family: monospace;">' + err + '</pre>';
+                  html += '</div>';
+              }
+          }
+          
+          html += '<ul style="margin: 0; padding-left: 20px;">';
           res.data.results.forEach(function(item) {
             var color = item.status === 'green' ? '#00a32a' : (item.status === 'orange' ? '#f5c60d' : '#d63638');
             var icon = item.status === 'green' ? '✓' : (item.status === 'orange' ? '⚠' : '✗');

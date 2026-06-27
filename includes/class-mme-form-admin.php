@@ -550,10 +550,53 @@ function doPost(e) {
             );
         }
         
+        $dummy_fields = array();
+        foreach ($form_fields as $field) {
+            $name = sanitize_text_field($field['name'] ?? '');
+            $name = trim(preg_replace('/\s+/', '_', $name));
+            if (!$name) continue;
+            
+            if ($name === 'full_name' || $name === 'name' || $name === 'fullname' || $name === 'ho_ten') {
+                $dummy_fields[$name] = 'MME Test Lead';
+            } elseif ($name === 'phone' || $name === 'telephone' || $name === 'so_dien_thoai' || $name === 'sdt') {
+                $dummy_fields[$name] = '090' . mt_rand(1000000, 9999999);
+            } elseif ($name === 'email' || $name === 'email_address') {
+                $dummy_fields[$name] = 'test-' . mt_rand(1000, 9999) . '@mme.vn';
+            } elseif (in_array($field['type'] ?? '', array('select', 'radio', 'checkbox'))) {
+                $dummy_fields[$name] = !empty($field['options'][0]) ? $field['options'][0] : 'Test Option';
+            } elseif (($field['type'] ?? '') === 'number') {
+                $dummy_fields[$name] = 123;
+            } else {
+                $dummy_fields[$name] = 'Test ' . $name;
+            }
+        }
+        
+        $dummy_payload = array(
+            'contact' => array('name' => 'MME Test Lead', 'phone' => '090' . mt_rand(1000000, 9999999), 'email' => 'test-' . mt_rand(1000, 9999) . '@mme.vn'),
+            'lead' => array('need' => 'Test Need'),
+            'source' => array('url' => 'https://mme.vn/test', 'referrer' => ''),
+            'submitted_at' => time() * 1000,
+            'fields' => $dummy_fields
+        );
+        
+        $submissions = new MME_Form_Submissions();
+        $settings = $this->settings($post_id);
+        $test_result = $submissions->send_twenty($post_id, $settings, $dummy_payload);
+        
+        if (!empty($test_result['success']) && !empty($test_result['response']['data']['id'])) {
+            $person_id = $test_result['response']['data']['id'];
+            $delete_url = rtrim($settings['twenty_base_url'], '/') . '/people/' . $person_id;
+            wp_remote_request($delete_url, array(
+                'method' => 'DELETE',
+                'headers' => array('Authorization' => 'Bearer ' . $settings['twenty_api_key']),
+            ));
+        }
+
         wp_send_json_success(array(
             'results' => $results,
             'all_good' => $all_good,
-            'twenty_fields' => array_keys($twenty_fields)
+            'twenty_fields' => array_keys($twenty_fields),
+            'test_result' => $test_result
         ));
     }
 

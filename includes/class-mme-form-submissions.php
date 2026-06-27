@@ -165,14 +165,23 @@ final class MME_Form_Submissions
         $settings = wp_parse_args((array) get_post_meta($form_id, '_mme_form_settings', true), MME_Form_Plugin::default_settings());
         $integration_results = array(
             'webhook' => $this->send_webhook($settings, $payload),
-            'twenty' => $this->send_twenty($settings, $payload),
+            'twenty' => $this->send_twenty($form_id, $settings, $payload),
         );
         update_post_meta($submission_id, '_mme_submission_integrations', $integration_results);
+
+        $message = sanitize_text_field($settings['success_message']);
+        
+        if (current_user_can('manage_options')) {
+            if (isset($integration_results['twenty']) && empty($integration_results['twenty']['success'])) {
+                $err = $integration_results['twenty']['error'] ?? json_encode($integration_results['twenty']['response'] ?? 'Unknown error', JSON_UNESCAPED_UNICODE);
+                $message .= '<br><br><b style="color:#d63638">⚠️ Lỗi đồng bộ Twenty CRM (Chỉ Admin mới thấy):</b><br> ' . esc_html($err);
+            }
+        }
 
         return new WP_REST_Response(array(
             'success' => true,
             'event_id' => $event_id,
-            'message' => sanitize_text_field($settings['success_message']),
+            'message' => $message,
         ), 201);
     }
 
@@ -336,7 +345,7 @@ final class MME_Form_Submissions
         return $fields;
     }
 
-    private function send_twenty(array $settings, array $payload): array
+    public function send_twenty(int $post_id, array $settings, array $payload): array
     {
         if (($settings['twenty_enabled'] ?? 'no') !== 'yes') {
             return array('success' => false, 'skipped' => true);
