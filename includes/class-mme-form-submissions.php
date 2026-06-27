@@ -69,7 +69,8 @@ final class MME_Form_Submissions
         $errors = array();
 
         foreach ($fields as $field) {
-            $name = sanitize_key($field['name'] ?? '');
+            $name = sanitize_text_field($field['name'] ?? '');
+            $name = trim(preg_replace('/\s+/', '_', $name));
             if (!$name) {
                 continue;
             }
@@ -376,13 +377,28 @@ final class MME_Form_Submissions
         
         $standard_keys = array('full_name', 'name', 'fullname', 'ho_ten', 'hoten', 'phone', 'telephone', 'mobile', 'so_dien_thoai', 'sdt', 'email', 'email_address', 'need');
         foreach ((array) $payload['fields'] as $k => $v) {
-            if (in_array($k, $standard_keys, true)) {
+            if (in_array(strtolower($k), $standard_keys, true)) {
                 continue;
             }
             if (in_array($k, $allowed_fields, true)) {
                 $person[$k] = $v;
             } elseif (in_array($k . 'Custom', $allowed_fields, true)) {
                 $person[$k . 'Custom'] = $v;
+            }
+        }
+
+        $hidden_fields = array(
+            'current_url' => $payload['source']['url'] ?? '',
+            'referrer_url' => $payload['source']['referrer'] ?? '',
+            'started_at' => $payload['submitted_at'] ?? '',
+        );
+        foreach ($hidden_fields as $k => $v) {
+            if ($v !== '') {
+                if (in_array($k, $allowed_fields, true)) {
+                    $person[$k] = $v;
+                } elseif (in_array($k . 'Custom', $allowed_fields, true)) {
+                    $person[$k . 'Custom'] = $v;
+                }
             }
         }
 

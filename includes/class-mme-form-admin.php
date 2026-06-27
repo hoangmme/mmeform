@@ -492,11 +492,12 @@ function doPost(e) {
         $all_good = true;
         
         foreach ($form_fields as $field) {
-            $name = sanitize_key($field['name'] ?? '');
+            $name = sanitize_text_field($field['name'] ?? '');
+            $name = trim(preg_replace('/\s+/', '_', $name));
             if (!$name) continue;
             
             $status = 'red';
-            if (in_array($name, $standard_keys, true)) {
+            if (in_array(strtolower($name), $standard_keys, true)) {
                 $status = 'green';
             } elseif (in_array($name, $twenty_fields, true) || in_array($name . 'Custom', $twenty_fields, true)) {
                 $status = 'green';
