@@ -136,10 +136,16 @@
         if (!nameInput.value || nameInput.dataset.auto === "yes") {
           nameInput.value = slugify(labelInput.value);
           nameInput.dataset.auto = "yes";
+          serialize();
         }
       });
       nameInput.addEventListener("input", function () {
         nameInput.dataset.auto = "no";
+        serialize();
+      });
+      nameInput.addEventListener("blur", function () {
+        nameInput.value = nameInput.value.trim().replace(/\s+/g, '_');
+        serialize();
       });
       typeSelect.addEventListener("change", updateDetailsVisibility);
       removeButton.addEventListener("click", function () {
@@ -174,7 +180,7 @@
         var name = row.querySelector(".mme-field-name").value || "field_" + (index + 1);
         return {
           label: row.querySelector(".mme-field-label").value || "Field " + (index + 1),
-          name: slugify(name) || "field_" + (index + 1),
+          name: name.trim().replace(/\s+/g, '_') || "field_" + (index + 1),
           width: row.querySelector(".mme-field-width").value || "100",
           type: row.querySelector(".mme-field-type").value,
           placeholder: row.querySelector(".mme-field-placeholder").value,
