@@ -387,18 +387,6 @@ final class MME_Form_Submissions
             if (in_array(strtolower($k), $standard_keys, true)) {
                 continue;
             }
-            
-            // Check if this field is a select or radio to auto-format to Twenty CRM Option slug (UPPER_SNAKE_CASE)
-            foreach ($fields as $f) {
-                if (($f['name'] ?? '') === $k && in_array($f['type'] ?? '', array('select', 'radio'), true)) {
-                    $slug = remove_accents($v);
-                    $slug = preg_replace('/[^a-zA-Z0-9]+/', '_', $slug);
-                    $slug = trim($slug, '_');
-                    $v = strtoupper($slug);
-                    break;
-                }
-            }
-            
             if (in_array($k, $allowed_fields, true)) {
                 $person[$k] = $v;
             } elseif (in_array($k . 'Custom', $allowed_fields, true)) {
