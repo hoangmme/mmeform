@@ -97,6 +97,18 @@
     startedInput.value = String(Date.now());
     sourceUrl = currentInput.value;
 
+    var itiInstances = [];
+    form.querySelectorAll('input[type="tel"]').forEach(function (telInput) {
+      if (window.intlTelInput) {
+        var iti = window.intlTelInput(telInput, {
+          initialCountry: "vn",
+          showSelectedDialCode: true,
+          utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/23.0.4/js/utils.js"
+        });
+        itiInstances.push({ input: telInput, iti: iti });
+      }
+    });
+
     openChat(shell, sourceUrl);
     emitTracking("mme_form_view", Object.assign({ form_id: formId }, sourceParts(sourceUrl)));
 
@@ -111,6 +123,12 @@
     form.addEventListener("submit", async function (event) {
       event.preventDefault();
       if (!form.reportValidity()) return;
+      
+      itiInstances.forEach(function (instance) {
+        if (instance.iti.isValidNumber()) {
+          instance.input.value = instance.iti.getNumber();
+        }
+      });
 
       submit.disabled = true;
       form.classList.add("is-submitting");

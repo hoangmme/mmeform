@@ -15,13 +15,25 @@ final class MME_Form_Renderer
                 : '';
         }
 
+        $fields = get_post_meta($form_id, '_mme_form_fields', true);
+        $fields = is_array($fields) && $fields ? $fields : MME_Form_Plugin::default_fields();
+        
+        $has_tel = false;
+        foreach ($fields as $field) {
+            if (isset($field['type']) && $field['type'] === 'tel') {
+                $has_tel = true;
+                break;
+            }
+        }
+
         if (empty($args['embed'])) {
             wp_enqueue_style('mme-form-public', MME_FORM_URL . 'assets/public.css', array(), MME_FORM_VERSION);
             wp_enqueue_script('mme-form-public', MME_FORM_URL . 'assets/public.js', array(), MME_FORM_VERSION, true);
+            if ($has_tel) {
+                wp_enqueue_style('intl-tel-input', 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/23.0.4/css/intlTelInput.css', array(), '23.0.4');
+                wp_enqueue_script('intl-tel-input', 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/23.0.4/js/intlTelInput.min.js', array(), '23.0.4', true);
+            }
         }
-
-        $fields = get_post_meta($form_id, '_mme_form_fields', true);
-        $fields = is_array($fields) && $fields ? $fields : MME_Form_Plugin::default_fields();
         $settings = wp_parse_args(
             (array) get_post_meta($form_id, '_mme_form_settings', true),
             MME_Form_Plugin::default_settings()
@@ -129,6 +141,11 @@ final class MME_Form_Renderer
                     <?php echo self::render_social_links($settings); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                 </div>
             </div>
+            
+            <?php if (!empty($args['embed']) && $has_tel) : ?>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/23.0.4/css/intlTelInput.css">
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/23.0.4/js/intlTelInput.min.js"></script>
+            <?php endif; ?>
         </section>
         <?php
         return (string) ob_get_clean();

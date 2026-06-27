@@ -197,6 +197,17 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--mme-accent) 18%, transparent);
 }
 
+.mme-form-field .iti {
+  width: 100%;
+}
+
+.mme-form-field .iti__country-list {
+  border-radius: 9px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, .15);
+  border: 1px solid color-mix(in srgb, var(--mme-text) 17%, transparent);
+  font: 500 13px/1.35 var(--mme-font);
+}
+
 .mme-radio-group {
   display: flex;
   flex-wrap: wrap;
