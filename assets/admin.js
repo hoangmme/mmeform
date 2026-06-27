@@ -84,6 +84,8 @@
         ["text", "Text"],
         ["email", "Email"],
         ["tel", "Phone"],
+        ["date", "Date"],
+        ["time", "Time"],
         ["textarea", "Text area"],
         ["select", "Dropdown"],
         ["radio", "Radio"],
@@ -288,6 +290,19 @@
             html += '<li style="color: ' + color + '; font-weight: 500; margin-bottom: 5px;">' + icon + ' ' + item.label + ' (' + item.name + ')</li>';
           });
           html += '</ul>';
+          
+          if (!res.data.all_good && res.data.twenty_fields && res.data.twenty_fields.length > 0) {
+            var customFields = res.data.twenty_fields.filter(function(f) { 
+              return f !== 'name' && f !== 'emails' && f !== 'phones' && f !== 'id' && f !== 'createdAt' && f !== 'updatedAt' && f !== 'createdBy' && f !== 'position';
+            });
+            if (customFields.length > 0) {
+              html += '<div style="margin-top: 15px; padding: 10px; background: #fff8e5; border-left: 4px solid #f5c60d;">';
+              html += '<p style="margin: 0 0 5px; font-weight: 600;">Gợi ý: Các field hiện có trên Twenty CRM của bạn là:</p>';
+              html += '<p style="margin: 0; font-family: monospace; color: #333;">' + customFields.join(', ') + '</p>';
+              html += '<p style="margin: 5px 0 0; font-size: 12px; color: #666;">Hãy copy tên field ở trên và dán vào ô Tên Field trong Form Builder sao cho khớp nhé.</p>';
+              html += '</div>';
+            }
+          }
           
           resultsDiv.innerHTML = html;
           resultsDiv.style.display = "block";

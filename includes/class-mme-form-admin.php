@@ -478,6 +478,10 @@ function doPost(e) {
         $form_fields = get_post_meta($post_id, '_mme_form_fields', true);
         $form_fields = is_array($form_fields) && $form_fields ? $form_fields : MME_Form_Plugin::default_fields();
         
+        $form_fields[] = array('label' => 'URL gửi form (Ẩn)', 'name' => 'current_url');
+        $form_fields[] = array('label' => 'Nguồn truy cập (Ẩn)', 'name' => 'referrer_url');
+        $form_fields[] = array('label' => 'Thời gian bắt đầu (Ẩn)', 'name' => 'started_at');
+        
         $standard_keys = array('full_name', 'name', 'fullname', 'ho_ten', 'hoten', 'phone', 'telephone', 'mobile', 'so_dien_thoai', 'sdt', 'email', 'email_address', 'need');
         
         $results = array();
@@ -503,7 +507,7 @@ function doPost(e) {
             );
         }
         
-        wp_send_json_success(array('results' => $results, 'all_good' => $all_good));
+        wp_send_json_success(array('results' => $results, 'all_good' => $all_good, 'twenty_fields' => $twenty_fields));
     }
 
     private function settings(int $post_id): array

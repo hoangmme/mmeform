@@ -202,19 +202,6 @@
   flex-direction: column;
   justify-content: center;
   background: #fff;
-  border-radius: 16px;
-  margin: 12px 12px 12px 0;
-  box-shadow: 0 4px 24px rgba(15, 23, 42, .03);
-  border: 1px solid color-mix(in srgb, var(--mme-text) 6%, transparent);
-}
-
-.mme-form-shell.mme-layout-right .mme-form-card {
-  margin: 12px 0 12px 12px;
-}
-
-.mme-form-shell.mme-layout-top .mme-form-card,
-.mme-form-shell.no-image .mme-form-card {
-  margin: 12px;
 }
 
 .mme-form-header {
@@ -514,10 +501,8 @@
     padding: 30px 20px;
   }
   .mme-form-card {
-    margin: 0;
     border-radius: 20px 20px 0 0;
     padding: 30px 20px;
-    box-shadow: 0 -4px 20px rgba(0,0,0,.03);
   }
 }
 

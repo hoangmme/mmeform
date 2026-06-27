@@ -192,7 +192,7 @@ final class MME_Form_Renderer
     private static function render_field(array $field): string
     {
         $type = sanitize_key($field['type'] ?? 'text');
-        $allowed = array('text', 'email', 'tel', 'textarea', 'select', 'radio');
+        $allowed = array('text', 'email', 'tel', 'date', 'time', 'textarea', 'select', 'radio');
         if (!in_array($type, $allowed, true)) {
             $type = 'text';
         }
