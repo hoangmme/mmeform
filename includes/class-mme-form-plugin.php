@@ -123,7 +123,7 @@ final class MME_Form_Plugin
     <style>
         body.mme-form-embed-page {
             margin: 0;
-            padding: 40px 20px;
+            padding: 0;
             min-height: 100vh;
             background: #f8fafc;
             display: flex;

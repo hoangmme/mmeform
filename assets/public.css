@@ -12,8 +12,14 @@
   line-height: 1.5;
   color: #1e293b;
   overflow: hidden;
-  padding: 40px 0;
+  padding: 48px 0;
   -webkit-font-smoothing: antialiased;
+}
+
+@media (min-width: 1024px) {
+  .mme-form-wrapper {
+    padding: 96px 0;
+  }
 }
 
 .mme-form-bg-blob {
