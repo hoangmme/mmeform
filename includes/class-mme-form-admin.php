@@ -285,6 +285,9 @@ function doPost(e) {
             $endpoint
         );
         ?>
+        <p style="margin-bottom: 16px;">
+            <a href="<?php echo esc_url(get_permalink($post->ID)); ?>" target="_blank" class="button button-primary button-large">Xem Preview giao diện Form (mở tab mới)</a>
+        </p>
         <p><strong>Shortcode</strong></p>
         <textarea class="widefat code" rows="2" readonly><?php echo esc_textarea($shortcode); ?></textarea>
         <p><strong>Embed website khác</strong></p>

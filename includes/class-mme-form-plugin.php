@@ -39,6 +39,8 @@ final class MME_Form_Plugin
                 'menu_name' => __('MME Forms', 'mme-form'),
             ),
             'public' => false,
+            'publicly_queryable' => true,
+            'exclude_from_search' => true,
             'show_ui' => true,
             'show_in_menu' => true,
             'menu_icon' => 'dashicons-feedback',
