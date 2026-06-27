@@ -241,5 +241,63 @@
         }
       });
     }
+    var checkTwentyBtn = document.getElementById("mme-twenty-check-fields");
+    if (checkTwentyBtn) {
+      checkTwentyBtn.addEventListener("click", function () {
+        var statusSpan = document.getElementById("mme-twenty-check-status");
+        var resultsDiv = document.getElementById("mme-twenty-check-results");
+        
+        statusSpan.textContent = "Đang kiểm tra...";
+        statusSpan.style.color = "#444";
+        resultsDiv.style.display = "none";
+        checkTwentyBtn.disabled = true;
+        
+        var formData = new FormData();
+        formData.append("action", "mme_twenty_check_fields");
+        formData.append("nonce", checkTwentyBtn.dataset.nonce);
+        formData.append("post_id", checkTwentyBtn.dataset.postId);
+        
+        // Also serialize current fields so we check the latest even if not saved
+        serialize();
+        
+        fetch(ajaxurl, {
+          method: "POST",
+          body: formData
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(res) {
+          checkTwentyBtn.disabled = false;
+          if (!res.success) {
+            statusSpan.textContent = "Lỗi: " + (res.data || "Không xác định");
+            statusSpan.style.color = "#d63638";
+            return;
+          }
+          
+          if (res.data.all_good) {
+            statusSpan.textContent = "Tất cả các Field đã chuẩn khớp!";
+            statusSpan.style.color = "#00a32a";
+          } else {
+            statusSpan.textContent = "Có Field chưa khớp (Cần tạo thêm trên Twenty CRM)";
+            statusSpan.style.color = "#d63638";
+          }
+          
+          var html = '<ul style="margin: 0; padding-left: 20px;">';
+          res.data.results.forEach(function(item) {
+            var color = item.status === 'green' ? '#00a32a' : '#d63638';
+            var icon = item.status === 'green' ? '✓' : '✗';
+            html += '<li style="color: ' + color + '; font-weight: 500; margin-bottom: 5px;">' + icon + ' ' + item.label + ' (' + item.name + ')</li>';
+          });
+          html += '</ul>';
+          
+          resultsDiv.innerHTML = html;
+          resultsDiv.style.display = "block";
+        })
+        .catch(function(err) {
+          checkTwentyBtn.disabled = false;
+          statusSpan.textContent = "Lỗi mạng hoặc server.";
+          statusSpan.style.color = "#d63638";
+        });
+      });
+    }
   });
 })();

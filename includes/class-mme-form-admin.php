@@ -27,6 +27,7 @@ final class MME_Form_Admin
         add_filter('manage_mme_form_submission_posts_columns', array($this, 'submission_columns'));
         add_action('manage_mme_form_submission_posts_custom_column', array($this, 'render_submission_column'), 10, 2);
         add_filter('post_row_actions', array($this, 'remove_submission_quick_actions'), 10, 2);
+        add_action('wp_ajax_mme_twenty_check_fields', array($this, 'ajax_twenty_check_fields'));
     }
 
     public function enqueue_assets(string $hook): void
@@ -80,32 +81,34 @@ final class MME_Form_Admin
         $settings = $this->settings($post->ID);
         ?>
         <div class="mme-admin-grid">
+            <h4 class="mme-admin-span-2" style="margin-bottom: 0; padding-bottom: 5px; border-bottom: 1px solid #ddd;">Cột bên trái (Thông tin)</h4>
             <?php $this->text_input('kicker', 'Chữ nhỏ trên đầu', $settings['kicker']); ?>
-            <?php $this->text_input('heading', 'Tiêu đề', $settings['heading']); ?>
+            <?php $this->text_input('heading', 'Tiêu đề trái', $settings['heading']); ?>
             <?php $this->text_input('description', 'Mô tả ngắn', $settings['description']); ?>
+            <?php $this->text_input('hotline', 'Hotline', $settings['hotline']); ?>
+            <?php $this->text_input('support_email', 'Email hỗ trợ', $settings['support_email']); ?>
+            
+            <label class="mme-admin-field mme-admin-span-2">
+                <span>Điểm nổi bật (mỗi dòng một mục, tối đa 4)</span>
+                <textarea name="mme_settings[trust_items]" rows="4"><?php echo esc_textarea(implode("\n", (array) $settings['trust_items'])); ?></textarea>
+            </label>
+
+            <?php $this->url_input('facebook_url', 'Facebook URL', $settings['facebook_url']); ?>
+            <?php $this->url_input('zalo_url', 'Zalo URL', $settings['zalo_url']); ?>
+            <?php $this->url_input('linkedin_url', 'LinkedIn URL', $settings['linkedin_url']); ?>
+
+            <h4 class="mme-admin-span-2" style="margin-top: 15px; margin-bottom: 0; padding-bottom: 5px; border-bottom: 1px solid #ddd;">Cột bên phải (Form)</h4>
+            <?php $this->text_input('form_heading', 'Tiêu đề Form', $settings['form_heading']); ?>
             <?php $this->text_input('button_text', 'Chữ trên nút', $settings['button_text']); ?>
+            <?php $this->text_input('form_footer', 'Chữ dưới cùng Form (Footer)', $settings['form_footer']); ?>
             <?php $this->text_input('success_message', 'Thông báo thành công', $settings['success_message']); ?>
-
-            <label class="mme-admin-field mme-admin-span-2">
-                <span>Ảnh minh họa (Desktop)</span>
-                <div class="mme-media-row">
-                    <input type="url" id="mme-image-url" name="mme_settings[image_url]" value="<?php echo esc_attr($settings['image_url']); ?>" placeholder="https://...">
-                    <button type="button" class="button" id="mme-pick-image">Chọn ảnh</button>
-                </div>
-            </label>
-
-            <label class="mme-admin-field mme-admin-span-2">
-                <span>Ảnh minh họa (Mobile)</span>
-                <div class="mme-media-row">
-                    <input type="url" id="mme-image-url-mobile" name="mme_settings[image_url_mobile]" value="<?php echo esc_attr($settings['image_url_mobile'] ?? ''); ?>" placeholder="https://...">
-                    <button type="button" class="button" id="mme-pick-image-mobile">Chọn ảnh</button>
-                </div>
-            </label>
+            
+            <h4 class="mme-admin-span-2" style="margin-top: 15px; margin-bottom: 0; padding-bottom: 5px; border-bottom: 1px solid #ddd;">Thiết kế chung</h4>
 
             <label class="mme-admin-field">
-                <span>Vị trí ảnh</span>
+                <span>Vị trí cột thông tin</span>
                 <select name="mme_settings[image_position]">
-                    <?php foreach (array('left' => 'Trái', 'right' => 'Phải', 'top' => 'Trên') as $value => $label) : ?>
+                    <?php foreach (array('left' => 'Bên trái', 'right' => 'Bên phải', 'top' => 'Bên trên') as $value => $label) : ?>
                         <option value="<?php echo esc_attr($value); ?>" <?php selected($settings['image_position'], $value); ?>><?php echo esc_html($label); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -125,14 +128,6 @@ final class MME_Form_Admin
             <?php $this->color_input('background_color', 'Màu nền', $settings['background_color']); ?>
             <?php $this->color_input('text_color', 'Màu chữ', $settings['text_color']); ?>
 
-            <label class="mme-admin-field mme-admin-span-2">
-                <span>Điểm nổi bật (mỗi dòng một mục, tối đa 4)</span>
-                <textarea name="mme_settings[trust_items]" rows="4"><?php echo esc_textarea(implode("\n", (array) $settings['trust_items'])); ?></textarea>
-            </label>
-
-            <?php $this->url_input('facebook_url', 'Facebook URL', $settings['facebook_url']); ?>
-            <?php $this->url_input('zalo_url', 'Zalo URL', $settings['zalo_url']); ?>
-            <?php $this->url_input('linkedin_url', 'LinkedIn URL', $settings['linkedin_url']); ?>
         </div>
         <?php
     }
@@ -266,6 +261,11 @@ function doPost(e) {
                 <?php $this->url_input('twenty_base_url', 'Twenty base URL', $settings['twenty_base_url']); ?>
                 <?php $this->password_input('twenty_api_key', 'Twenty API key', !empty($settings['twenty_api_key'])); ?>
             </div>
+            <div style="margin-top: 15px;">
+                <button type="button" class="button" id="mme-twenty-check-fields" data-nonce="<?php echo wp_create_nonce('mme_twenty_check'); ?>" data-post-id="<?php echo esc_attr((string)$post->ID); ?>">Kiểm tra trùng khớp tên Field</button>
+                <span id="mme-twenty-check-status" style="margin-left: 10px; font-weight: 500;"></span>
+                <div id="mme-twenty-check-results" style="margin-top: 10px; display: none; background: #fff; padding: 15px; border: 1px solid #ccd0d4; border-radius: 4px; box-shadow: 0 1px 1px rgba(0,0,0,.04);"></div>
+            </div>
         </div>
         <?php
     }
@@ -346,10 +346,10 @@ function doPost(e) {
         $current = $this->settings($post_id);
         $settings = MME_Form_Plugin::default_settings();
 
-        foreach (array('kicker', 'heading', 'description', 'button_text', 'success_message', 'chatbot_tenant', 'chatbot_button_text') as $key) {
-            $settings[$key] = sanitize_text_field($submitted[$key] ?? $current[$key]);
+        foreach (array('kicker', 'heading', 'description', 'form_heading', 'form_footer', 'hotline', 'support_email', 'button_text', 'success_message', 'chatbot_tenant', 'chatbot_button_text') as $key) {
+            $settings[$key] = sanitize_text_field($submitted[$key] ?? $current[$key] ?? '');
         }
-        foreach (array('image_url', 'image_url_mobile', 'facebook_url', 'zalo_url', 'linkedin_url', 'chatbot_base_url', 'webhook_url', 'twenty_base_url') as $key) {
+        foreach (array('facebook_url', 'zalo_url', 'linkedin_url', 'chatbot_base_url', 'webhook_url', 'twenty_base_url') as $key) {
             $settings[$key] = esc_url_raw($submitted[$key] ?? ($current[$key] ?? ''));
         }
         foreach (array('button_color', 'accent_color', 'background_color', 'text_color') as $key) {
@@ -419,6 +419,91 @@ function doPost(e) {
             unset($actions['inline hide-if-no-js']);
         }
         return $actions;
+    }
+
+    public function ajax_twenty_check_fields(): void
+    {
+        check_ajax_referer('mme_twenty_check', 'nonce');
+        
+        $post_id = isset($_POST['post_id']) ? absint($_POST['post_id']) : 0;
+        if (!$post_id || !current_user_can('edit_post', $post_id)) {
+            wp_send_json_error('Permission denied');
+        }
+        
+        $settings = $this->settings($post_id);
+        
+        if (empty($settings['twenty_base_url']) || empty($settings['twenty_api_key'])) {
+            wp_send_json_error('Vui lòng điền đủ Twenty URL và API Key trước khi kiểm tra.');
+        }
+        
+        $base_url = untrailingslashit(esc_url_raw($settings['twenty_base_url']));
+        $api_key = sanitize_text_field($settings['twenty_api_key']);
+        $url = $base_url . (str_ends_with(strtolower($base_url), '/rest') ? '/metadata/objects' : '/rest/metadata/objects');
+        
+        $response = wp_remote_get($url, array(
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type' => 'application/json',
+            ),
+            'timeout' => 10,
+        ));
+        
+        if (is_wp_error($response)) {
+            wp_send_json_error('Lỗi kết nối tới Twenty CRM: ' . $response->get_error_message());
+        }
+        if (wp_remote_retrieve_response_code($response) !== 200) {
+            wp_send_json_error('Lỗi kết nối tới Twenty CRM (HTTP ' . wp_remote_retrieve_response_code($response) . ')');
+        }
+        
+        $data = json_decode(wp_remote_retrieve_body($response), true);
+        $twenty_fields = array();
+        
+        if (!empty($data['data']) && is_array($data['data'])) {
+            foreach ($data['data'] as $obj) {
+                if (($obj['nameSingular'] ?? '') === 'person' && !empty($obj['fields'])) {
+                    foreach ($obj['fields'] as $field) {
+                        if (!empty($field['name'])) {
+                            $twenty_fields[] = $field['name'];
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        
+        if (empty($twenty_fields)) {
+            wp_send_json_error('Không lấy được danh sách field từ Twenty CRM. Vui lòng kiểm tra lại URL/Key.');
+        }
+        
+        $form_fields = get_post_meta($post_id, '_mme_form_fields', true);
+        $form_fields = is_array($form_fields) && $form_fields ? $form_fields : MME_Form_Plugin::default_fields();
+        
+        $standard_keys = array('full_name', 'name', 'fullname', 'ho_ten', 'hoten', 'phone', 'telephone', 'mobile', 'so_dien_thoai', 'sdt', 'email', 'email_address', 'need');
+        
+        $results = array();
+        $all_good = true;
+        
+        foreach ($form_fields as $field) {
+            $name = sanitize_key($field['name'] ?? '');
+            if (!$name) continue;
+            
+            $status = 'red';
+            if (in_array($name, $standard_keys, true)) {
+                $status = 'green';
+            } elseif (in_array($name, $twenty_fields, true) || in_array($name . 'Custom', $twenty_fields, true)) {
+                $status = 'green';
+            } else {
+                $all_good = false;
+            }
+            
+            $results[] = array(
+                'label' => sanitize_text_field($field['label'] ?? $name),
+                'name' => $name,
+                'status' => $status
+            );
+        }
+        
+        wp_send_json_success(array('results' => $results, 'all_good' => $all_good));
     }
 
     private function settings(int $post_id): array

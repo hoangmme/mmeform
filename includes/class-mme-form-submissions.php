@@ -365,15 +365,12 @@ final class MME_Form_Submissions
         }
         
         $allowed_fields = $this->get_twenty_person_fields($settings);
-        $unmapped_text = array();
         
         if (!empty($lead['need'])) {
             if (in_array('need', $allowed_fields, true)) {
                 $person['need'] = $lead['need'];
             } elseif (in_array('needCustom', $allowed_fields, true)) {
                 $person['needCustom'] = $lead['need'];
-            } else {
-                $unmapped_text[] = 'Nhu cầu: ' . $lead['need'];
             }
         }
         
@@ -386,15 +383,6 @@ final class MME_Form_Submissions
                 $person[$k] = $v;
             } elseif (in_array($k . 'Custom', $allowed_fields, true)) {
                 $person[$k . 'Custom'] = $v;
-            } else {
-                $unmapped_text[] = $k . ': ' . $v;
-            }
-        }
-        
-        if (!empty($unmapped_text)) {
-            $extra_str = implode(' | ', $unmapped_text);
-            if (in_array('jobTitle', $allowed_fields, true)) {
-                $person['jobTitle'] = mb_substr($extra_str, 0, 255);
             }
         }
 

@@ -43,42 +43,182 @@
 
 .mme-form-visual {
   min-height: 100%;
-  background: color-mix(in srgb, var(--mme-accent) 12%, #f8fafc);
+  padding: 40px 30px;
+  background: color-mix(in srgb, var(--mme-accent) 4%, #ffffff);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.mme-form-visual img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 340px;
-  object-fit: cover;
-  object-position: top center;
+.mme-form-info-content {
+  max-width: 380px;
+  margin: 0 auto;
 }
 
-.mme-image-top .mme-form-visual img {
-  min-height: 170px;
-  max-height: 260px;
+.mme-form-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: color-mix(in srgb, var(--mme-accent) 10%, #f1f5f9);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--mme-text) 80%, transparent);
+  letter-spacing: .05em;
+  margin-bottom: 24px;
+}
+
+.mme-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mme-accent);
+}
+
+.mme-form-main-heading {
+  margin: 0 0 16px;
+  font-size: clamp(32px, 4vw, 42px);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--mme-text);
+  letter-spacing: -0.03em;
+}
+
+.mme-highlight {
+  color: var(--mme-button);
+}
+
+.mme-form-main-desc {
+  margin: 0 0 24px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--mme-text) 75%, transparent);
+}
+
+.mme-form-trust-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mme-form-trust-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--mme-text) 85%, transparent);
+}
+
+.mme-trust-icon {
+  color: var(--mme-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mme-trust-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mme-form-contact-boxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.mme-contact-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, .04);
+  border: 1px solid color-mix(in srgb, var(--mme-text) 6%, transparent);
+  flex: 1 1 100%;
+}
+
+@media (min-width: 480px) {
+  .mme-contact-box {
+    flex: 1 1 200px;
+  }
+}
+
+.mme-contact-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mme-phone-icon {
+  background: color-mix(in srgb, var(--mme-button) 10%, #eff6ff);
+  color: var(--mme-button);
+}
+
+.mme-email-icon {
+  background: color-mix(in srgb, var(--mme-accent) 12%, #ecfdf5);
+  color: var(--mme-accent);
+}
+
+.mme-contact-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mme-contact-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--mme-text) 50%, transparent);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.mme-contact-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--mme-text);
+  text-decoration: none;
+}
+
+.mme-contact-value:hover {
+  text-decoration: underline;
 }
 
 .mme-form-card {
   min-width: 0;
-  padding: 22px;
+  padding: 40px 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #fff;
+  border-radius: 16px;
+  margin: 12px 12px 12px 0;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, .03);
+  border: 1px solid color-mix(in srgb, var(--mme-text) 6%, transparent);
+}
+
+.mme-form-shell.mme-layout-right .mme-form-card {
+  margin: 12px 0 12px 12px;
+}
+
+.mme-form-shell.mme-layout-top .mme-form-card,
+.mme-form-shell.no-image .mme-form-card {
+  margin: 12px;
 }
 
 .mme-form-header {
-  margin-bottom: 12px;
-}
-
-.mme-form-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-bottom: 5px;
-  color: var(--mme-button);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: .13em;
-  text-transform: uppercase;
+  margin-bottom: 24px;
 }
 
 .mme-form-shell svg {
@@ -87,50 +227,34 @@
   flex: 0 0 auto;
 }
 
-.mme-form-kicker svg {
-  width: 14px;
-  height: 14px;
-}
-
 .mme-form-header h2 {
   margin: 0;
   color: var(--mme-text);
-  font: 760 clamp(22px, 3vw, 30px)/1.12 var(--mme-font);
-  letter-spacing: -.025em;
+  font: 700 clamp(18px, 2.5vw, 22px)/1.2 var(--mme-font);
+  letter-spacing: -.02em;
 }
 
-.mme-form-header p {
-  margin: 7px 0 0;
-  color: color-mix(in srgb, var(--mme-text) 70%, transparent);
-  font-size: 13px;
-}
-
-.mme-form-trust {
+.mme-form-secure-text {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  margin: 0 0 13px;
-}
-
-.mme-form-trust span {
-  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  color: color-mix(in srgb, var(--mme-text) 72%, transparent);
+  justify-content: center;
+  gap: 6px;
+  margin-top: 16px;
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--mme-text) 60%, transparent);
 }
 
-.mme-form-trust svg {
-  width: 13px;
-  height: 13px;
+.mme-form-secure-text svg {
+  width: 14px;
+  height: 14px;
   color: var(--mme-accent);
 }
 
 .mme-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 16px 12px;
 }
 
 .mme-form-field {
@@ -251,9 +375,9 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
-  min-height: 42px;
+  min-height: 48px;
   margin-top: 12px;
-  padding: 8px 16px;
+  padding: 8px 24px;
   border: 0;
   border-radius: 10px;
   cursor: pointer;
@@ -381,16 +505,19 @@
     border-radius: 0;
     border: 0;
     box-shadow: none;
+    background: color-mix(in srgb, var(--mme-accent) 4%, #ffffff);
   }
   .mme-form-shell.mme-image-right .mme-form-visual {
     order: 0;
   }
-  .mme-form-visual img {
-    min-height: 150px;
-    max-height: 210px;
+  .mme-form-visual {
+    padding: 30px 20px;
   }
   .mme-form-card {
-    padding: 24px 14px;
+    margin: 0;
+    border-radius: 20px 20px 0 0;
+    padding: 30px 20px;
+    box-shadow: 0 -4px 20px rgba(0,0,0,.03);
   }
 }
 
