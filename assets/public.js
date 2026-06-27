@@ -102,7 +102,8 @@
       if (window.intlTelInput) {
         var iti = window.intlTelInput(telInput, {
           initialCountry: "vn",
-          showSelectedDialCode: true,
+          showSelectedDialCode: false,
+          nationalMode: true,
           utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/23.0.4/js/utils.js"
         });
         itiInstances.push({ input: telInput, iti: iti });
