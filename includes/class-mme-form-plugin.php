@@ -80,13 +80,23 @@ final class MME_Form_Plugin
 
     public function serve_embed(): void
     {
-        $form_id = absint(get_query_var('mme_form_embed'));
+        $form_id = 0;
+        if (get_query_var('mme_form_embed')) {
+            $form_id = absint(get_query_var('mme_form_embed'));
+        } elseif (is_singular('mme_form')) {
+            $form_id = get_the_ID();
+        }
+
         if (!$form_id) {
             return;
         }
 
         $form = get_post($form_id);
-        if (!$form || $form->post_type !== 'mme_form' || $form->post_status !== 'publish') {
+        if (!$form || $form->post_type !== 'mme_form') {
+            return;
+        }
+
+        if ($form->post_status !== 'publish' && !current_user_can('edit_post', $form_id)) {
             status_header(404);
             exit('Form not found.');
         }
@@ -108,6 +118,17 @@ final class MME_Form_Plugin
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?php echo esc_html(get_the_title($form_id)); ?></title>
     <link rel="stylesheet" href="<?php echo esc_url(MME_FORM_URL . 'assets/public.css?ver=' . MME_FORM_VERSION); ?>">
+    <style>
+        body.mme-form-embed-page {
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
 </head>
 <body class="mme-form-embed-page">
 <?php echo MME_Form_Renderer::render($form_id, array('embed' => true, 'parent_url' => $parent_url)); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
