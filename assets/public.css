@@ -489,9 +489,9 @@
   .mme-form-shell,
   .mme-form-shell.mme-image-right {
     grid-template-columns: 1fr;
-    border-radius: 0;
-    border: 0;
-    box-shadow: none;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--mme-text) 10%, transparent);
+    box-shadow: 0 4px 20px rgba(15, 23, 42, .08);
     background: color-mix(in srgb, var(--mme-accent) 4%, #ffffff);
   }
   .mme-form-shell.mme-image-right .mme-form-visual {
@@ -501,7 +501,7 @@
     padding: 24px 16px;
   }
   .mme-form-card {
-    border-radius: 20px 20px 0 0;
+    border-radius: 0;
     padding: 24px 16px;
   }
 }

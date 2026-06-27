@@ -197,7 +197,9 @@ final class MME_Form_Renderer
             $type = 'text';
         }
 
-        $name = sanitize_key($field['name'] ?? 'field');
+        $name = sanitize_text_field($field['name'] ?? '');
+        $name = trim(preg_replace('/\s+/', '_', $name));
+        if (!$name) $name = 'field';
         $label = sanitize_text_field($field['label'] ?? $name);
         $placeholder = sanitize_text_field($field['placeholder'] ?? '');
         $required = !empty($field['required']);

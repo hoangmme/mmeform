@@ -100,7 +100,8 @@ final class MME_Form_Submissions
         }
 
         if ($errors) {
-            return new WP_Error('mme_form_validation', 'Vui lòng kiểm tra các trường bắt buộc.', array('status' => 422, 'fields' => $errors));
+            $error_msg = implode(' ', array_values($errors));
+            return new WP_Error('mme_form_validation_failed', $error_msg, array('status' => 400, 'errors' => $errors));
         }
 
         $current_url = isset($input['current_url']) && is_scalar($input['current_url'])
@@ -212,7 +213,8 @@ final class MME_Form_Submissions
         $email = $this->first_value($values, array('email', 'email_address'));
 
         foreach ($fields as $field) {
-            $field_name = sanitize_key($field['name'] ?? '');
+            $field_name = sanitize_text_field($field['name'] ?? '');
+            $field_name = trim(preg_replace('/\s+/', '_', $field_name));
             $field_type = sanitize_key($field['type'] ?? '');
             if (!$email && $field_type === 'email') {
                 $email = $values[$field_name] ?? '';
