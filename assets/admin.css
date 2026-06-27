@@ -1,0 +1,116 @@
+.mme-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+}
+
+.mme-admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mme-admin-field > span {
+  font-weight: 600;
+}
+
+.mme-admin-field input:not([type="color"]),
+.mme-admin-field select,
+.mme-admin-field textarea {
+  width: 100%;
+}
+
+.mme-admin-field input[type="color"] {
+  width: 80px;
+  height: 38px;
+}
+
+.mme-admin-span-2 {
+  grid-column: span 2;
+}
+
+.mme-media-row {
+  display: flex;
+  gap: 8px;
+}
+
+.mme-media-row input {
+  flex: 1;
+}
+
+.mme-fields-table {
+  margin: 14px 0;
+}
+
+.mme-fields-table th:first-child,
+.mme-fields-table td:first-child,
+.mme-fields-table th:last-child,
+.mme-fields-table td:last-child {
+  width: 38px;
+}
+
+.mme-fields-table input[type="text"],
+.mme-fields-table select,
+.mme-fields-table textarea {
+  width: 100%;
+}
+
+.mme-field-options {
+  margin-top: 6px;
+  resize: vertical;
+}
+
+.mme-drag-handle {
+  cursor: grab;
+  font-size: 18px;
+  color: #64748b;
+  text-align: center;
+}
+
+.mme-field-row.is-dragging {
+  opacity: .45;
+}
+
+.mme-integration-card {
+  padding: 14px 0 18px;
+  border-bottom: 1px solid #dcdcde;
+}
+
+.mme-integration-card:last-child {
+  border-bottom: 0;
+}
+
+.mme-integration-card h3 {
+  margin: 0 0 10px;
+}
+
+.mme-admin-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+
+.mme-json-preview {
+  max-height: 520px;
+  overflow: auto;
+  padding: 16px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 782px) {
+  .mme-admin-grid {
+    grid-template-columns: 1fr;
+  }
+  .mme-admin-span-2 {
+    grid-column: auto;
+  }
+  .mme-fields-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
