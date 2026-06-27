@@ -206,50 +206,6 @@ final class MME_Form_Renderer
                     </div>
                 </div>
 
-                <!-- Khu vực 3: Benefit List -->
-                <div class="mme-area-trust">
-                    <?php if (!empty($settings['trust_items']) && is_array($settings['trust_items'])) : ?>
-                        <ul class="mme-form-trust-list">
-                            <?php foreach (array_slice($settings['trust_items'], 0, 4) as $item) : ?>
-                                <li>
-                                    <span class="mme-trust-icon"><?php echo self::icon('check-circle'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-                                    <span><?php echo esc_html($item); ?></span>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Khu vực 4: Contact Cards -->
-                <div class="mme-area-contact">
-                    <div class="mme-form-contact-boxes">
-                        <?php if (!empty($settings['hotline'])) : ?>
-                            <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $settings['hotline'])); ?>" class="mme-contact-box group">
-                                <div class="mme-contact-icon mme-phone-icon">
-                                    <?php echo self::icon('phone-call'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                                </div>
-                                <div class="mme-contact-text">
-                                    <span class="mme-contact-label"><?php echo esc_html($settings['hotline_label']); ?></span>
-                                    <span class="mme-contact-value"><?php echo esc_html($settings['hotline']); ?></span>
-                                </div>
-                            </a>
-                        <?php endif; ?>
-                        
-                        <?php if (!empty($settings['support_email'])) : ?>
-                            <a href="mailto:<?php echo esc_attr($settings['support_email']); ?>" class="mme-contact-box group">
-                                <div class="mme-contact-icon mme-email-icon">
-                                    <?php echo self::icon('mail'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                                </div>
-                                <div class="mme-contact-text">
-                                    <span class="mme-contact-label"><?php echo esc_html($settings['email_label']); ?></span>
-                                    <span class="mme-contact-value"><?php echo esc_html($settings['support_email']); ?></span>
-                                </div>
-                            </a>
-                        <?php endif; ?>
-                        
-                        <?php echo self::render_social_links($settings); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                    </div>
-                </div>
             </div>
             
             <?php if (!empty($args['embed']) && $has_tel) : ?>
@@ -315,64 +271,7 @@ final class MME_Form_Renderer
                     <?php endforeach; ?>
                 </div>
 
-                <!-- Khu vực 3 & 4 (bên trái) -->
-                <?php if (!empty($settings['trust_items'])) : ?>
-                    <div class="mme-area-trust">
-                        <ul class="mme-form-trust-list">
-                            <?php foreach ((array) $settings['trust_items'] as $item) : ?>
-                                <?php if (trim($item) !== '') : ?>
-                                    <li>
-                                        <div class="mme-trust-icon">
-                                            <?php echo self::icon('check-circle'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                                        </div>
-                                        <span><?php echo esc_html(trim($item)); ?></span>
-                                    </li>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
-                        </ul>
-                    </div>
-                <?php endif; ?>
 
-                <div class="mme-area-contact">
-                    <?php
-                    // Contact boxes
-                    $html = '';
-                    $html .= '<div class="mme-form-contact-boxes">';
-
-                    // Hotline
-                    if (!empty($settings['hotline'])) {
-                        $html .= sprintf(
-                            '<a href="tel:%s" class="mme-contact-box"><div class="mme-contact-icon mme-phone-icon">%s</div><div class="mme-contact-text"><span class="mme-contact-label">%s</span><span class="mme-contact-value">%s</span></div></a>',
-                            esc_attr(preg_replace('/[^0-9+]/', '', $settings['hotline'])),
-                            self::icon('phone-call'),
-                            esc_html($settings['hotline_label'] ?? 'Hotline tư vấn'),
-                            esc_html($settings['hotline'])
-                        );
-                    }
-
-                    // Email
-                    if (!empty($settings['support_email'])) {
-                        $html .= sprintf(
-                            '<a href="mailto:%s" class="mme-contact-box"><div class="mme-contact-icon mme-email-icon">%s</div><div class="mme-contact-text"><span class="mme-contact-label">%s</span><span class="mme-contact-value">%s</span></div></a>',
-                            esc_attr($settings['support_email']),
-                            self::icon('mail'),
-                            esc_html($settings['email_label'] ?? 'Email hỗ trợ'),
-                            esc_html($settings['support_email'])
-                        );
-                    }
-
-                    $html .= '</div>';
-                    echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-
-                    // Social
-                    if (!empty($settings['facebook_url'])) {
-                        echo self::render_social_box($settings, 'facebook'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-                    } elseif (!empty($settings['zalo_url'])) {
-                        echo self::render_social_box($settings, 'zalo'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-                    }
-                    ?>
-                </div>
-            </div> <!-- End mme-area-left -->
             <?php else : ?>
                 <div class="mme-input-wrapper mme-has-icon">
                     <div class="mme-input-icon-left">
