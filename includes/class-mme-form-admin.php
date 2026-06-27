@@ -318,11 +318,15 @@ function doPost(e) {
                     continue;
                 }
                 $type = sanitize_key($field['type'] ?? 'text');
-                if (!in_array($type, array('text', 'email', 'tel', 'textarea', 'select', 'radio'), true)) {
+                if (!in_array($type, array('text', 'email', 'tel', 'date', 'time', 'textarea', 'select', 'radio'), true)) {
                     $type = 'text';
                 }
                 $label = sanitize_text_field($field['label'] ?? 'Field ' . ($index + 1));
-                $name = sanitize_key($field['name'] ?? sanitize_title($label));
+                $name = sanitize_text_field($field['name'] ?? '');
+                $name = trim(preg_replace('/\s+/', '_', $name));
+                if (!$name) {
+                    $name = sanitize_title($label);
+                }
                 if (!$name) {
                     $name = 'field_' . ($index + 1);
                 }
