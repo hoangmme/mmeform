@@ -387,6 +387,18 @@ final class MME_Form_Submissions
             if (in_array(strtolower($k), $standard_keys, true)) {
                 continue;
             }
+            
+            // Check if this field is a select or radio to auto-format to Twenty CRM Option slug (UPPER_SNAKE_CASE)
+            foreach ($fields as $f) {
+                if (($f['name'] ?? '') === $k && in_array($f['type'] ?? '', array('select', 'radio'), true)) {
+                    $slug = remove_accents($v);
+                    $slug = preg_replace('/[^a-zA-Z0-9]+/', '_', $slug);
+                    $slug = trim($slug, '_');
+                    $v = strtoupper($slug);
+                    break;
+                }
+            }
+            
             if (in_array($k, $allowed_fields, true)) {
                 $person[$k] = $v;
             } elseif (in_array($k . 'Custom', $allowed_fields, true)) {
@@ -402,14 +414,28 @@ final class MME_Form_Submissions
         foreach ($hidden_fields as $k => $v) {
             if ($v !== '') {
                 $camel = lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $k))));
+                $mapped_key = null;
                 if (in_array($k, $allowed_fields, true)) {
-                    $person[$k] = $v;
+                    $mapped_key = $k;
                 } elseif (in_array($camel, $allowed_fields, true)) {
-                    $person[$camel] = $v;
+                    $mapped_key = $camel;
                 } elseif (in_array($k . 'Custom', $allowed_fields, true)) {
-                    $person[$k . 'Custom'] = $v;
+                    $mapped_key = $k . 'Custom';
                 } elseif (in_array($camel . 'Custom', $allowed_fields, true)) {
-                    $person[$camel . 'Custom'] = $v;
+                    $mapped_key = $camel . 'Custom';
+                }
+                
+                if ($mapped_key) {
+                    if ($k === 'started_at') {
+                        $person[$mapped_key] = date('c', is_numeric($v) ? (int) ($v / 1000) : time());
+                    } elseif ($k === 'current_url' || $k === 'referrer_url') {
+                        $person[$mapped_key] = array(
+                            'primaryLinkUrl' => $v,
+                            'primaryLinkLabel' => $k === 'current_url' ? 'Current URL' : 'Referrer URL'
+                        );
+                    } else {
+                        $person[$mapped_key] = $v;
+                    }
                 }
             }
         }
