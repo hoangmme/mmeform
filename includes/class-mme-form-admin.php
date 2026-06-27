@@ -87,10 +87,18 @@ final class MME_Form_Admin
             <?php $this->text_input('success_message', 'Thông báo thành công', $settings['success_message']); ?>
 
             <label class="mme-admin-field mme-admin-span-2">
-                <span>Ảnh minh họa</span>
+                <span>Ảnh minh họa (Desktop)</span>
                 <div class="mme-media-row">
                     <input type="url" id="mme-image-url" name="mme_settings[image_url]" value="<?php echo esc_attr($settings['image_url']); ?>" placeholder="https://...">
                     <button type="button" class="button" id="mme-pick-image">Chọn ảnh</button>
+                </div>
+            </label>
+
+            <label class="mme-admin-field mme-admin-span-2">
+                <span>Ảnh minh họa (Mobile)</span>
+                <div class="mme-media-row">
+                    <input type="url" id="mme-image-url-mobile" name="mme_settings[image_url_mobile]" value="<?php echo esc_attr($settings['image_url_mobile'] ?? ''); ?>" placeholder="https://...">
+                    <button type="button" class="button" id="mme-pick-image-mobile">Chọn ảnh</button>
                 </div>
             </label>
 
@@ -341,8 +349,8 @@ function doPost(e) {
         foreach (array('kicker', 'heading', 'description', 'button_text', 'success_message', 'chatbot_tenant', 'chatbot_button_text') as $key) {
             $settings[$key] = sanitize_text_field($submitted[$key] ?? $current[$key]);
         }
-        foreach (array('image_url', 'facebook_url', 'zalo_url', 'linkedin_url', 'chatbot_base_url', 'webhook_url', 'twenty_base_url') as $key) {
-            $settings[$key] = esc_url_raw($submitted[$key] ?? $current[$key]);
+        foreach (array('image_url', 'image_url_mobile', 'facebook_url', 'zalo_url', 'linkedin_url', 'chatbot_base_url', 'webhook_url', 'twenty_base_url') as $key) {
+            $settings[$key] = esc_url_raw($submitted[$key] ?? ($current[$key] ?? ''));
         }
         foreach (array('button_color', 'accent_color', 'background_color', 'text_color') as $key) {
             $settings[$key] = sanitize_hex_color($submitted[$key] ?? '') ?: $current[$key];

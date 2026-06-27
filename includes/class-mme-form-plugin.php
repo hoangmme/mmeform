@@ -137,6 +137,7 @@ final class MME_Form_Plugin
             'button_text' => 'Gửi thông tin',
             'success_message' => 'Đã nhận thông tin. MME sẽ liên hệ với bạn sớm!',
             'image_url' => '',
+            'image_url_mobile' => '',
             'image_position' => 'left',
             'button_color' => '#0f766e',
             'accent_color' => '#14b8a6',

@@ -293,12 +293,28 @@ final class MME_Form_Submissions
         $lead = (array) $payload['lead'];
         $source_url = (string) ($payload['source']['url'] ?? '');
         $intro = array_filter(array($lead['need'] ?? '', $source_url ? 'Source URL: ' . $source_url : ''));
+        
+        $raw_name = $contact['name'] ?: ($contact['phone'] ?: ($contact['email'] ?: 'Website lead'));
+        $name_parts = explode(' ', trim($raw_name), 2);
+        
         $person = array(
-            'name' => $contact['name'] ?: ($contact['phone'] ?: ($contact['email'] ?: 'Website lead')),
-            'emails' => array('primaryEmail' => $contact['email'] ?? ''),
-            'phones' => array('primaryPhoneNumber' => $contact['phone'] ?? ''),
-            'intro' => implode("\n", $intro),
+            'name' => array(
+                'firstName' => $name_parts[0],
+                'lastName' => $name_parts[1] ?? '',
+            ),
         );
+        
+        if (!empty($contact['email'])) {
+            $person['emails'] = array('primaryEmail' => $contact['email']);
+        }
+        
+        if (!empty($contact['phone'])) {
+            $phone = preg_replace('/[^0-9+]/', '', $contact['phone']);
+            if (str_starts_with($phone, '0') && strlen($phone) === 10) {
+                $phone = '+84' . substr($phone, 1);
+            }
+            $person['phones'] = array('primaryPhoneNumber' => $phone);
+        }
 
         $url = untrailingslashit(esc_url_raw($settings['twenty_base_url'])) . '/rest/people';
         $response = wp_remote_post($url, array(

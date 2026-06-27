@@ -57,9 +57,14 @@ final class MME_Form_Renderer
             style="<?php echo esc_attr($style); ?>"
             data-form-id="<?php echo esc_attr((string) $form_id); ?>"
         >
-            <?php if (!empty($settings['image_url'])) : ?>
+            <?php if (!empty($settings['image_url']) || !empty($settings['image_url_mobile'])) : ?>
                 <div class="mme-form-visual" aria-hidden="true">
-                    <img src="<?php echo esc_url($settings['image_url']); ?>" alt="" loading="lazy">
+                    <picture>
+                        <?php if (!empty($settings['image_url_mobile'])) : ?>
+                            <source media="(max-width: 680px)" srcset="<?php echo esc_url($settings['image_url_mobile']); ?>">
+                        <?php endif; ?>
+                        <img src="<?php echo esc_url($settings['image_url'] ?: $settings['image_url_mobile']); ?>" alt="" loading="lazy">
+                    </picture>
                 </div>
             <?php endif; ?>
 

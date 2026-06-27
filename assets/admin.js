@@ -212,6 +212,20 @@
       });
     }
 
+    var mediaButtonMobile = document.getElementById("mme-pick-image-mobile");
+    var imageInputMobile = document.getElementById("mme-image-url-mobile");
+    if (mediaButtonMobile && imageInputMobile && window.wp && wp.media) {
+      mediaButtonMobile.addEventListener("click", function () {
+        var frame = wp.media({ title: "Chọn ảnh cho MME Form (Mobile)", button: { text: "Dùng ảnh này" }, multiple: false });
+        frame.on("select", function () {
+          var attachment = frame.state().get("selection").first().toJSON();
+          imageInputMobile.value = attachment.url || "";
+          imageInputMobile.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+        frame.open();
+      });
+    }
+
     var copyGasButton = document.getElementById("mme-copy-gas");
     if (copyGasButton) {
       copyGasButton.addEventListener("click", function () {
