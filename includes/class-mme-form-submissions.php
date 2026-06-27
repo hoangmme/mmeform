@@ -70,12 +70,17 @@ final class MME_Form_Submissions
 
         foreach ($fields as $field) {
             $name = sanitize_text_field($field['name'] ?? '');
-            $name = trim(preg_replace('/\s+/', '_', $name));
-            if (!$name) {
+            $field_name = trim(preg_replace('/\s+/', '_', $name));
+            if (!$field_name) {
                 continue;
             }
             $type = sanitize_key($field['type'] ?? 'text');
-            $raw_value = is_scalar($raw_values[$name] ?? null) ? (string) $raw_values[$name] : '';
+            $raw_value = '';
+            if (isset($raw_values[$field_name]) && is_scalar($raw_values[$field_name])) {
+                $raw_value = (string) $raw_values[$field_name];
+            } elseif (isset($raw_values[sanitize_key($field_name)]) && is_scalar($raw_values[sanitize_key($field_name)])) {
+                $raw_value = (string) $raw_values[sanitize_key($field_name)];
+            }
             $raw_value = $this->limit_string($raw_value, $type === 'textarea' ? 5000 : 500);
             if ($type === 'email') {
                 $value = sanitize_email($raw_value);
@@ -425,9 +430,15 @@ final class MME_Form_Submissions
             'timeout' => 10,
         ));
         if (is_wp_error($response)) {
-            return array('success' => false, 'error' => $response->get_error_message());
+            $err = $response->get_error_message();
+            error_log('MME Form - Twenty CRM Error: ' . $err);
+            return array('success' => false, 'error' => $err);
         }
         $status = wp_remote_retrieve_response_code($response);
-        return array('success' => $status >= 200 && $status < 300, 'status_code' => $status);
+        $body = wp_remote_retrieve_body($response);
+        if ($status >= 300) {
+            error_log('MME Form - Twenty CRM Error HTTP ' . $status . ': ' . $body);
+        }
+        return array('success' => $status >= 200 && $status < 300, 'status_code' => $status, 'response' => json_decode($body, true));
     }
 }
