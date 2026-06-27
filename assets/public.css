@@ -52,6 +52,7 @@
   height: 100%;
   min-height: 340px;
   object-fit: cover;
+  object-position: top center;
 }
 
 .mme-image-top .mme-form-visual img {
@@ -139,6 +140,14 @@
 .mme-field-textarea,
 .mme-field-radio {
   grid-column: 1 / -1;
+}
+
+.mme-field-width-100 {
+  grid-column: 1 / -1 !important;
+}
+
+.mme-field-width-50 {
+  grid-column: span 1 !important;
 }
 
 .mme-form-field > label {
@@ -352,6 +361,9 @@
 }
 
 @media (max-width: 680px) {
+  .mme-form-embed-page {
+    padding: 0;
+  }
   .mme-form-shell,
   .mme-form-shell.mme-image-right {
     grid-template-columns: 1fr;

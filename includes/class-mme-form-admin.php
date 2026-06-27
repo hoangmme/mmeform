@@ -65,7 +65,7 @@ final class MME_Form_Admin
             <table class="widefat striped mme-fields-table">
                 <thead>
                     <tr>
-                        <th></th><th>Nhãn</th><th>Tên field</th><th>Loại</th><th>Placeholder / options</th><th>Bắt buộc</th><th></th>
+                        <th></th><th>Nhãn</th><th>Tên field</th><th>Độ rộng</th><th>Loại</th><th>Placeholder / options</th><th>Bắt buộc</th><th></th>
                     </tr>
                 </thead>
                 <tbody id="mme-fields-body"></tbody>
@@ -80,6 +80,7 @@ final class MME_Form_Admin
         $settings = $this->settings($post->ID);
         ?>
         <div class="mme-admin-grid">
+            <?php $this->text_input('kicker', 'Chữ nhỏ trên đầu', $settings['kicker']); ?>
             <?php $this->text_input('heading', 'Tiêu đề', $settings['heading']); ?>
             <?php $this->text_input('description', 'Mô tả ngắn', $settings['description']); ?>
             <?php $this->text_input('button_text', 'Chữ trên nút', $settings['button_text']); ?>
@@ -223,6 +224,7 @@ final class MME_Form_Admin
                 $fields[] = array(
                     'label' => $label,
                     'name' => $name,
+                    'width' => in_array($field['width'] ?? '', array('100', '50'), true) ? $field['width'] : '100',
                     'type' => $type,
                     'placeholder' => sanitize_text_field($field['placeholder'] ?? ''),
                     'required' => !empty($field['required']),
@@ -238,7 +240,7 @@ final class MME_Form_Admin
         $current = $this->settings($post_id);
         $settings = MME_Form_Plugin::default_settings();
 
-        foreach (array('heading', 'description', 'button_text', 'success_message', 'chatbot_tenant', 'chatbot_button_text') as $key) {
+        foreach (array('kicker', 'heading', 'description', 'button_text', 'success_message', 'chatbot_tenant', 'chatbot_button_text') as $key) {
             $settings[$key] = sanitize_text_field($submitted[$key] ?? $current[$key]);
         }
         foreach (array('image_url', 'facebook_url', 'zalo_url', 'linkedin_url', 'chatbot_base_url', 'webhook_url', 'twenty_base_url') as $key) {

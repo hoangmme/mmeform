@@ -65,7 +65,9 @@ final class MME_Form_Renderer
 
             <div class="mme-form-card">
                 <header class="mme-form-header">
-                    <span class="mme-form-kicker"><?php echo self::icon('spark'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> MME</span>
+                    <?php if (!empty($settings['kicker'])) : ?>
+                        <span class="mme-form-kicker"><?php echo self::icon('spark'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> <?php echo esc_html($settings['kicker']); ?></span>
+                    <?php endif; ?>
                     <h2><?php echo esc_html($settings['heading']); ?></h2>
                     <?php if (!empty($settings['description'])) : ?>
                         <p><?php echo esc_html($settings['description']); ?></p>
@@ -140,11 +142,12 @@ final class MME_Form_Renderer
         $placeholder = sanitize_text_field($field['placeholder'] ?? '');
         $required = !empty($field['required']);
         $options = isset($field['options']) && is_array($field['options']) ? $field['options'] : array();
+        $width_class = ($field['width'] ?? '100') === '50' ? 'mme-field-width-50' : 'mme-field-width-100';
         $id = wp_unique_id('mme-field-');
 
         ob_start();
         ?>
-        <div class="mme-form-field mme-field-<?php echo esc_attr($type); ?>">
+        <div class="mme-form-field mme-field-<?php echo esc_attr($type); ?> <?php echo esc_attr($width_class); ?>">
             <label for="<?php echo esc_attr($id); ?>">
                 <?php echo esc_html($label); ?><?php echo $required ? '<span aria-hidden="true">*</span>' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
             </label>

@@ -62,6 +62,21 @@
       nameInput.value = field.name || "";
       nameCell.appendChild(nameInput);
 
+      var widthCell = document.createElement("td");
+      var widthSelect = document.createElement("select");
+      widthSelect.className = "mme-field-width";
+      [
+        ["100", "1 cột (100%)"],
+        ["50", "2 cột (50%)"],
+      ].forEach(function (option) {
+        var node = document.createElement("option");
+        node.value = option[0];
+        node.textContent = option[1];
+        node.selected = (field.width || "100") === option[0];
+        widthSelect.appendChild(node);
+      });
+      widthCell.appendChild(widthSelect);
+
       var typeCell = document.createElement("td");
       var typeSelect = document.createElement("select");
       typeSelect.className = "mme-field-type";
@@ -105,7 +120,7 @@
       removeButton.textContent = "Xóa";
       removeCell.appendChild(removeButton);
 
-      [handleCell, labelCell, nameCell, typeCell, detailsCell, requiredCell, removeCell].forEach(function (cell) {
+      [handleCell, labelCell, nameCell, widthCell, typeCell, detailsCell, requiredCell, removeCell].forEach(function (cell) {
         row.appendChild(cell);
       });
 
@@ -158,6 +173,7 @@
         return {
           label: row.querySelector(".mme-field-label").value || "Field " + (index + 1),
           name: slugify(name) || "field_" + (index + 1),
+          width: row.querySelector(".mme-field-width").value || "100",
           type: row.querySelector(".mme-field-type").value,
           placeholder: row.querySelector(".mme-field-placeholder").value,
           required: row.querySelector(".mme-field-required").checked,

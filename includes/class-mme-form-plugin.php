@@ -120,17 +120,18 @@ final class MME_Form_Plugin
     public static function default_fields(): array
     {
         return array(
-            array('name' => 'full_name', 'label' => 'Họ và tên', 'type' => 'text', 'placeholder' => 'Nguyễn Văn A', 'required' => true, 'options' => array()),
-            array('name' => 'phone', 'label' => 'Số điện thoại', 'type' => 'tel', 'placeholder' => '09xx xxx xxx', 'required' => true, 'options' => array()),
-            array('name' => 'email', 'label' => 'Email', 'type' => 'email', 'placeholder' => 'email@example.com', 'required' => false, 'options' => array()),
-            array('name' => 'need', 'label' => 'Nhu cầu tư vấn', 'type' => 'textarea', 'placeholder' => 'Bạn đang quan tâm điều gì?', 'required' => false, 'options' => array()),
-            array('name' => 'contact_channel', 'label' => 'Kênh liên hệ', 'type' => 'radio', 'placeholder' => '', 'required' => false, 'options' => array('Điện thoại', 'Zalo', 'Email')),
+            array('name' => 'full_name', 'label' => 'Họ và tên', 'type' => 'text', 'width' => '100', 'placeholder' => 'Nguyễn Văn A', 'required' => true, 'options' => array()),
+            array('name' => 'phone', 'label' => 'Số điện thoại', 'type' => 'tel', 'width' => '50', 'placeholder' => '09xx xxx xxx', 'required' => true, 'options' => array()),
+            array('name' => 'email', 'label' => 'Email', 'type' => 'email', 'width' => '50', 'placeholder' => 'email@example.com', 'required' => false, 'options' => array()),
+            array('name' => 'need', 'label' => 'Nhu cầu tư vấn', 'type' => 'textarea', 'width' => '100', 'placeholder' => 'Bạn đang quan tâm điều gì?', 'required' => false, 'options' => array()),
+            array('name' => 'contact_channel', 'label' => 'Kênh liên hệ', 'type' => 'radio', 'width' => '100', 'placeholder' => '', 'required' => false, 'options' => array('Điện thoại', 'Zalo', 'Email')),
         );
     }
 
     public static function default_settings(): array
     {
         return array(
+            'kicker' => 'MME',
             'heading' => 'Đăng ký tư vấn',
             'description' => 'Để lại thông tin, đội ngũ MME sẽ phản hồi sớm.',
             'button_text' => 'Gửi thông tin',
