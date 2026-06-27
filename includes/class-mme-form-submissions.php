@@ -382,15 +382,62 @@ final class MME_Form_Submissions
             }
         }
         
+        $twenty_metadata = get_post_meta($post_id, '_mme_twenty_person_metadata', true);
+        if (!is_array($twenty_metadata)) {
+            $twenty_metadata = array();
+        }
+        
         $standard_keys = array('full_name', 'name', 'fullname', 'ho_ten', 'hoten', 'phone', 'telephone', 'mobile', 'so_dien_thoai', 'sdt', 'email', 'email_address', 'need');
         foreach ((array) $payload['fields'] as $k => $v) {
             if (in_array(strtolower($k), $standard_keys, true)) {
                 continue;
             }
+            
+            $mapped_key = null;
             if (in_array($k, $allowed_fields, true)) {
-                $person[$k] = $v;
+                $mapped_key = $k;
             } elseif (in_array($k . 'Custom', $allowed_fields, true)) {
-                $person[$k . 'Custom'] = $v;
+                $mapped_key = $k . 'Custom';
+            }
+            
+            if ($mapped_key) {
+                $twenty_type = $twenty_metadata[$mapped_key]['type'] ?? '';
+                if ($twenty_type === 'SELECT' || $twenty_type === 'MULTI_SELECT') {
+                    $slug = remove_accents($v);
+                    $slug = preg_replace('/[^a-zA-Z0-9]+/', '_', $slug);
+                    $slug = trim($slug, '_');
+                    $slug = strtoupper($slug);
+                    
+                    $matched = false;
+                    if (!empty($twenty_metadata[$mapped_key]['options'])) {
+                        foreach ($twenty_metadata[$mapped_key]['options'] as $opt) {
+                            if ($opt['value'] === $slug || strcasecmp($opt['label'], $v) === 0 || strcasecmp($opt['value'], $v) === 0) {
+                                $v = $opt['value'];
+                                $matched = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!$matched) {
+                        $v = $slug;
+                    }
+                    
+                    if ($twenty_type === 'MULTI_SELECT') {
+                        $v = array($v);
+                    }
+                } elseif ($twenty_type === 'NUMBER' || $twenty_type === 'CURRENCY') {
+                    $v = (float)$v;
+                } elseif ($twenty_type === 'BOOLEAN') {
+                    $v = filter_var($v, FILTER_VALIDATE_BOOLEAN);
+                } elseif ($twenty_type === 'DATE' || $twenty_type === 'DATE_TIME') {
+                    if (is_numeric($v)) {
+                        $v = date('c', (int)($v / 1000));
+                    } elseif (strtotime($v)) {
+                        $v = date('c', strtotime($v));
+                    }
+                }
+                
+                $person[$mapped_key] = $v;
             }
         }
 

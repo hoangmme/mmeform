@@ -467,7 +467,7 @@ function doPost(e) {
                 if (($obj['nameSingular'] ?? '') === 'person' && !empty($obj['fields'])) {
                     foreach ($obj['fields'] as $field) {
                         if (!empty($field['name'])) {
-                            $twenty_fields[] = $field['name'];
+                            $twenty_fields[$field['name']] = $field;
                         }
                     }
                     break;
@@ -479,12 +479,15 @@ function doPost(e) {
             wp_send_json_error('Không lấy được danh sách field từ Twenty CRM. Vui lòng kiểm tra lại URL/Key.');
         }
         
+        // Cache this rich metadata for submissions
+        update_post_meta($post_id, '_mme_twenty_person_metadata', $twenty_fields);
+        
         $form_fields = get_post_meta($post_id, '_mme_form_fields', true);
         $form_fields = is_array($form_fields) && $form_fields ? $form_fields : MME_Form_Plugin::default_fields();
         
-        $form_fields[] = array('label' => 'URL gửi form (Ẩn)', 'name' => 'current_url');
-        $form_fields[] = array('label' => 'Nguồn truy cập (Ẩn)', 'name' => 'referrer_url');
-        $form_fields[] = array('label' => 'Thời gian bắt đầu (Ẩn)', 'name' => 'started_at');
+        $form_fields[] = array('label' => 'URL gửi form (Ẩn)', 'name' => 'current_url', 'type' => 'hidden');
+        $form_fields[] = array('label' => 'Nguồn truy cập (Ẩn)', 'name' => 'referrer_url', 'type' => 'hidden');
+        $form_fields[] = array('label' => 'Thời gian bắt đầu (Ẩn)', 'name' => 'started_at', 'type' => 'hidden');
         
         $standard_keys = array('full_name', 'name', 'fullname', 'ho_ten', 'hoten', 'phone', 'telephone', 'mobile', 'so_dien_thoai', 'sdt', 'email', 'email_address', 'need');
         
@@ -496,29 +499,62 @@ function doPost(e) {
             $name = trim(preg_replace('/\s+/', '_', $name));
             if (!$name) continue;
             
+            $mme_type = sanitize_text_field($field['type'] ?? 'text');
             $status = 'red';
+            $message = '';
+            
             if (in_array(strtolower($name), $standard_keys, true)) {
                 $status = 'green';
-            } elseif (in_array($name, $twenty_fields, true) || in_array($name . 'Custom', $twenty_fields, true)) {
-                $status = 'green';
+                $message = 'Trường mặc định';
             } else {
-                // Check camelCase for hidden fields
+                $matched_key = null;
                 $camel_name = lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $name))));
-                if (in_array($camel_name, $twenty_fields, true) || in_array($camel_name . 'Custom', $twenty_fields, true)) {
+                
+                if (isset($twenty_fields[$name])) {
+                    $matched_key = $name;
+                } elseif (isset($twenty_fields[$name . 'Custom'])) {
+                    $matched_key = $name . 'Custom';
+                } elseif (isset($twenty_fields[$camel_name])) {
+                    $matched_key = $camel_name;
+                } elseif (isset($twenty_fields[$camel_name . 'Custom'])) {
+                    $matched_key = $camel_name . 'Custom';
+                }
+                
+                if ($matched_key) {
                     $status = 'green';
+                    $twenty_type = $twenty_fields[$matched_key]['type'] ?? '';
+                    
+                    // Cross check types
+                    if (in_array($mme_type, array('select', 'radio', 'checkbox')) && !in_array($twenty_type, array('SELECT', 'MULTI_SELECT'))) {
+                        $message = 'Cảnh báo: Form là ' . $mme_type . ' nhưng CRM là ' . $twenty_type . ' (Vẫn có thể hoạt động nhưng nên cẩn thận)';
+                        $status = 'orange'; // Will style this dynamically in JS
+                    } elseif ($mme_type === 'number' && $twenty_type !== 'NUMBER' && $twenty_type !== 'CURRENCY') {
+                        $message = 'Cảnh báo: Form là Số nhưng CRM là ' . $twenty_type;
+                        $status = 'orange';
+                    } elseif ($twenty_type === 'SELECT' || $twenty_type === 'MULTI_SELECT') {
+                        $message = 'CRM là SELECT (Plugin sẽ tự động map option value)';
+                    } else {
+                        $message = 'Loại dữ liệu: ' . $twenty_type;
+                    }
                 } else {
                     $all_good = false;
+                    $message = 'Không tìm thấy field này trong Twenty CRM';
                 }
             }
             
             $results[] = array(
                 'label' => sanitize_text_field($field['label'] ?? $name),
                 'name' => $name,
-                'status' => $status
+                'status' => $status,
+                'message' => $message
             );
         }
         
-        wp_send_json_success(array('results' => $results, 'all_good' => $all_good, 'twenty_fields' => $twenty_fields));
+        wp_send_json_success(array(
+            'results' => $results,
+            'all_good' => $all_good,
+            'twenty_fields' => array_keys($twenty_fields)
+        ));
     }
 
     private function settings(int $post_id): array

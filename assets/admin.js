@@ -291,9 +291,13 @@
           
           var html = '<ul style="margin: 0; padding-left: 20px;">';
           res.data.results.forEach(function(item) {
-            var color = item.status === 'green' ? '#00a32a' : '#d63638';
-            var icon = item.status === 'green' ? '✓' : '✗';
-            html += '<li style="color: ' + color + '; font-weight: 500; margin-bottom: 5px;">' + icon + ' ' + item.label + ' (' + item.name + ')</li>';
+            var color = item.status === 'green' ? '#00a32a' : (item.status === 'orange' ? '#f5c60d' : '#d63638');
+            var icon = item.status === 'green' ? '✓' : (item.status === 'orange' ? '⚠' : '✗');
+            html += '<li style="color: ' + color + '; font-weight: 500; margin-bottom: 5px;">' + icon + ' ' + item.label + ' (' + item.name + ')';
+            if (item.message) {
+                html += '<div style="font-size: 12px; color: #666; font-weight: normal; margin-left: 15px;">' + item.message + '</div>';
+            }
+            html += '</li>';
           });
           html += '</ul>';
           
