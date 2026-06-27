@@ -324,13 +324,21 @@
 
 /* Status */
 .mme-form-status {
-  margin-top: 16px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 500;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - 48px);
+  max-width: 400px;
+  padding: 20px 24px;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 600;
   text-align: center;
+  z-index: 100;
+  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.2);
   display: none;
+  border: 1px solid rgba(0,0,0,0.05);
 }
 
 .mme-form-status:not(:empty) {
@@ -648,7 +656,6 @@
   background: rgba(255, 255, 255, 0.65);
   border: 1px solid rgba(226,232,240,0.7);
   border-radius: 16px;
-  text-decoration: none;
   box-shadow: 0 12px 30px -26px rgba(15,23,42,0.22);
   transition: all 0.2s ease;
   width: 100%;
@@ -659,10 +666,6 @@
     grid-column: span 2;
     margin-top: 0;
   }
-}
-
-.mme-social-card:hover {
-  background: #ffffff;
 }
 
 .mme-social-text {
@@ -683,28 +686,36 @@
   font-size: 16px;
   font-weight: 800;
   color: #0f172a;
+  line-height: 1.25;
+}
+
+.mme-social-icons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .mme-social-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 40px;
   height: 40px;
   border-radius: 12px;
   background: #f8fafc;
   border: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #64748b;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.mme-social-icon:hover {
+  background: var(--mme-button);
+  border-color: var(--mme-button);
+  color: #fff;
 }
 
 .mme-social-icon svg {
   width: 20px;
   height: 20px;
-}
-
-.mme-social-card:hover .mme-social-icon {
-  background: var(--mme-button);
-  border-color: var(--mme-button);
-  color: #fff;
 }

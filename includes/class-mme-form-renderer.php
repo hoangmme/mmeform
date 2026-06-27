@@ -299,24 +299,35 @@ final class MME_Form_Renderer
             'linkedin_url' => array('label' => 'LinkedIn', 'icon' => 'linkedin'),
         );
 
-        $html = '';
+        $configured = array();
         foreach ($links as $key => $config) {
-            if (empty($settings[$key])) {
-                continue;
+            if (!empty($settings[$key])) {
+                $config['url'] = $settings[$key];
+                $configured[] = $config;
             }
+        }
+
+        if (empty($configured)) {
+            return '';
+        }
+
+        $html = '<div class="mme-social-card">';
+        $html .= '<div class="mme-social-text">';
+        $html .= '<span class="mme-social-label">' . esc_html($settings['social_label'] ?? 'Theo dõi') . '</span>';
+        $html .= '<span class="mme-social-title">Mạng xã hội</span>';
+        $html .= '</div>';
+        $html .= '<div class="mme-social-icons">';
+        
+        foreach ($configured as $config) {
             $html .= sprintf(
-                '<a class="mme-social-card" href="%s" target="_blank" rel="noopener noreferrer" aria-label="%s">',
-                esc_url($settings[$key]),
+                '<a class="mme-social-icon group" href="%s" target="_blank" rel="noopener noreferrer" aria-label="%s">',
+                esc_url($config['url']),
                 esc_attr($config['label'])
             );
-            $html .= '<div class="mme-social-text">';
-            $html .= '<span class="mme-social-label">' . esc_html($settings['social_label'] ?? $config['label']) . '</span>';
-            $html .= '<span class="mme-social-title">' . esc_html($config['label']) . '</span>';
-            $html .= '</div>';
-            $html .= '<div class="mme-social-icon">';
             $html .= self::icon($config['icon']);
-            $html .= '</div></a>';
+            $html .= '</a>';
         }
+        $html .= '</div></div>';
 
         return $html;
     }
