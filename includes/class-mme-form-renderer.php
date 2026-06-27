@@ -53,8 +53,9 @@ final class MME_Form_Renderer
             : 'left';
 
         $style = sprintf(
-            '--mme-button:%s;--mme-accent:%s;--mme-bg:%s;--mme-text:%s;--mme-font:%s;',
+            '--mme-button:%s;--mme-secondary:%s;--mme-accent:%s;--mme-bg:%s;--mme-text:%s;--mme-font:%s;',
             esc_attr($settings['button_color']),
+            esc_attr($settings['secondary_color']),
             esc_attr($settings['accent_color']),
             esc_attr($settings['background_color']),
             esc_attr($settings['text_color']),
@@ -104,7 +105,7 @@ final class MME_Form_Renderer
                             <div class="mme-contact-box">
                                 <div class="mme-contact-icon mme-phone-icon"><?php echo self::icon('phone-call'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
                                 <div class="mme-contact-text">
-                                    <span class="mme-contact-label">HOTLINE TƯ VẤN</span>
+                                    <span class="mme-contact-label"><?php echo esc_html($settings['hotline_label']); ?></span>
                                     <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $settings['hotline'])); ?>" class="mme-contact-value"><?php echo esc_html($settings['hotline']); ?></a>
                                 </div>
                             </div>
@@ -114,7 +115,7 @@ final class MME_Form_Renderer
                             <div class="mme-contact-box">
                                 <div class="mme-contact-icon mme-email-icon"><?php echo self::icon('mail'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
                                 <div class="mme-contact-text">
-                                    <span class="mme-contact-label">EMAIL HỖ TRỢ</span>
+                                    <span class="mme-contact-label"><?php echo esc_html($settings['email_label']); ?></span>
                                     <a href="mailto:<?php echo esc_attr($settings['support_email']); ?>" class="mme-contact-value"><?php echo esc_html($settings['support_email']); ?></a>
                                 </div>
                             </div>

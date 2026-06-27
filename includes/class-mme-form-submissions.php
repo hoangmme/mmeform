@@ -147,6 +147,7 @@ final class MME_Form_Submissions
             ),
             'attribution' => $attribution,
             'timestamp' => $timestamp,
+            'started_at' => $input['started_at'] ?? '',
         );
 
         $submission_id = wp_insert_post(array(
@@ -453,7 +454,7 @@ final class MME_Form_Submissions
         $hidden_fields = array(
             'current_url' => $payload['source']['url'] ?? '',
             'referrer_url' => $payload['source']['referrer'] ?? '',
-            'started_at' => $payload['submitted_at'] ?? '',
+            'started_at' => $payload['started_at'] ?? '',
         );
         foreach ($hidden_fields as $k => $v) {
             if ($v !== '') {

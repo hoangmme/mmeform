@@ -85,8 +85,11 @@ final class MME_Form_Admin
             <?php $this->text_input('kicker', 'Chữ nhỏ trên đầu', $settings['kicker']); ?>
             <?php $this->text_input('heading', 'Tiêu đề trái', $settings['heading']); ?>
             <?php $this->text_input('description', 'Mô tả ngắn', $settings['description']); ?>
+            <?php $this->text_input('hotline_label', 'Nhãn Hotline', $settings['hotline_label']); ?>
             <?php $this->text_input('hotline', 'Hotline', $settings['hotline']); ?>
+            <?php $this->text_input('email_label', 'Nhãn Email', $settings['email_label']); ?>
             <?php $this->text_input('support_email', 'Email hỗ trợ', $settings['support_email']); ?>
+            <?php $this->text_input('social_label', 'Nhãn Mạng xã hội', $settings['social_label']); ?>
             
             <label class="mme-admin-field mme-admin-span-2">
                 <span>Điểm nổi bật (mỗi dòng một mục, tối đa 4)</span>
@@ -123,7 +126,8 @@ final class MME_Form_Admin
                 </select>
             </label>
 
-            <?php $this->color_input('button_color', 'Màu nút', $settings['button_color']); ?>
+            <?php $this->color_input('button_color', 'Màu chính (Primary)', $settings['button_color']); ?>
+            <?php $this->color_input('secondary_color', 'Màu phụ (Secondary)', $settings['secondary_color']); ?>
             <?php $this->color_input('accent_color', 'Màu nhấn', $settings['accent_color']); ?>
             <?php $this->color_input('background_color', 'Màu nền', $settings['background_color']); ?>
             <?php $this->color_input('text_color', 'Màu chữ', $settings['text_color']); ?>
@@ -574,8 +578,8 @@ function doPost(e) {
         $dummy_payload = array(
             'contact' => array('name' => 'MME Test Lead', 'phone' => '090' . mt_rand(1000000, 9999999), 'email' => 'test-' . mt_rand(1000, 9999) . '@mme.vn'),
             'lead' => array('need' => 'Test Need'),
-            'source' => array('url' => 'https://mme.vn/test', 'referrer' => ''),
-            'submitted_at' => time() * 1000,
+            'source' => array('url' => 'https://mme.vn/test', 'referrer' => 'https://google.com'),
+            'started_at' => time() * 1000,
             'fields' => $dummy_fields
         );
         
