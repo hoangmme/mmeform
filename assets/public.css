@@ -734,3 +734,10 @@
   max-width: 100%;
   margin: 0;
 }
+.mme-form-wrapper.is-fields-only .mme-form-card {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  border: none;
+}

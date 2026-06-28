@@ -157,7 +157,7 @@ final class MME_Form_Renderer
                 <!-- Khu vực 2: Form Card -->
                 <div class="mme-area-form">
                     <div class="mme-form-card">
-                        <?php if (!empty($settings['form_heading'])) : ?>
+                        <?php if (!empty($settings['form_heading']) && empty($args['fields_only'])) : ?>
                             <header class="mme-form-header">
                                 <h2><?php echo esc_html($settings['form_heading']); ?></h2>
                             </header>
