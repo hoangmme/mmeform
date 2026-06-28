@@ -40,11 +40,10 @@ final class MME_Form_Renderer
         );
 
         $font_map = array(
-            'inherit' => 'inherit',
-            'system' => 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-            'inter' => 'Inter, ui-sans-serif, system-ui, sans-serif',
-            'arial' => 'Arial, Helvetica, sans-serif',
-            'georgia' => 'Georgia, "Times New Roman", serif',
+            'system'  => 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            'inter'   => '"Inter", sans-serif',
+            'arial'   => 'Arial, sans-serif',
+            'georgia' => 'Georgia, serif'
         );
         $font = $font_map[$settings['font_family']] ?? $font_map['system'];
         $instance_id = wp_unique_id('mme-form-');
@@ -72,7 +71,7 @@ final class MME_Form_Renderer
         ?>
         <section
             id="<?php echo esc_attr($instance_id); ?>"
-            class="mme-form-wrapper <?php echo !empty($args['embed']) ? 'is-embed' : ''; ?> <?php echo !empty($args['fields_only']) ? 'is-fields-only' : ''; ?> <?php echo !empty($settings['component_mode']) ? 'is-component' : ''; ?>"
+            class="mme-form-wrapper <?php echo !empty($args['embed']) ? 'is-embed' : ''; ?> <?php echo !empty($args['fields_only']) ? 'is-fields-only' : ''; ?>"
             style="<?php echo esc_attr($wrapper_style); ?>"
             data-form-id="<?php echo esc_attr((string) $form_id); ?>"
         >

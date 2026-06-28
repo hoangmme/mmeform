@@ -177,7 +177,6 @@ final class MME_Form_Plugin
             'secondary_color' => '#10b981',
             'accent_color' => '#14b8a6',
             'background_color' => '#f4f7fb',
-            'component_mode' => 0,
             'text_color' => '#0f172a',
             'font_family' => 'system',
             'trust_items' => array('Phản hồi nhanh', 'Bảo mật thông tin', 'Tư vấn miễn phí'),

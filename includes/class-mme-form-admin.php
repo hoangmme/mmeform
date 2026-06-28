@@ -123,16 +123,10 @@ final class MME_Form_Admin
             <label class="mme-admin-field">
                 <span>Font chữ</span>
                 <select name="mme_settings[font_family]">
-                    <?php foreach (array('inherit' => 'Kế thừa giao diện web', 'system' => 'System / Inter', 'inter' => 'Inter', 'arial' => 'Arial', 'georgia' => 'Georgia') as $value => $label) : ?>
+                    <?php foreach (array('system' => 'System / Inter', 'inter' => 'Inter', 'arial' => 'Arial', 'georgia' => 'Georgia') as $value => $label) : ?>
                         <option value="<?php echo esc_attr($value); ?>" <?php selected($settings['font_family'], $value); ?>><?php echo esc_html($label); ?></option>
                     <?php endforeach; ?>
                 </select>
-            </label>
-
-            <label class="mme-admin-field mme-admin-span-2" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 10px;">
-                <input type="checkbox" name="mme_settings[component_mode]" value="1" <?php checked(!empty($settings['component_mode'])); ?>>
-                <span style="font-weight: 600;">Chế độ Component (Loại bỏ nền trắng thẻ Form, khung đệm)</span>
-                <p class="description" style="margin: 0; font-size: 13px;">Tùy chọn này giúp Form phẳng hoàn toàn và mở rộng tối đa, rất thích hợp khi bạn muốn chèn Form vào bên trong một Container hoặc Cột đã được thiết kế sẵn (ví dụ trên Elementor).</p>
             </label>
 
             <?php $this->color_input('button_color', 'Màu chính (Primary)', $settings['button_color']); ?>
@@ -376,9 +370,8 @@ function doPost(e) {
             $settings[$key] = sanitize_hex_color($submitted[$key] ?? '') ?: $current[$key];
         }
         $settings['image_position'] = in_array(($submitted['image_position'] ?? ''), array('left', 'right', 'top'), true) ? $submitted['image_position'] : 'left';
-        $settings['font_family'] = in_array(($submitted['font_family'] ?? ''), array('inherit', 'system', 'inter', 'arial', 'georgia'), true) ? $submitted['font_family'] : 'system';
+        $settings['font_family'] = in_array(($submitted['font_family'] ?? ''), array('system', 'inter', 'arial', 'georgia'), true) ? $submitted['font_family'] : 'system';
         $settings['trust_items'] = array_slice(array_values(array_filter(array_map('sanitize_text_field', preg_split('/\r\n|\r|\n/', (string) ($submitted['trust_items'] ?? ''))))), 0, 4);
-        $settings['component_mode'] = !empty($submitted['component_mode']) ? 1 : 0;
         foreach (array('chatbot_enabled', 'webhook_enabled', 'twenty_enabled') as $key) {
             $settings[$key] = ($submitted[$key] ?? 'no') === 'yes' ? 'yes' : 'no';
         }
