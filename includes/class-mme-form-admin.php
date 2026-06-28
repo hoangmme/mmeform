@@ -385,7 +385,8 @@ function doPost(e) {
 
     public function form_columns(array $columns): array
     {
-        $columns['mme_shortcode'] = 'Shortcode';
+        $columns['mme_shortcode'] = 'Shortcode (Full)';
+        $columns['mme_shortcode_fields'] = 'Shortcode (Chỉ Form)';
         $columns['mme_embed'] = 'External embed';
         return $columns;
     }
@@ -394,6 +395,9 @@ function doPost(e) {
     {
         if ($column === 'mme_shortcode') {
             echo '<code>[mme_form id=&quot;' . esc_html((string) $post_id) . '&quot;]</code>';
+        }
+        if ($column === 'mme_shortcode_fields') {
+            echo '<code>[mme_form_fields id=&quot;' . esc_html((string) $post_id) . '&quot;]</code>';
         }
         if ($column === 'mme_embed') {
             echo '<code>?mme_form_embed=' . esc_html((string) $post_id) . '</code>';
