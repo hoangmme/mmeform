@@ -26,13 +26,18 @@ final class MME_Form_Renderer
             }
         }
 
+        $inline_assets = '';
         if (empty($args['embed'])) {
-            wp_enqueue_style('mme-form-public', MME_FORM_URL . 'assets/public.css', array(), MME_FORM_VERSION);
-            if ($has_tel) {
-                wp_enqueue_style('intl-tel-input', 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/23.0.4/css/intlTelInput.css', array(), '23.0.4');
-                wp_enqueue_script('intl-tel-input', 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/23.0.4/js/intlTelInput.min.js', array(), '23.0.4', true);
+            static $assets_printed = false;
+            if (!$assets_printed) {
+                $inline_assets .= '<link rel="stylesheet" href="' . esc_url(MME_FORM_URL . 'assets/public.css?ver=' . MME_FORM_VERSION) . '">';
+                if ($has_tel) {
+                    $inline_assets .= '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/23.0.4/css/intlTelInput.css">';
+                    wp_enqueue_script('intl-tel-input', 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/23.0.4/js/intlTelInput.min.js', array(), '23.0.4', true);
+                }
+                wp_enqueue_script('mme-form-public', MME_FORM_URL . 'assets/public.js', $has_tel ? array('intl-tel-input') : array(), MME_FORM_VERSION, true);
+                $assets_printed = true;
             }
-            wp_enqueue_script('mme-form-public', MME_FORM_URL . 'assets/public.js', $has_tel ? array('intl-tel-input') : array(), MME_FORM_VERSION, true);
         }
         $settings = wp_parse_args(
             (array) get_post_meta($form_id, '_mme_form_settings', true),
@@ -68,6 +73,7 @@ final class MME_Form_Renderer
         }
 
         ob_start();
+        echo $inline_assets;
         ?>
         <section
             id="<?php echo esc_attr($instance_id); ?>"
@@ -369,6 +375,6 @@ final class MME_Form_Renderer
         );
         $path = $paths[$name] ?? $paths['check'];
 
-        return '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' . $path . '</svg>';
+        return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' . $path . '</svg>';
     }
 }
