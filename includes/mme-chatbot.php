@@ -198,6 +198,51 @@ function mme_chatbot_options_page() {
             submit_button();
             ?>
         </form>
+        
+        <hr style="margin: 30px 0;">
+        <h2>Phát triển & Cập nhật</h2>
+        <p>Tính năng này giúp bạn đồng bộ (pull) mã nguồn mới nhất của plugin <strong>MME Form</strong> từ GitHub về máy chủ ngay lập tức.</p>
+        <button type="button" id="mme-form-git-pull-btn" class="button button-secondary">Đồng bộ code MME Form từ GitHub (Git Pull)</button>
+        <div id="mme-form-git-pull-result" style="margin-top: 15px; padding: 15px; background: #1e1e1e; color: #00ff00; font-family: monospace; border-radius: 4px; display: none; white-space: pre-wrap;"></div>
+
+        <script>
+        document.getElementById('mme-form-git-pull-btn').addEventListener('click', function() {
+            var btn = this;
+            var resultDiv = document.getElementById('mme-form-git-pull-result');
+            
+            btn.disabled = true;
+            btn.textContent = 'Đang đồng bộ...';
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Đang chạy git pull...';
+
+            var formData = new FormData();
+            formData.append('action', 'mme_form_git_pull');
+            formData.append('_ajax_nonce', '<?php echo wp_create_nonce('mme_form_git_pull_nonce'); ?>');
+
+            fetch(ajaxurl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resultDiv.textContent = data.data;
+                } else {
+                    resultDiv.textContent = 'Lỗi: ' + (data.data || 'Không rõ nguyên nhân');
+                    resultDiv.style.color = '#ff5555';
+                }
+            })
+            .catch(error => {
+                resultDiv.textContent = 'Lỗi kết nối: ' + error;
+                resultDiv.style.color = '#ff5555';
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.textContent = 'Đồng bộ code MME Form từ GitHub (Git Pull)';
+            });
+        });
+        </script>
+
         <?php mme_chatbot_render_content_status(); ?>
     </div>
     <?php
@@ -691,4 +736,18 @@ function mme_chatbot_render_backend() {
         });
       })();
     </script>';
+}
+
+// Thêm AJAX handler cho nút Git Pull
+add_action('wp_ajax_mme_form_git_pull', 'mme_form_git_pull_handler');
+function mme_form_git_pull_handler() {
+    check_ajax_referer('mme_form_git_pull_nonce');
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('Không đủ quyền hạn');
+    }
+
+    $dir = dirname(plugin_dir_path(__FILE__));
+    $output = shell_exec('cd ' . escapeshellarg($dir) . ' && git pull origin main 2>&1');
+    
+    wp_send_json_success($output ?: 'Đã chạy lệnh git pull nhưng không có đầu ra.');
 }

@@ -72,7 +72,7 @@ final class MME_Form_Renderer
         ?>
         <section
             id="<?php echo esc_attr($instance_id); ?>"
-            class="mme-form-wrapper <?php echo !empty($args['embed']) ? 'is-embed' : ''; ?> <?php echo !empty($args['fields_only']) ? 'is-fields-only' : ''; ?>"
+            class="mme-form-wrapper <?php echo !empty($args['embed']) ? 'is-embed' : ''; ?> <?php echo !empty($args['fields_only']) ? 'is-fields-only' : ''; ?> <?php echo !empty($settings['component_mode']) ? 'is-component' : ''; ?>"
             style="<?php echo esc_attr($wrapper_style); ?>"
             data-form-id="<?php echo esc_attr((string) $form_id); ?>"
         >

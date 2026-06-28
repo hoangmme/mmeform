@@ -741,3 +741,23 @@
   box-shadow: none;
   border: none;
 }
+
+/* Modifier: Component Mode (Nhúng phẳng vào Elementor) */
+.mme-form-wrapper.is-component {
+  padding: 0 !important;
+  background: transparent !important;
+}
+.mme-form-wrapper.is-component .mme-layout-grid {
+  max-width: 100% !important;
+  padding: 0 !important;
+}
+.mme-form-wrapper.is-component .mme-form-bg-blob {
+  display: none !important;
+}
+.mme-form-wrapper.is-component .mme-form-card {
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
