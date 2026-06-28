@@ -746,8 +746,27 @@ function mme_form_git_pull_handler() {
         wp_send_json_error('Không đủ quyền hạn');
     }
 
-    $dir = dirname(plugin_dir_path(__FILE__));
-    $output = shell_exec('cd ' . escapeshellarg($dir) . ' && git pull origin main 2>&1');
+    $domain = $_SERVER['HTTP_HOST'] ?? '';
+    $domain = preg_replace('/^www\./', '', $domain);
+
+    if (empty($domain)) {
+        wp_send_json_error('Không thể xác định tên miền.');
+    }
+
+    $daemon_url = "http://127.0.0.1:8989/hooks/" . urlencode($domain);
+
+    $args = array(
+        'method'      => 'POST',
+        'timeout'     => 5,
+        'redirection' => 5,
+        'httpversion' => '1.0',
+        'blocking'    => false,
+        'headers'     => array(),
+        'body'        => '',
+        'cookies'     => array()
+    );
+
+    wp_remote_post($daemon_url, $args);
     
-    wp_send_json_success($output ?: 'Đã chạy lệnh git pull nhưng không có đầu ra.');
+    wp_send_json_success('Đã gửi lệnh kích hoạt Deploy cho domain: ' . $domain . '. Vui lòng chờ vài giây để server tự động cập nhật!');
 }
