@@ -40,6 +40,7 @@ final class MME_Form_Renderer
         );
 
         $font_map = array(
+            'inherit' => 'inherit',
             'system' => 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
             'inter' => 'Inter, ui-sans-serif, system-ui, sans-serif',
             'arial' => 'Arial, Helvetica, sans-serif',
@@ -62,18 +63,23 @@ final class MME_Form_Renderer
             esc_attr($font)
         );
 
+        $wrapper_style = $style;
+        if (!empty($args['fields_only'])) {
+            $wrapper_style .= ' padding: 0 !important; background: transparent !important;';
+        }
+
         ob_start();
         ?>
         <section
             id="<?php echo esc_attr($instance_id); ?>"
             class="mme-form-wrapper <?php echo !empty($args['embed']) ? 'is-embed' : ''; ?> <?php echo !empty($args['fields_only']) ? 'is-fields-only' : ''; ?>"
-            style="<?php echo esc_attr($style); ?>"
+            style="<?php echo esc_attr($wrapper_style); ?>"
             data-form-id="<?php echo esc_attr((string) $form_id); ?>"
         >
+            <?php if (empty($args['fields_only'])) : ?>
             <div class="mme-form-bg-blob mme-bg-blob-primary"></div>
             <div class="mme-form-bg-blob mme-bg-blob-secondary"></div>
 
-            <?php if (empty($args['fields_only'])) : ?>
             <div class="mme-layout-grid mme-layout-<?php echo esc_attr($image_position); ?>">
                 
                 <!-- Left Column -->
