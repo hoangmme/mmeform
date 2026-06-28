@@ -72,6 +72,11 @@ final class MME_Form_Plugin
             $attributes = shortcode_atts(array('id' => 0), $attributes, 'mme_form');
             return MME_Form_Renderer::render(absint($attributes['id']));
         });
+
+        add_shortcode('mme_form_fields', static function (array $attributes = array()): string {
+            $attributes = shortcode_atts(array('id' => 0), $attributes, 'mme_form_fields');
+            return MME_Form_Renderer::render(absint($attributes['id']), array('fields_only' => true));
+        });
     }
 
     public function register_query_vars(array $query_vars): array

@@ -719,3 +719,18 @@
   width: 20px;
   height: 20px;
 }
+
+/* Modifier cho shortcode chỉ hiện field */
+.mme-form-wrapper.is-fields-only {
+  background: transparent;
+  padding: 0;
+  max-width: 100%;
+}
+.mme-form-wrapper.is-fields-only .mme-form-bg-blob {
+  display: none;
+}
+.mme-form-wrapper.is-fields-only .mme-area-form {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}

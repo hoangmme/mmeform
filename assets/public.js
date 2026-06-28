@@ -171,6 +171,11 @@
         currentInput.value = sourceUrl;
         referrerInput.value = document.referrer || "";
         startedInput.value = String(Date.now());
+        
+        setTimeout(function() {
+          status.classList.remove("is-success");
+          status.textContent = "";
+        }, 2000);
       } catch (error) {
         status.classList.add("is-error");
         status.textContent = error instanceof Error ? error.message : "Không thể gửi form. Vui lòng thử lại.";

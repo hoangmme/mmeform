@@ -66,13 +66,14 @@ final class MME_Form_Renderer
         ?>
         <section
             id="<?php echo esc_attr($instance_id); ?>"
-            class="mme-form-wrapper <?php echo !empty($args['embed']) ? 'is-embed' : ''; ?>"
+            class="mme-form-wrapper <?php echo !empty($args['embed']) ? 'is-embed' : ''; ?> <?php echo !empty($args['fields_only']) ? 'is-fields-only' : ''; ?>"
             style="<?php echo esc_attr($style); ?>"
             data-form-id="<?php echo esc_attr((string) $form_id); ?>"
         >
             <div class="mme-form-bg-blob mme-bg-blob-primary"></div>
             <div class="mme-form-bg-blob mme-bg-blob-secondary"></div>
 
+            <?php if (empty($args['fields_only'])) : ?>
             <div class="mme-layout-grid mme-layout-<?php echo esc_attr($image_position); ?>">
                 
                 <!-- Left Column -->
@@ -145,6 +146,7 @@ final class MME_Form_Renderer
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <!-- Khu vực 2: Form Card -->
                 <div class="mme-area-form">
@@ -206,7 +208,9 @@ final class MME_Form_Renderer
                     </div>
                 </div>
 
+            <?php if (empty($args['fields_only'])) : ?>
             </div>
+            <?php endif; ?>
             
             <?php if (!empty($args['embed']) && $has_tel) : ?>
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/23.0.4/css/intlTelInput.css">
