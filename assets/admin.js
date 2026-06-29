@@ -341,5 +341,34 @@
         });
       });
     }
+
+    var importBtn = document.getElementById("mme-import-json-btn");
+    var importWrap = document.getElementById("mme-import-json-wrap");
+    var importText = document.getElementById("mme-import-json-text");
+    var importSubmit = document.getElementById("mme-import-json-submit");
+
+    if (importBtn && importWrap && importText && importSubmit) {
+      importBtn.addEventListener("click", function () {
+        importWrap.style.display = importWrap.style.display === "none" ? "block" : "none";
+        importText.value = JSON.stringify(fields, null, 2);
+      });
+
+      importSubmit.addEventListener("click", function () {
+        try {
+          var newFields = JSON.parse(importText.value);
+          if (Array.isArray(newFields)) {
+            fields = newFields;
+            renderTable();
+            updateJSON();
+            importWrap.style.display = "none";
+            alert("Import thành công! Hãy bấm Cập nhật bài viết để lưu lại cấu hình mới.");
+          } else {
+            alert("Lỗi: Dữ liệu JSON phải là một mảng [] (array) chứa các object form field.");
+          }
+        } catch (e) {
+          alert("Lỗi cú pháp JSON: Vui lòng kiểm tra lại cấu trúc.\nChi tiết: " + e.message);
+        }
+      });
+    }
   });
 })();

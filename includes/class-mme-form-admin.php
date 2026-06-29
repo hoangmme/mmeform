@@ -71,7 +71,18 @@ final class MME_Form_Admin
                 </thead>
                 <tbody id="mme-fields-body"></tbody>
             </table>
-            <button type="button" class="button button-secondary" id="mme-add-field">+ Thêm field</button>
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                <button type="button" class="button button-secondary" id="mme-add-field">+ Thêm field</button>
+                <button type="button" class="button button-link" id="mme-import-json-btn">Import JSON (Nâng cao)</button>
+            </div>
+            <div id="mme-import-json-wrap" style="display: none; margin-top: 15px; padding: 15px; background: #fff; border: 1px solid #ccd0d4; border-radius: 4px;">
+                <p style="margin-top: 0;"><strong>Import Form Fields từ JSON</strong></p>
+                <p class="description">Dán mảng JSON chứa định dạng các field vào đây. (Có thể yêu cầu AI viết cấu trúc dựa theo file README.md, sau đó copy dán vào đây để khởi tạo nhanh form).</p>
+                <textarea id="mme-import-json-text" rows="8" class="large-text code" style="font-family: monospace;"></textarea>
+                <div style="margin-top: 10px;">
+                    <button type="button" class="button button-primary" id="mme-import-json-submit">Xác nhận Import (Ghi đè)</button>
+                </div>
+            </div>
         </div>
         <?php
     }

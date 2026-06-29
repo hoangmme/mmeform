@@ -182,3 +182,67 @@ Lỗi integration không làm mất submission: dữ liệu vẫn lưu trong Wor
 - Nên dùng HTTPS cho WordPress, website embed, webhook, chatbot và Twenty.
 - Rate limit mặc định: 15 requests / 10 phút / IP.
 - Không xóa dữ liệu khi deactivate plugin.
+
+## Hướng dẫn cho Developer (Khởi tạo Form nhanh bằng JSON)
+
+Trong wp-admin, phần tạo Form có tính năng **"Import JSON (Nâng cao)"**. Tính năng này cho phép bạn dán trực tiếp một mảng JSON để khởi tạo nhanh cấu trúc các trường (fields) thay vì phải bấm tạo từng cái bằng tay.
+
+Đây là một tính năng cực kỳ hữu ích khi bạn làm việc với **AI (ChatGPT, Claude, Gemini...)**. Bạn có thể yêu cầu AI tự động sinh ra mã JSON dựa trên yêu cầu của khách hàng hoặc tài liệu API, sau đó chỉ việc copy và dán vào.
+
+### Cấu trúc JSON chuẩn của Form Fields:
+
+Mảng JSON cần tuân thủ cấu trúc sau (mỗi object là 1 field):
+
+```json
+[
+  {
+    "type": "text",
+    "name": "full_name",
+    "label": "Họ và tên",
+    "placeholder": "Nguyễn Văn A",
+    "required": true,
+    "width": "100"
+  },
+  {
+    "type": "tel",
+    "name": "phone",
+    "label": "Số điện thoại",
+    "placeholder": "09xx xxx xxx",
+    "required": true,
+    "width": "50"
+  },
+  {
+    "type": "select",
+    "name": "need",
+    "label": "Nhu cầu tư vấn",
+    "placeholder": "Bạn đang quan tâm điều gì?",
+    "options": "Tư vấn thiết kế\nThi công nội thất\nBáo giá trọn gói",
+    "required": false,
+    "width": "50"
+  },
+  {
+    "type": "textarea",
+    "name": "note",
+    "label": "Ghi chú thêm",
+    "placeholder": "Để lại lời nhắn...",
+    "required": false,
+    "width": "100"
+  }
+]
+```
+
+### Các thuộc tính (Properties):
+
+- `type`: Loại trường. Các giá trị hỗ trợ: `text`, `email`, `tel`, `textarea`, `select`, `radio`.
+- `name`: Tên biến dữ liệu (để gửi qua webhook hoặc CRM). Ví dụ: `phone`, `email`, `need`. **Lưu ý: Không dùng ký tự đặc biệt, nên dùng tiếng Anh viết thường không dấu gạch dưới.**
+- `label`: Tên hiển thị cho người dùng (Label).
+- `placeholder`: Dòng chữ mờ gợi ý trong ô input.
+- `options`: **Chỉ dùng cho `select` và `radio`**. Các lựa chọn cách nhau bằng dấu xuống dòng (`\n`).
+- `required`: Bắt buộc nhập (`true` hoặc `false`).
+- `width`: Chiều rộng của ô. Hỗ trợ 2 giá trị: `"100"` (Full-width) hoặc `"50"` (Chia đôi dòng).
+
+### Prompt mẫu để nhờ AI viết JSON:
+
+Bạn có thể copy đoạn hướng dẫn sau gửi cho AI:
+
+> "Hãy tạo cho tôi mảng JSON cấu trúc form dựa theo document của MME Form: Cần các trường: Họ tên, Số điện thoại, Email, Chức vụ (select: Giám đốc, Nhân viên, Khác), Ghi chú. Thiết lập width 50 cho điện thoại và email."
