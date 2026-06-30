@@ -39,10 +39,16 @@ final class MME_Form_Renderer
                 $assets_printed = true;
             }
         }
+        $defaults = MME_Form_Plugin::default_settings();
         $settings = wp_parse_args(
             (array) get_post_meta($form_id, '_mme_form_settings', true),
-            MME_Form_Plugin::default_settings()
+            $defaults
         );
+        foreach (array('chatbot_base_url', 'chatbot_tenant', 'chatbot_button_text', 'button_text', 'success_message') as $k) {
+            if (empty($settings[$k])) {
+                $settings[$k] = $defaults[$k];
+            }
+        }
 
         $font_map = array(
             'system'  => 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',

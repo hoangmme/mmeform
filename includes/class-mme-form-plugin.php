@@ -185,7 +185,7 @@ final class MME_Form_Plugin
             'linkedin_url' => '',
             'tiktok_url' => '',
             'youtube_url' => '',
-            'chatbot_enabled' => 'yes',
+            'chatbot_enabled' => 'no',
             'chatbot_base_url' => 'https://chat.mme.vn',
             'chatbot_tenant' => 'mme',
             'chatbot_button_text' => 'Hỏi AI trước khi gửi',
