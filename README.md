@@ -246,3 +246,37 @@ Mảng JSON cần tuân thủ cấu trúc sau (mỗi object là 1 field):
 Bạn có thể copy đoạn hướng dẫn sau gửi cho AI:
 
 > "Hãy tạo cho tôi mảng JSON cấu trúc form dựa theo document của MME Form: Cần các trường: Họ tên, Số điện thoại, Email, Chức vụ (select: Giám đốc, Nhân viên, Khác), Ghi chú. Thiết lập width 50 cho điện thoại và email."
+
+---
+
+## 🚀 Dành cho Theme Developer / AI Code Landing Page (Tự động tạo form qua PHP)
+
+Nếu bạn code trực tiếp trong file template PHP (ví dụ `page-landing.php`) và không muốn phải vào wp-admin bấm tạo form hay lấy ID thủ công, plugin cung cấp hàm PHP thần thánh: `mme_form_auto()`.
+
+### Hàm `mme_form_auto($slug, $title, $fields, $settings)`
+
+Hàm này sẽ tự động tìm trong database xem đã có form nào mang slug đó chưa:
+- **Nếu đã có:** Tự động lấy ID và render ra HTML shortcode.
+- **Nếu chưa có:** Tự động tạo 1 bài viết `mme_form` mới trong database với `$fields` và `$settings` được cung cấp, sau đó render ra HTML.
+
+### Cách dùng trong PHP template:
+
+```php
+<?php
+// Định nghĩa mảng JSON các trường muốn tạo
+$json_fields = '[
+  {"type":"text", "name":"fullname", "label":"Họ và tên", "placeholder":"Nguyễn Văn A", "required":true, "width":"100"},
+  {"type":"tel", "name":"phone", "label":"Số điện thoại", "placeholder":"09xx xxx xxx", "required":true, "width":"50"},
+  {"type":"email", "name":"email", "label":"Email", "placeholder":"email@domain.com", "required":false, "width":"50"}
+]';
+
+// Gọi hàm (Tự động tạo form slug "form-landing-2026" nếu chưa tồn tại và in ra)
+if (function_exists('mme_form_auto')) {
+    echo mme_form_auto('form-landing-2026', 'Form Landing Page 2026', $json_fields);
+}
+?>
+```
+
+👉 **Prompt bảo AI code PHP Landing Page:**
+> "Tôi đang code file PHP template cho WordPress. Hãy dùng hàm PHP `mme_form_auto($slug, $title, $json_fields)` của plugin MME Form để hiển thị form đăng ký. Hãy tự viết mảng `$json_fields` phù hợp với ngữ cảnh trang web này và gọi hàm `echo mme_form_auto(...)` vào đúng vị trí section form."
+
