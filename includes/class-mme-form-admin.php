@@ -71,9 +71,11 @@ final class MME_Form_Admin
                 </thead>
                 <tbody id="mme-fields-body"></tbody>
             </table>
-            <div style="margin-top: 15px; display: flex; gap: 10px;">
+            <div style="margin-top: 15px; display: flex; gap: 10px; align-items: center;">
                 <button type="button" class="button button-secondary" id="mme-add-field">+ Thêm field</button>
                 <button type="button" class="button button-link" id="mme-import-json-btn">Import JSON (Nâng cao)</button>
+                <button type="button" class="button button-link" id="mme-copy-ai-prompt-builder-btn" style="color: #007cba; font-weight: 600;">✨ Copy Prompt cho AI code web</button>
+                <span id="mme-copy-ai-prompt-builder-status" style="color: #10b981; font-weight: 600; display: none;">✔ Đã copy Prompt!</span>
             </div>
             <div id="mme-import-json-wrap" style="display: none; margin-top: 15px; padding: 15px; background: #fff; border: 1px solid #ccd0d4; border-radius: 4px;">
                 <p style="margin-top: 0;"><strong>Import Form Fields từ JSON</strong></p>
@@ -83,6 +85,21 @@ final class MME_Form_Admin
                     <button type="button" class="button button-primary" id="mme-import-json-submit">Xác nhận Import (Ghi đè)</button>
                 </div>
             </div>
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var copyBtn = document.getElementById('mme-copy-ai-prompt-builder-btn');
+                if (copyBtn) {
+                    copyBtn.addEventListener('click', function() {
+                        var promptText = "Khi code Landing Page WordPress bằng PHP template, hãy sử dụng hàm PHP mme_form_auto($slug, $title, $json_fields) của plugin MME Form để hiển thị form.\nHàm này tự động kiểm tra/tạo form và trả về shortcode Chỉ Form (ẩn cột thông tin bên trái để lọt vào khung giao diện của bạn).\n\nQuy tắc viết mảng $json_fields (JSON array các object):\n- Các thuộc tính hỗ trợ:\n  + type: text, email, tel, textarea, select, hoặc radio.\n  + name: Tên biến (viết thường, không dấu, dùng dấu gạch dưới, VD: full_name, phone).\n  + label: Nhãn hiển thị (VD: \"Họ và tên\").\n  + placeholder: Gợi ý mờ trong ô nhập.\n  + width: \"100\" (Full dòng) hoặc \"50\" (Chia đôi dòng).\n  + required: true hoặc false.\n  + options: Chỉ cho select/radio, các lựa chọn cách nhau bằng \\n (xuống dòng).\n\nVí dụ PHP:\n<?php\n$fields = '[\n  {\"type\":\"text\", \"name\":\"fullname\", \"label\":\"Họ tên\", \"placeholder\":\"Nhập tên...\", \"required\":true, \"width\":\"100\"},\n  {\"type\":\"tel\", \"name\":\"phone\", \"label\":\"Số điện thoại\", \"placeholder\":\"09xx...\", \"required\":true, \"width\":\"50\"}\n]';\nif (function_exists('mme_form_auto')) {\n    echo mme_form_auto('landing-su-kien-2026', 'Form Sự Kiện', $fields);\n}\n?>\nLưu ý: Bạn hãy tự thiết kế Container/Card giao diện cho form đẹp mắt theo bố cục website rồi gọi echo mme_form_auto(...) vào đúng vị trí!";
+                        navigator.clipboard.writeText(promptText).then(function() {
+                            var status = document.getElementById('mme-copy-ai-prompt-builder-status');
+                            status.style.display = 'inline';
+                            setTimeout(function() { status.style.display = 'none'; }, 3000);
+                        });
+                    });
+                }
+            });
+            </script>
         </div>
         <?php
     }

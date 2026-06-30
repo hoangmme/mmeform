@@ -253,11 +253,12 @@ Bạn có thể copy đoạn hướng dẫn sau gửi cho AI:
 
 Nếu bạn code trực tiếp trong file template PHP (ví dụ `page-landing.php`) và không muốn phải vào wp-admin bấm tạo form hay lấy ID thủ công, plugin cung cấp hàm PHP thần thánh: `mme_form_auto()`.
 
-### Hàm `mme_form_auto($slug, $title, $fields, $settings)`
+### Hàm `mme_form_auto($slug, $title, $fields, $settings, $fields_only = true)`
 
 Hàm này sẽ tự động tìm trong database xem đã có form nào mang slug đó chưa:
 - **Nếu đã có:** Tự động lấy ID và render ra HTML shortcode.
 - **Nếu chưa có:** Tự động tạo 1 bài viết `mme_form` mới trong database với `$fields` và `$settings` được cung cấp, sau đó render ra HTML.
+- **Lưu ý quan trọng (`$fields_only = true`):** Mặc định hàm sẽ sử dụng shortcode `[mme_form_fields id="..."]` (Chỉ Form nhập liệu, ẩn cột thông tin bên trái). Điều này giúp form hoàn toàn ăn khớp khi chèn vào bên trong các Card/Container giao diện do AI hoặc Developer tự thiết kế mà không bị lỗi giao diện kép.
 
 ### Cách dùng trong PHP template:
 

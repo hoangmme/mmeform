@@ -3,7 +3,7 @@
  * Plugin Name: MME Form
  * Plugin URI: https://mme.vn
  * Description: Compact form builder with external embeds, source URL tracking, chatbot, Google Sheets webhooks, and Twenty CRM sync.
- * Version: 0.4.0
+ * Version: 0.4.2
  * Author: MME
  * Text Domain: mme-form
  * Requires at least: 6.4
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MME_FORM_VERSION', '0.4.0');
+define('MME_FORM_VERSION', '0.4.2');
 define('MME_FORM_FILE', __FILE__);
 define('MME_FORM_DIR', plugin_dir_path(__FILE__));
 define('MME_FORM_URL', plugin_dir_url(__FILE__));
@@ -39,9 +39,10 @@ add_action('plugins_loaded', static function (): void {
  * @param string $title Tiêu đề form nếu cần tạo mới
  * @param array|string $fields Mảng hoặc JSON string các field
  * @param array|string $settings Mảng hoặc JSON string cấu hình giao diện
+ * @param bool $fields_only Mặc định true (Chỉ render phần form nhập liệu để fit vào layout của AI/dev, không hiện cột thông tin bên trái)
  * @return string HTML render của form
  */
-function mme_form_auto(string $slug, string $title = '', $fields = array(), $settings = array()): string {
+function mme_form_auto(string $slug, string $title = '', $fields = array(), $settings = array(), bool $fields_only = true): string {
     $slug = sanitize_title($slug);
     if (empty($slug)) {
         return '';
@@ -86,6 +87,7 @@ function mme_form_auto(string $slug, string $title = '', $fields = array(), $set
         return '';
     }
 
-    return do_shortcode('[mme_form id="' . $form_id . '"]');
+    $shortcode = $fields_only ? 'mme_form_fields' : 'mme_form';
+    return do_shortcode('[' . $shortcode . ' id="' . $form_id . '"]');
 }
 

@@ -201,11 +201,29 @@ function mme_chatbot_options_page() {
         
         <hr style="margin: 30px 0;">
         <h2>Phát triển & Cập nhật</h2>
-        <p>Tính năng này giúp bạn đồng bộ (pull) mã nguồn mới nhất của plugin <strong>MME Form</strong> từ GitHub về máy chủ ngay lập tức.</p>
+        
+        <div style="margin-bottom: 25px; padding: 15px; background: #fff; border: 1px solid #ccd0d4; border-left: 4px solid #007cba; border-radius: 4px;">
+            <h3 style="margin-top: 0; color: #007cba;">✨ Copy Prompt cho AI (ChatGPT, Claude, Copilot)</h3>
+            <p style="margin-bottom: 12px;">Nếu bạn muốn nhờ AI code Landing Page bằng PHP template tự động tích hợp form MME mà không nhớ cú pháp, hãy bấm nút dưới đây để copy câu lệnh hướng dẫn AI:</p>
+            <button type="button" id="mme-copy-ai-prompt-btn" class="button button-primary">📋 Copy Prompt hướng dẫn AI Code Landing Page</button>
+            <span id="mme-copy-ai-prompt-status" style="margin-left: 10px; color: #10b981; font-weight: 600; display: none;">✔ Đã copy vào clipboard!</span>
+        </div>
+
+        <p>Tính năng dưới đây giúp bạn đồng bộ (pull) mã nguồn mới nhất của plugin <strong>MME Form</strong> từ GitHub về máy chủ ngay lập tức.</p>
         <button type="button" id="mme-form-git-pull-btn" class="button button-secondary">Đồng bộ code MME Form từ GitHub (Git Pull)</button>
         <div id="mme-form-git-pull-result" style="margin-top: 15px; padding: 15px; background: #1e1e1e; color: #00ff00; font-family: monospace; border-radius: 4px; display: none; white-space: pre-wrap;"></div>
 
         <script>
+        document.getElementById('mme-copy-ai-prompt-btn').addEventListener('click', function() {
+            var promptText = "Khi code Landing Page WordPress bằng PHP template, hãy sử dụng hàm PHP mme_form_auto($slug, $title, $json_fields) của plugin MME Form để hiển thị form.\nHàm này tự động kiểm tra/tạo form và trả về shortcode Chỉ Form (ẩn cột thông tin bên trái để lọt vào khung giao diện của bạn).\n\nQuy tắc viết mảng $json_fields (JSON array các object):\n- Các thuộc tính hỗ trợ:\n  + type: text, email, tel, textarea, select, hoặc radio.\n  + name: Tên biến (viết thường, không dấu, dùng dấu gạch dưới, VD: full_name, phone).\n  + label: Nhãn hiển thị (VD: \"Họ và tên\").\n  + placeholder: Gợi ý mờ trong ô nhập.\n  + width: \"100\" (Full dòng) hoặc \"50\" (Chia đôi dòng).\n  + required: true hoặc false.\n  + options: Chỉ cho select/radio, các lựa chọn cách nhau bằng \\n (xuống dòng).\n\nVí dụ PHP:\n<?php\n$fields = '[\n  {\"type\":\"text\", \"name\":\"fullname\", \"label\":\"Họ tên\", \"placeholder\":\"Nhập tên...\", \"required\":true, \"width\":\"100\"},\n  {\"type\":\"tel\", \"name\":\"phone\", \"label\":\"Số điện thoại\", \"placeholder\":\"09xx...\", \"required\":true, \"width\":\"50\"}\n]';\nif (function_exists('mme_form_auto')) {\n    echo mme_form_auto('landing-su-kien-2026', 'Form Sự Kiện', $fields);\n}\n?>\nLưu ý: Bạn hãy tự thiết kế Container/Card giao diện cho form đẹp mắt theo bố cục website rồi gọi echo mme_form_auto(...) vào đúng vị trí!";
+            
+            navigator.clipboard.writeText(promptText).then(function() {
+                var status = document.getElementById('mme-copy-ai-prompt-status');
+                status.style.display = 'inline';
+                setTimeout(function() { status.style.display = 'none'; }, 3000);
+            });
+        });
+
         document.getElementById('mme-form-git-pull-btn').addEventListener('click', function() {
             var btn = this;
             var resultDiv = document.getElementById('mme-form-git-pull-result');
