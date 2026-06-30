@@ -358,8 +358,11 @@
           var newFields = JSON.parse(importText.value);
           if (Array.isArray(newFields)) {
             fields = newFields;
-            renderTable();
-            updateJSON();
+            body.innerHTML = "";
+            fields.forEach(function (field) {
+              body.appendChild(createRow(field));
+            });
+            serialize();
             importWrap.style.display = "none";
             alert("Import thành công! Hãy bấm Cập nhật bài viết để lưu lại cấu hình mới.");
           } else {
