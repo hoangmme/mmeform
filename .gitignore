@@ -1,0 +1,26 @@
+# Bỏ qua WordPress Core
+/wp-admin/
+/wp-includes/
+/index.php
+/license.txt
+/readme.html
+/wp-*.php
+/xmlrpc.php
+
+# Bỏ qua file cấu hình (lưu thông tin database, bảo mật)
+/wp-config.php
+
+# Bỏ qua thư mục upload (ảnh, video, tài liệu)
+/wp-content/uploads/
+
+# Bỏ qua cache và các file rác
+/wp-content/cache/
+/wp-content/w3tc-config/
+sitemap.xml
+sitemap.xml.gz
+
+# Bỏ qua file nhật ký và môi trường
+*.log
+.DS_Store
+Thumbs.db
+.idea
