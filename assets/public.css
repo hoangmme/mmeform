@@ -86,10 +86,19 @@
     grid-template-columns: 1fr;
     column-gap: 0;
     row-gap: 0;
-    max-width: 680px;
+    max-width: var(--mme-form-max-width, 680px);
     margin: 0 auto;
     padding: 0 20px;
     align-items: start;
+  }
+
+  .mme-form-wrapper.is-form-only .mme-layout-grid {
+    grid-template-columns: 1fr !important;
+    column-gap: 0 !important;
+    row-gap: 0 !important;
+    max-width: var(--mme-form-max-width, 680px) !important;
+    margin: 0 auto;
+    padding: 0 !important;
   }
 }
 
@@ -160,7 +169,7 @@
 .mme-layout-hidden,
 .mme-layout-none {
   grid-template-columns: 1fr;
-  max-width: 680px;
+  max-width: var(--mme-form-max-width, 680px);
   margin: 0 auto;
 }
 
@@ -172,7 +181,35 @@
 .mme-layout-hidden .mme-area-form,
 .mme-layout-none .mme-area-form {
   width: 100%;
-  max-width: 680px;
+  max-width: var(--mme-form-max-width, 680px);
+  margin: 0 auto;
+}
+
+/* Layout: Form Only Mode (Bỏ padding wrapper & blobs, chỉ hiển thị form) */
+.mme-form-wrapper.is-form-only {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.mme-form-wrapper.is-form-only .mme-form-bg-blob {
+  display: none !important;
+}
+
+.mme-form-wrapper.is-form-only .mme-layout-grid {
+  grid-template-columns: 1fr !important;
+  max-width: var(--mme-form-max-width, 680px) !important;
+  padding: 0 !important;
+  margin: 0 auto;
+  row-gap: 0 !important;
+}
+
+.mme-form-wrapper.is-form-only .mme-area-left {
+  display: none !important;
+}
+
+.mme-form-wrapper.is-form-only .mme-area-form {
+  width: 100%;
+  max-width: var(--mme-form-max-width, 680px);
   margin: 0 auto;
 }
 
@@ -252,19 +289,19 @@
 
 
 .mme-form-card {
-  background: #ffffff;
-  border-radius: 28px;
-  padding: 40px;
-  box-shadow: 0 20px 60px -15px rgba(0,0,0,0.1);
-  border: 1px solid rgba(226, 232, 240, 0.6);
+  background: var(--mme-form-card-bg, #ffffff);
+  border-radius: var(--mme-form-radius, 28px);
+  padding: var(--mme-form-padding, 40px);
+  box-shadow: var(--mme-form-shadow, 0 20px 60px -15px rgba(0,0,0,0.1));
+  border: 1px solid var(--mme-form-card-border, rgba(226, 232, 240, 0.6));
   position: relative;
   overflow: hidden;
 }
 
 @media (max-width: 639px) {
   .mme-form-card {
-    padding: 24px;
-    border-radius: 22px;
+    padding: var(--mme-form-padding-mobile, 24px);
+    border-radius: min(var(--mme-form-radius, 22px), 22px);
   }
 }
 
@@ -280,7 +317,7 @@
 .mme-form-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 20px;
+  gap: var(--mme-form-field-gap, 20px);
 }
 
 @media (min-width: 640px) {
@@ -355,10 +392,10 @@
 .mme-form-field textarea,
 .mme-form-field select {
   width: 100%;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--mme-field-border, #e2e8f0);
   border-radius: 12px;
-  background: rgba(248, 250, 252, 0.5);
-  color: #1e293b;
+  background: var(--mme-field-bg, rgba(248, 250, 252, 0.5));
+  color: var(--mme-field-text, #1e293b);
   font-family: inherit;
   font-size: 14px;
   outline: none;
@@ -516,7 +553,7 @@
   border: none;
   border-radius: 999px;
   background: var(--mme-button);
-  color: #fff;
+  color: var(--mme-btn-text, #fff);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;

@@ -137,14 +137,74 @@ final class MME_Form_Admin
             <?php $this->text_input('form_footer', 'Chữ dưới cùng Form (Footer)', $settings['form_footer']); ?>
             <?php $this->text_input('success_message', 'Thông báo thành công', $settings['success_message']); ?>
             
-            <h4 class="mme-admin-span-2" style="margin-top: 15px; margin-bottom: 0; padding-bottom: 5px; border-bottom: 1px solid #ddd;">Thiết kế chung</h4>
+            <h4 class="mme-admin-span-2" style="margin-top: 15px; margin-bottom: 0; padding-bottom: 5px; border-bottom: 1px solid #ddd;">Bố cục & Kích thước Form</h4>
 
             <label class="mme-admin-field">
-                <span>Vị trí cột thông tin</span>
+                <span>Bố cục tổng thể (Layout Mode)</span>
+                <select name="mme_settings[layout_mode]">
+                    <option value="full" <?php selected($settings['layout_mode'] ?? 'full', 'full'); ?>>Giao diện đầy đủ (Landing Page - có padding ngoài & blob)</option>
+                    <option value="form_only" <?php selected($settings['layout_mode'] ?? 'full', 'form_only'); ?>>Chỉ khung Form (Tối giản - Bỏ padding ngoài & blob)</option>
+                </select>
+            </label>
+
+            <label class="mme-admin-field">
+                <span>Vị trí cột thông tin (khi ở chế độ đầy đủ)</span>
                 <select name="mme_settings[image_position]">
                     <?php foreach (array('left' => 'Bên trái', 'right' => 'Bên phải', 'top' => 'Bên trên', 'hidden' => 'Ẩn cột thông tin') as $value => $label) : ?>
                         <option value="<?php echo esc_attr($value); ?>" <?php selected($settings['image_position'], $value); ?>><?php echo esc_html($label); ?></option>
                     <?php endforeach; ?>
+                </select>
+            </label>
+
+            <label class="mme-admin-field">
+                <span>Padding bên trong Form Card</span>
+                <select name="mme_settings[form_padding]">
+                    <option value="default" <?php selected($settings['form_padding'] ?? 'default', 'default'); ?>>Tiêu chuẩn (40px / Mobile 24px)</option>
+                    <option value="spacious" <?php selected($settings['form_padding'] ?? 'default', 'spacious'); ?>>Rộng rãi (56px / Mobile 32px)</option>
+                    <option value="compact" <?php selected($settings['form_padding'] ?? 'default', 'compact'); ?>>Vừa phải (28px / Mobile 20px)</option>
+                    <option value="small" <?php selected($settings['form_padding'] ?? 'default', 'small'); ?>>Nhỏ gọn (16px / Mobile 14px)</option>
+                    <option value="none" <?php selected($settings['form_padding'] ?? 'default', 'none'); ?>>Không padding (0px - Phẳng theo khung)</option>
+                </select>
+            </label>
+
+            <label class="mme-admin-field">
+                <span>Khoảng cách giữa các ô nhập (Field Gap)</span>
+                <select name="mme_settings[form_field_gap]">
+                    <option value="default" <?php selected($settings['form_field_gap'] ?? 'default', 'default'); ?>>Tiêu chuẩn (20px)</option>
+                    <option value="compact" <?php selected($settings['form_field_gap'] ?? 'default', 'compact'); ?>>Gọn gàng (14px)</option>
+                    <option value="small" <?php selected($settings['form_field_gap'] ?? 'default', 'small'); ?>>Nhỏ gọn (10px)</option>
+                    <option value="relaxed" <?php selected($settings['form_field_gap'] ?? 'default', 'relaxed'); ?>>Rộng rãi (28px)</option>
+                </select>
+            </label>
+
+            <label class="mme-admin-field">
+                <span>Độ rộng tối đa Form Card (Max Width)</span>
+                <select name="mme_settings[form_max_width]">
+                    <option value="680px" <?php selected($settings['form_max_width'] ?? '680px', '680px'); ?>>Tiêu chuẩn (680px)</option>
+                    <option value="540px" <?php selected($settings['form_max_width'] ?? '680px', '540px'); ?>>Gọn gàng (540px)</option>
+                    <option value="800px" <?php selected($settings['form_max_width'] ?? '680px', '800px'); ?>>Rộng rãi (800px)</option>
+                    <option value="100%" <?php selected($settings['form_max_width'] ?? '680px', '100%'); ?>>100% (Tự co giãn theo khung chứa / Elementor)</option>
+                </select>
+            </label>
+
+            <label class="mme-admin-field">
+                <span>Bo góc Form Card (Border Radius)</span>
+                <select name="mme_settings[form_border_radius]">
+                    <option value="default" <?php selected($settings['form_border_radius'] ?? 'default', 'default'); ?>>Bo tròn nhiều (28px)</option>
+                    <option value="medium" <?php selected($settings['form_border_radius'] ?? 'default', 'medium'); ?>>Bo tròn vừa (16px)</option>
+                    <option value="small" <?php selected($settings['form_border_radius'] ?? 'default', 'small'); ?>>Bo nhẹ (8px)</option>
+                    <option value="none" <?php selected($settings['form_border_radius'] ?? 'default', 'none'); ?>>Vuông vức (0px)</option>
+                    <option value="full" <?php selected($settings['form_border_radius'] ?? 'default', 'full'); ?>>Siêu bo tròn (36px)</option>
+                </select>
+            </label>
+
+            <label class="mme-admin-field">
+                <span>Đổ bóng Form Card (Shadow)</span>
+                <select name="mme_settings[form_shadow]">
+                    <option value="default" <?php selected($settings['form_shadow'] ?? 'default', 'default'); ?>>Đổ bóng mềm (Mặc định)</option>
+                    <option value="none" <?php selected($settings['form_shadow'] ?? 'default', 'none'); ?>>Không đổ bóng (Phẳng)</option>
+                    <option value="subtle" <?php selected($settings['form_shadow'] ?? 'default', 'subtle'); ?>>Đổ bóng nhẹ</option>
+                    <option value="strong" <?php selected($settings['form_shadow'] ?? 'default', 'strong'); ?>>Đổ bóng nổi bật</option>
                 </select>
             </label>
 
@@ -157,11 +217,19 @@ final class MME_Form_Admin
                 </select>
             </label>
 
-            <?php $this->color_input('button_color', 'Màu chính (Primary)', $settings['button_color']); ?>
-            <?php $this->color_input('secondary_color', 'Màu phụ (Secondary)', $settings['secondary_color']); ?>
-            <?php $this->color_input('accent_color', 'Màu nhấn', $settings['accent_color']); ?>
-            <?php $this->color_input('background_color', 'Màu nền', $settings['background_color']); ?>
-            <?php $this->color_input('text_color', 'Màu chữ', $settings['text_color']); ?>
+            <h4 class="mme-admin-span-2" style="margin-top: 15px; margin-bottom: 0; padding-bottom: 5px; border-bottom: 1px solid #ddd;">Màu sắc Form & Giao diện</h4>
+
+            <?php $this->color_input('button_color', 'Màu nút bấm chính (Primary)', $settings['button_color']); ?>
+            <?php $this->color_input('button_text_color', 'Màu chữ trên nút bấm', $settings['button_text_color']); ?>
+            <?php $this->color_input('secondary_color', 'Màu phụ (Secondary / Badge)', $settings['secondary_color']); ?>
+            <?php $this->color_input('accent_color', 'Màu nhấn (Accent)', $settings['accent_color']); ?>
+            <?php $this->color_input('form_card_bg', 'Màu nền Form Card', $settings['form_card_bg']); ?>
+            <?php $this->color_input('form_card_border', 'Màu viền Form Card', $settings['form_card_border']); ?>
+            <?php $this->color_input('field_bg_color', 'Màu nền ô nhập liệu', $settings['field_bg_color']); ?>
+            <?php $this->color_input('field_border_color', 'Màu viền ô nhập liệu', $settings['field_border_color']); ?>
+            <?php $this->color_input('field_text_color', 'Màu chữ ô nhập liệu', $settings['field_text_color']); ?>
+            <?php $this->color_input('background_color', 'Màu nền ngoài cùng (Wrapper)', $settings['background_color']); ?>
+            <?php $this->color_input('text_color', 'Màu chữ ngoài cùng', $settings['text_color']); ?>
 
         </div>
         <?php
@@ -394,14 +462,31 @@ function doPost(e) {
         foreach (array('facebook_url', 'zalo_url', 'linkedin_url', 'tiktok_url', 'youtube_url', 'chatbot_base_url', 'webhook_url', 'twenty_base_url') as $key) {
             $settings[$key] = esc_url_raw($submitted[$key] ?? ($current[$key] ?? ''));
         }
-        foreach (array('button_color', 'accent_color', 'background_color', 'text_color') as $key) {
-            $settings[$key] = sanitize_hex_color($submitted[$key] ?? '') ?: $current[$key];
+        $defaults = MME_Form_Plugin::default_settings();
+        $color_keys = array(
+            'button_color', 'button_text_color', 'secondary_color', 'accent_color',
+            'background_color', 'text_color', 'form_card_bg', 'form_card_border',
+            'field_bg_color', 'field_border_color', 'field_text_color'
+        );
+        foreach ($color_keys as $key) {
+            $val = $submitted[$key] ?? '';
+            if ($val === 'transparent') {
+                $settings[$key] = 'transparent';
+            } else {
+                $settings[$key] = sanitize_hex_color($val) ?: ($current[$key] ?? ($defaults[$key] ?? ''));
+            }
         }
+        $settings['layout_mode'] = in_array(($submitted['layout_mode'] ?? ''), array('full', 'form_only'), true) ? $submitted['layout_mode'] : 'full';
         $image_pos = $submitted['image_position'] ?? '';
         if ($image_pos === 'none') {
             $image_pos = 'hidden';
         }
         $settings['image_position'] = in_array($image_pos, array('left', 'right', 'top', 'hidden'), true) ? $image_pos : 'left';
+        $settings['form_padding'] = in_array(($submitted['form_padding'] ?? ''), array('default', 'spacious', 'compact', 'small', 'none'), true) ? $submitted['form_padding'] : 'default';
+        $settings['form_field_gap'] = in_array(($submitted['form_field_gap'] ?? ''), array('default', 'compact', 'small', 'relaxed'), true) ? $submitted['form_field_gap'] : 'default';
+        $settings['form_border_radius'] = in_array(($submitted['form_border_radius'] ?? ''), array('default', 'medium', 'small', 'none', 'full'), true) ? $submitted['form_border_radius'] : 'default';
+        $settings['form_max_width'] = in_array(($submitted['form_max_width'] ?? ''), array('680px', '540px', '800px', '100%'), true) ? $submitted['form_max_width'] : '680px';
+        $settings['form_shadow'] = in_array(($submitted['form_shadow'] ?? ''), array('default', 'none', 'subtle', 'strong'), true) ? $submitted['form_shadow'] : 'default';
         $settings['font_family'] = in_array(($submitted['font_family'] ?? ''), array('system', 'inter', 'arial', 'georgia'), true) ? $submitted['font_family'] : 'system';
         $settings['trust_items'] = array_slice(array_values(array_filter(array_map('sanitize_text_field', preg_split('/\r\n|\r|\n/', (string) ($submitted['trust_items'] ?? ''))))), 0, 4);
         foreach (array('chatbot_enabled', 'webhook_enabled', 'twenty_enabled') as $key) {
@@ -663,7 +748,8 @@ function doPost(e) {
 
     private function color_input(string $key, string $label, string $value): void
     {
-        echo '<label class="mme-admin-field"><span>' . esc_html($label) . '</span><input type="color" name="mme_settings[' . esc_attr($key) . ']" value="' . esc_attr($value) . '"></label>';
+        $picker_val = (preg_match('/^#[0-9a-fA-F]{6}$/', $value)) ? $value : '#ffffff';
+        echo '<label class="mme-admin-field"><span>' . esc_html($label) . '</span><input type="color" name="mme_settings[' . esc_attr($key) . ']" value="' . esc_attr($picker_val) . '"></label>';
     }
 
     private function password_input(string $key, string $label, bool $is_set): void
