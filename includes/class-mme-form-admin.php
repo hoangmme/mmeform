@@ -142,7 +142,7 @@ final class MME_Form_Admin
             <label class="mme-admin-field">
                 <span>Vị trí cột thông tin</span>
                 <select name="mme_settings[image_position]">
-                    <?php foreach (array('left' => 'Bên trái', 'right' => 'Bên phải', 'top' => 'Bên trên') as $value => $label) : ?>
+                    <?php foreach (array('left' => 'Bên trái', 'right' => 'Bên phải', 'top' => 'Bên trên', 'hidden' => 'Ẩn cột thông tin') as $value => $label) : ?>
                         <option value="<?php echo esc_attr($value); ?>" <?php selected($settings['image_position'], $value); ?>><?php echo esc_html($label); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -397,7 +397,11 @@ function doPost(e) {
         foreach (array('button_color', 'accent_color', 'background_color', 'text_color') as $key) {
             $settings[$key] = sanitize_hex_color($submitted[$key] ?? '') ?: $current[$key];
         }
-        $settings['image_position'] = in_array(($submitted['image_position'] ?? ''), array('left', 'right', 'top'), true) ? $submitted['image_position'] : 'left';
+        $image_pos = $submitted['image_position'] ?? '';
+        if ($image_pos === 'none') {
+            $image_pos = 'hidden';
+        }
+        $settings['image_position'] = in_array($image_pos, array('left', 'right', 'top', 'hidden'), true) ? $image_pos : 'left';
         $settings['font_family'] = in_array(($submitted['font_family'] ?? ''), array('system', 'inter', 'arial', 'georgia'), true) ? $submitted['font_family'] : 'system';
         $settings['trust_items'] = array_slice(array_values(array_filter(array_map('sanitize_text_field', preg_split('/\r\n|\r|\n/', (string) ($submitted['trust_items'] ?? ''))))), 0, 4);
         foreach (array('chatbot_enabled', 'webhook_enabled', 'twenty_enabled') as $key) {

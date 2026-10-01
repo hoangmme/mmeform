@@ -59,8 +59,12 @@ final class MME_Form_Renderer
         $font = $font_map[$settings['font_family']] ?? $font_map['system'];
         $instance_id = wp_unique_id('mme-form-');
         $parent_url = !empty($args['parent_url']) ? esc_url_raw($args['parent_url']) : '';
-        $image_position = in_array($settings['image_position'], array('left', 'right', 'top'), true)
-            ? $settings['image_position']
+        $image_pos = $settings['image_position'] ?? 'left';
+        if ($image_pos === 'none') {
+            $image_pos = 'hidden';
+        }
+        $image_position = in_array($image_pos, array('left', 'right', 'top', 'hidden'), true)
+            ? $image_pos
             : 'left';
 
         $style = sprintf(
@@ -94,6 +98,7 @@ final class MME_Form_Renderer
             <div class="mme-layout-grid mme-layout-<?php echo esc_attr($image_position); ?>">
                 
                 <!-- Left Column -->
+                <?php if ($image_position !== 'hidden') : ?>
                 <div class="mme-area-left">
                     <!-- Khu vực 1: Heading -->
                     <div class="mme-area-heading">
@@ -163,6 +168,7 @@ final class MME_Form_Renderer
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
                 <?php endif; ?>
 
                 <!-- Khu vực 2: Form Card -->
