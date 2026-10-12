@@ -69,13 +69,63 @@ final class MME_Form_Plugin
     public function register_shortcode(): void
     {
         add_shortcode('mme_form', static function (array $attributes = array()): string {
-            $attributes = shortcode_atts(array('id' => 0), $attributes, 'mme_form');
-            return MME_Form_Renderer::render(absint($attributes['id']));
+            $attributes = shortcode_atts(array(
+                'id' => 0,
+                'mode' => '',
+                'card' => '',
+                'heading' => '',
+                'bg' => '',
+                'label_color' => '',
+            ), $attributes, 'mme_form');
+
+            $args = array();
+            if ($attributes['mode'] === 'fields_only') {
+                $args['fields_only'] = true;
+            } elseif ($attributes['mode'] === 'form_only') {
+                $args['form_only'] = true;
+            }
+            if (!empty($attributes['card'])) {
+                $args['card'] = in_array(strtolower($attributes['card']), array('yes', '1', 'true', 'card'), true) ? 'card' : 'transparent';
+            }
+            if (!empty($attributes['heading'])) {
+                $args['heading'] = in_array(strtolower($attributes['heading']), array('yes', '1', 'true'), true) ? 'yes' : 'no';
+            }
+            if (!empty($attributes['bg'])) {
+                $args['bg'] = sanitize_text_field($attributes['bg']);
+            }
+            if (!empty($attributes['label_color'])) {
+                $args['label_color'] = sanitize_text_field($attributes['label_color']);
+            }
+
+            return MME_Form_Renderer::render(absint($attributes['id']), $args);
         });
 
         add_shortcode('mme_form_fields', static function (array $attributes = array()): string {
-            $attributes = shortcode_atts(array('id' => 0), $attributes, 'mme_form_fields');
-            return MME_Form_Renderer::render(absint($attributes['id']), array('fields_only' => true));
+            $attributes = shortcode_atts(array(
+                'id' => 0,
+                'card' => '',
+                'heading' => '',
+                'bg' => '',
+                'label_color' => '',
+            ), $attributes, 'mme_form_fields');
+
+            $args = array(
+                'fields_only' => true,
+            );
+            if (!empty($attributes['card'])) {
+                $args['card'] = in_array(strtolower($attributes['card']), array('yes', '1', 'true', 'card'), true) ? 'card' : 'transparent';
+            }
+            if (!empty($attributes['heading'])) {
+                $args['heading'] = in_array(strtolower($attributes['heading']), array('yes', '1', 'true'), true) ? 'yes' : 'no';
+            }
+            if (!empty($attributes['bg'])) {
+                $args['bg'] = sanitize_text_field($attributes['bg']);
+            }
+            if (!empty($attributes['label_color'])) {
+                $args['label_color'] = sanitize_text_field($attributes['label_color']);
+            }
+
+            return MME_Form_Renderer::render(absint($attributes['id']), $args);
         });
     }
 
@@ -118,27 +168,126 @@ final class MME_Form_Plugin
             ? esc_url_raw(wp_unslash($_GET['mme_parent_url']))
             : '';
 
+        $mode = isset($_GET['mode']) ? sanitize_key($_GET['mode']) : '';
+        $bg_sim = isset($_GET['bg_sim']) ? sanitize_key($_GET['bg_sim']) : '';
+        $card = isset($_GET['card']) ? sanitize_key($_GET['card']) : '';
+        $in_modal = !empty($_GET['in_modal']);
+
+        $render_args = array(
+            'embed' => true,
+            'parent_url' => $parent_url,
+        );
+        if ($mode === 'fields_only' || $mode === 'form_only') {
+            $render_args['fields_only'] = true;
+        }
+        if (!empty($card)) {
+            $render_args['card'] = $card;
+        }
+
+        $body_bg = '#f8fafc';
+        if ($bg_sim === 'white') {
+            $body_bg = '#ffffff';
+        } elseif ($bg_sim === 'gray') {
+            $body_bg = '#e2e8f0';
+        } elseif ($bg_sim === 'dark') {
+            $body_bg = '#0f172a';
+        } elseif ($bg_sim === 'primary') {
+            $body_bg = '#1e3a8a';
+        }
+
+        $show_preview_bar = current_user_can('edit_post', $form_id) && empty($parent_url) && !$in_modal;
+
         ?><!doctype html>
 <html <?php language_attributes(); ?>>
 <head>
     <meta charset="<?php bloginfo('charset'); ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?php echo esc_html(get_the_title($form_id)); ?></title>
+    <title><?php echo esc_html(get_the_title($form_id)); ?> - Preview</title>
     <link rel="stylesheet" href="<?php echo esc_url(MME_FORM_URL . 'assets/public.css?ver=' . MME_FORM_VERSION); ?>">
     <style>
         body.mme-form-embed-page {
             margin: 0;
-            padding: 0;
+            padding: <?php echo $show_preview_bar ? '48px 0 0' : '0'; ?>;
             min-height: 100vh;
-            background: #f8fafc;
+            background: <?php echo esc_attr($body_bg); ?>;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            transition: background 0.2s ease;
+            box-sizing: border-box;
+        }
+        .mme-preview-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 48px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(8px);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 99999;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .mme-preview-topbar a, .mme-preview-topbar button {
+            color: #e2e8f0;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .mme-preview-topbar a:hover, .mme-preview-topbar button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+        .mme-preview-topbar a.is-active, .mme-preview-topbar button.is-active {
+            background: #2563eb;
+            border-color: #3b82f6;
+            color: #fff;
+            font-weight: 600;
+        }
+        .mme-preview-topbar-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
     </style>
 </head>
 <body class="mme-form-embed-page">
-<?php echo MME_Form_Renderer::render($form_id, array('embed' => true, 'parent_url' => $parent_url)); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php if ($show_preview_bar) :
+    $base_url = remove_query_arg(array('mode', 'bg_sim', 'card'));
+?>
+<div class="mme-preview-topbar">
+    <div class="mme-preview-topbar-group">
+        <span style="font-weight: 700; color: #60a5fa;">MME Form Preview:</span>
+        <a href="<?php echo esc_url(add_query_arg(array('mode' => 'full'), $base_url)); ?>" class="<?php echo $mode !== 'fields_only' ? 'is-active' : ''; ?>">Giao diện Đầy đủ</a>
+        <a href="<?php echo esc_url(add_query_arg(array('mode' => 'fields_only'), $base_url)); ?>" class="<?php echo $mode === 'fields_only' ? 'is-active' : ''; ?>">Chỉ Form ([mme_form_fields])</a>
+    </div>
+    <div class="mme-preview-topbar-group">
+        <span style="color: #94a3b8;">Thử màu nền section:</span>
+        <a href="<?php echo esc_url(add_query_arg('bg_sim', 'white', $base_url)); ?>" class="<?php echo $bg_sim === 'white' ? 'is-active' : ''; ?>">Trắng</a>
+        <a href="<?php echo esc_url(add_query_arg('bg_sim', 'gray', $base_url)); ?>" class="<?php echo $bg_sim === 'gray' || empty($bg_sim) ? 'is-active' : ''; ?>">Xám nhạt</a>
+        <a href="<?php echo esc_url(add_query_arg('bg_sim', 'dark', $base_url)); ?>" class="<?php echo $bg_sim === 'dark' ? 'is-active' : ''; ?>">Tối (Dark)</a>
+        <a href="<?php echo esc_url(add_query_arg('bg_sim', 'primary', $base_url)); ?>" class="<?php echo $bg_sim === 'primary' ? 'is-active' : ''; ?>">Màu thương hiệu</a>
+    </div>
+    <div class="mme-preview-topbar-group">
+        <a href="<?php echo esc_url(get_edit_post_link($form_id)); ?>">← Quay lại sửa Form</a>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php echo MME_Form_Renderer::render($form_id, $render_args); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 <script src="<?php echo esc_url(MME_FORM_URL . 'assets/public.js?ver=' . MME_FORM_VERSION); ?>"></script>
 </body>
 </html><?php
@@ -174,6 +323,8 @@ final class MME_Form_Plugin
             'success_message' => 'Đã nhận thông tin. MME sẽ liên hệ với bạn sớm!',
             'layout_mode' => 'full',
             'image_position' => 'left',
+            'fields_card_style' => 'card',
+            'fields_show_heading' => 'yes',
             'form_padding' => 'default',
             'form_field_gap' => 'default',
             'form_border_radius' => 'default',
@@ -184,6 +335,8 @@ final class MME_Form_Plugin
             'field_bg_color' => '#f8fafc',
             'field_border_color' => '#e2e8f0',
             'field_text_color' => '#1e293b',
+            'field_label_color' => '#1e293b',
+            'form_heading_color' => '#0f172a',
             'button_color' => '#0061ff',
             'button_text_color' => '#ffffff',
             'secondary_color' => '#10b981',

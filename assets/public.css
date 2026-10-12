@@ -319,7 +319,7 @@
   font-size: 22px;
   font-weight: 700;
   line-height: 1.4;
-  color: #0f172a;
+  color: var(--mme-form-heading-color, #0f172a);
 }
 
 /* Fields */
@@ -355,7 +355,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.025em;
-  color: #475569;
+  color: var(--mme-field-label-color, #1e293b);
 }
 
 .mme-form-field>label span {
@@ -911,12 +911,34 @@
   margin: 0;
 }
 
-.mme-form-wrapper.is-fields-only .mme-form-card {
+/* Chế độ trong suốt phẳng (khi tắt card style) */
+.mme-form-wrapper.is-fields-only:not(.has-card-style) .mme-form-card {
   background: transparent;
   border-radius: 0;
   padding: 0;
   box-shadow: none;
   border: none;
+}
+
+/* Chế độ Thẻ Form Card (has-card-style): Nền trắng/cài đặt, bo góc, viền, đổ bóng nổi bật */
+.mme-form-wrapper.is-fields-only.has-card-style {
+  max-width: var(--mme-form-max-width, 680px);
+  margin: 0 auto;
+}
+
+.mme-form-wrapper.is-fields-only.has-card-style .mme-form-card {
+  background: var(--mme-form-card-bg, #ffffff);
+  border-radius: var(--mme-form-radius, 28px);
+  padding: var(--mme-form-padding, 40px);
+  box-shadow: var(--mme-form-shadow, 0 20px 60px -15px rgba(0, 0, 0, 0.1));
+  border: 1px solid var(--mme-form-card-border, rgba(226, 232, 240, 0.6));
+}
+
+@media (max-width: 639px) {
+  .mme-form-wrapper.is-fields-only.has-card-style .mme-form-card {
+    padding: var(--mme-form-padding-mobile, 24px);
+    border-radius: min(var(--mme-form-radius, 22px), 22px);
+  }
 }
 
 /* Modifier: Component Mode (Nhúng phẳng vào Elementor) */

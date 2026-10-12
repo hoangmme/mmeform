@@ -28,6 +28,7 @@ final class MME_Form_Admin
         add_action('manage_mme_form_submission_posts_custom_column', array($this, 'render_submission_column'), 10, 2);
         add_filter('post_row_actions', array($this, 'remove_submission_quick_actions'), 10, 2);
         add_action('wp_ajax_mme_twenty_check_fields', array($this, 'ajax_twenty_check_fields'));
+        add_action('admin_footer', array($this, 'render_preview_modal'));
     }
 
     public function enqueue_assets(string $hook): void
@@ -209,6 +210,22 @@ final class MME_Form_Admin
             </label>
 
             <label class="mme-admin-field">
+                <span>Khung nền Shortcode Chỉ Form ([mme_form_fields])</span>
+                <select name="mme_settings[fields_card_style]">
+                    <option value="card" <?php selected($settings['fields_card_style'] ?? 'card', 'card'); ?>>Thẻ Form Card (Nền trắng/theo cài đặt, có padding, bo góc & bóng - Đề xuất cho mọi Section)</option>
+                    <option value="transparent" <?php selected($settings['fields_card_style'] ?? 'card', 'transparent'); ?>>Trong suốt phẳng (Không nền, không padding thẻ - Tự lồng ghép)</option>
+                </select>
+            </label>
+
+            <label class="mme-admin-field">
+                <span>Hiện Tiêu đề Form khi dùng Shortcode Chỉ Form</span>
+                <select name="mme_settings[fields_show_heading]">
+                    <option value="yes" <?php selected($settings['fields_show_heading'] ?? 'yes', 'yes'); ?>>Hiện tiêu đề Form</option>
+                    <option value="no" <?php selected($settings['fields_show_heading'] ?? 'yes', 'no'); ?>>Ẩn tiêu đề Form</option>
+                </select>
+            </label>
+
+            <label class="mme-admin-field">
                 <span>Font chữ</span>
                 <select name="mme_settings[font_family]">
                     <?php foreach (array('system' => 'System / Inter', 'inter' => 'Inter', 'arial' => 'Arial', 'georgia' => 'Georgia') as $value => $label) : ?>
@@ -223,8 +240,10 @@ final class MME_Form_Admin
             <?php $this->color_input('button_text_color', 'Màu chữ trên nút bấm', $settings['button_text_color']); ?>
             <?php $this->color_input('secondary_color', 'Màu phụ (Secondary / Badge)', $settings['secondary_color']); ?>
             <?php $this->color_input('accent_color', 'Màu nhấn (Accent)', $settings['accent_color']); ?>
-            <?php $this->color_input('form_card_bg', 'Màu nền Form Card', $settings['form_card_bg']); ?>
+            <?php $this->color_input('form_card_bg', 'Màu nền Form Card (Ví dụ: Nền trắng #ffffff)', $settings['form_card_bg']); ?>
             <?php $this->color_input('form_card_border', 'Màu viền Form Card', $settings['form_card_border']); ?>
+            <?php $this->color_input('form_heading_color', 'Màu chữ tiêu đề Form (Heading Form)', $settings['form_heading_color'] ?? '#0f172a'); ?>
+            <?php $this->color_input('field_label_color', 'Màu chữ nhãn trường (Field Title / Label - Họ tên, SĐT,...)', $settings['field_label_color'] ?? '#1e293b'); ?>
             <?php $this->color_input('field_bg_color', 'Màu nền ô nhập liệu', $settings['field_bg_color']); ?>
             <?php $this->color_input('field_border_color', 'Màu viền ô nhập liệu', $settings['field_border_color']); ?>
             <?php $this->color_input('field_text_color', 'Màu chữ ô nhập liệu', $settings['field_text_color']); ?>
@@ -375,8 +394,11 @@ function doPost(e) {
 
     public function render_embed_box(WP_Post $post): void
     {
-        $shortcode = '[mme_form id="' . $post->ID . '"]';
+        $shortcode_full = '[mme_form id="' . $post->ID . '"]';
+        $shortcode_fields = '[mme_form_fields id="' . $post->ID . '"]';
         $endpoint = add_query_arg('mme_form_embed', $post->ID, home_url('/'));
+        $preview_full_url = add_query_arg(array('mme_form_embed' => $post->ID, 'mode' => 'full'), home_url('/'));
+        $preview_fields_url = add_query_arg(array('mme_form_embed' => $post->ID, 'mode' => 'fields_only'), home_url('/'));
         $script = sprintf(
             '<script src="%s" data-mme-form="%d" data-endpoint="%s"></script>',
             MME_FORM_URL . 'assets/embed.js?ver=' . MME_FORM_VERSION,
@@ -384,14 +406,56 @@ function doPost(e) {
             $endpoint
         );
         ?>
-        <p style="margin-bottom: 16px;">
-            <a href="<?php echo esc_url(get_permalink($post->ID)); ?>" target="_blank" class="button button-primary button-large">Xem Preview giao diện Form (mở tab mới)</a>
-        </p>
-        <p><strong>Shortcode</strong></p>
-        <textarea class="widefat code" rows="2" readonly><?php echo esc_textarea($shortcode); ?></textarea>
-        <p><strong>Embed website khác</strong></p>
-        <textarea class="widefat code" rows="6" readonly><?php echo esc_textarea($script); ?></textarea>
-        <p class="description">Embed loader truyền full URL trang cha, tự resize iframe và đẩy event sang GTM, gtag hoặc Meta Pixel nếu website cha đã cài.</p>
+        <div style="margin-bottom: 14px;">
+            <button type="button" id="mme-open-preview-modal-btn" class="button button-primary button-large" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; padding: 6px 12px; margin-bottom: 8px;">
+                <span class="dashicons dashicons-visibility" style="margin-top: 2px;"></span> Xem trước Form (Live Preview)
+            </button>
+            <div style="display: flex; gap: 6px;">
+                <a href="<?php echo esc_url($preview_full_url); ?>" target="_blank" class="button button-secondary" style="flex: 1; text-align: center; font-size: 11px; padding: 0 4px;" title="Mở preview bản đầy đủ trong tab mới">Xem Full tab mới ↗</a>
+                <a href="<?php echo esc_url($preview_fields_url); ?>" target="_blank" class="button button-secondary" style="flex: 1; text-align: center; font-size: 11px; padding: 0 4px;" title="Mở preview chỉ form trong tab mới">Xem Chỉ Form ↗</a>
+            </div>
+        </div>
+
+        <div class="mme-shortcode-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <strong>Shortcode (Đầy đủ)</strong>
+                <span class="mme-copy-feedback" id="mme-copied-full">Đã chép!</span>
+            </div>
+            <div style="display: flex; gap: 6px;">
+                <input type="text" class="widefat code" id="mme-shortcode-full-input" value="<?php echo esc_attr($shortcode_full); ?>" readonly>
+                <button type="button" class="button mme-copy-btn" data-target="mme-shortcode-full-input" data-feedback="mme-copied-full">Copy</button>
+            </div>
+            <p class="description" style="margin: 4px 0 0; font-size: 11px;">Hiển thị trọn vẹn cả cột giới thiệu & form.</p>
+        </div>
+
+        <div class="mme-shortcode-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <strong>Shortcode (Chỉ Form)</strong>
+                <span class="mme-copy-feedback" id="mme-copied-fields">Đã chép!</span>
+            </div>
+            <div style="display: flex; gap: 6px;">
+                <input type="text" class="widefat code" id="mme-shortcode-fields-input" value="<?php echo esc_attr($shortcode_fields); ?>" readonly>
+                <button type="button" class="button mme-copy-btn" data-target="mme-shortcode-fields-input" data-feedback="mme-copied-fields">Copy</button>
+            </div>
+            <p class="description" style="margin: 4px 0 0; font-size: 11px; color: #475569;">
+                Chỉ hiện khung Form (thích hợp chèn vào mọi Section).<br>
+                <strong>Tùy chọn thêm vào shortcode:</strong><br>
+                • <code>card="yes"</code> : Giữ nền trắng Form Card (mặc định)<br>
+                • <code>card="no"</code> : Trong suốt phẳng<br>
+                • <code>heading="no"</code> : Ẩn tiêu đề Form
+            </p>
+        </div>
+
+        <div class="mme-shortcode-card" style="margin-bottom: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <strong>Embed website khác</strong>
+                <span class="mme-copy-feedback" id="mme-copied-embed">Đã chép!</span>
+            </div>
+            <textarea class="widefat code" id="mme-embed-script-input" rows="4" readonly><?php echo esc_textarea($script); ?></textarea>
+            <div style="margin-top: 6px; text-align: right;">
+                <button type="button" class="button mme-copy-btn" data-target="mme-embed-script-input" data-feedback="mme-copied-embed">Copy mã Embed</button>
+            </div>
+        </div>
         <?php
     }
 
@@ -466,7 +530,8 @@ function doPost(e) {
         $color_keys = array(
             'button_color', 'button_text_color', 'secondary_color', 'accent_color',
             'background_color', 'text_color', 'form_card_bg', 'form_card_border',
-            'field_bg_color', 'field_border_color', 'field_text_color'
+            'field_bg_color', 'field_border_color', 'field_text_color',
+            'field_label_color', 'form_heading_color'
         );
         foreach ($color_keys as $key) {
             $val = $submitted[$key] ?? '';
@@ -477,6 +542,8 @@ function doPost(e) {
             }
         }
         $settings['layout_mode'] = in_array(($submitted['layout_mode'] ?? ''), array('full', 'form_only'), true) ? $submitted['layout_mode'] : 'full';
+        $settings['fields_card_style'] = in_array(($submitted['fields_card_style'] ?? 'card'), array('card', 'transparent'), true) ? $submitted['fields_card_style'] : 'card';
+        $settings['fields_show_heading'] = ($submitted['fields_show_heading'] ?? 'yes') === 'no' ? 'no' : 'yes';
         $image_pos = $submitted['image_position'] ?? '';
         if ($image_pos === 'none') {
             $image_pos = 'hidden';
@@ -760,5 +827,50 @@ function doPost(e) {
     private function toggle(string $key, string $label, string $value): void
     {
         echo '<label class="mme-admin-toggle"><input type="hidden" name="mme_settings[' . esc_attr($key) . ']" value="no"><input type="checkbox" name="mme_settings[' . esc_attr($key) . ']" value="yes" ' . checked($value, 'yes', false) . '><span>' . esc_html($label) . '</span></label>';
+    }
+
+    public function render_preview_modal(): void
+    {
+        $screen = get_current_screen();
+        if (!$screen || $screen->post_type !== 'mme_form' || $screen->base !== 'post') {
+            return;
+        }
+
+        global $post;
+        if (!$post || $post->post_type !== 'mme_form') {
+            return;
+        }
+
+        $form_id = $post->ID;
+        $endpoint = add_query_arg(array('mme_form_embed' => $form_id, 'in_modal' => '1'), home_url('/'));
+        ?>
+        <div id="mme-preview-modal" class="mme-modal" style="display: none;" aria-hidden="true" role="dialog" aria-modal="true" data-base-url="<?php echo esc_url($endpoint); ?>">
+            <div class="mme-modal-backdrop"></div>
+            <div class="mme-modal-container">
+                <div class="mme-modal-header">
+                    <div class="mme-modal-title">
+                        <span class="dashicons dashicons-visibility" style="margin-top: 2px;"></span>
+                        <span>Xem trước giao diện Form (Live Preview)</span>
+                    </div>
+                    <div class="mme-modal-toolbar">
+                        <div class="mme-modal-toggle-group mme-mode-toggles">
+                            <button type="button" class="button mme-btn-mode is-active" data-mode="full">Giao diện Đầy đủ</button>
+                            <button type="button" class="button mme-btn-mode" data-mode="fields_only">Chỉ Form ([mme_form_fields])</button>
+                        </div>
+                        <div class="mme-modal-toggle-group mme-bg-toggles">
+                            <span class="mme-bg-label">Thử nền:</span>
+                            <button type="button" class="button mme-btn-bg is-active" data-bg="white" title="Nền trắng">Trắng</button>
+                            <button type="button" class="button mme-btn-bg" data-bg="gray" title="Nền xám">Xám</button>
+                            <button type="button" class="button mme-btn-bg" data-bg="dark" title="Nền tối (Dark)">Tối</button>
+                        </div>
+                    </div>
+                    <button type="button" class="mme-modal-close" aria-label="Đóng">&times;</button>
+                </div>
+                <div class="mme-modal-body" id="mme-modal-body-wrapper">
+                    <iframe id="mme-preview-iframe" src="about:blank" title="MME Form Preview" frameborder="0"></iframe>
+                </div>
+            </div>
+        </div>
+        <?php
     }
 }
