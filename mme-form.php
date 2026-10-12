@@ -14,10 +14,18 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MME_FORM_VERSION', '0.4.6');
-define('MME_FORM_FILE', __FILE__);
-define('MME_FORM_DIR', plugin_dir_path(__FILE__));
-define('MME_FORM_URL', plugin_dir_url(__FILE__));
+if (!defined('MME_FORM_VERSION')) {
+    define('MME_FORM_VERSION', '0.4.6');
+}
+if (!defined('MME_FORM_FILE')) {
+    define('MME_FORM_FILE', __FILE__);
+}
+if (!defined('MME_FORM_DIR')) {
+    define('MME_FORM_DIR', plugin_dir_path(__FILE__));
+}
+if (!defined('MME_FORM_URL')) {
+    define('MME_FORM_URL', plugin_dir_url(__FILE__));
+}
 
 require_once MME_FORM_DIR . 'includes/class-mme-form-renderer.php';
 require_once MME_FORM_DIR . 'includes/class-mme-form-submissions.php';
@@ -42,6 +50,7 @@ add_action('plugins_loaded', static function (): void {
  * @param bool $fields_only Mặc định true (Chỉ render phần form nhập liệu để fit vào layout của AI/dev, không hiện cột thông tin bên trái)
  * @return string HTML render của form
  */
+if (!function_exists('mme_form_auto')) {
 function mme_form_auto(string $slug, string $title = '', $fields = array(), $settings = array(), bool $fields_only = true): string {
     $slug = sanitize_title($slug);
     if (empty($slug)) {
@@ -87,5 +96,6 @@ function mme_form_auto(string $slug, string $title = '', $fields = array(), $set
 
     $shortcode = $fields_only ? 'mme_form_fields' : 'mme_form';
     return do_shortcode('[' . $shortcode . ' id="' . $form_id . '"]');
+}
 }
 

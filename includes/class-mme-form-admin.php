@@ -33,6 +33,10 @@ final class MME_Form_Admin
 
     public function enqueue_assets(string $hook): void
     {
+        if (!function_exists('get_current_screen')) {
+            return;
+        }
+
         $screen = get_current_screen();
         if (!$screen || !in_array($screen->post_type, array('mme_form', 'mme_form_submission'), true)) {
             return;
@@ -831,6 +835,10 @@ function doPost(e) {
 
     public function render_preview_modal(): void
     {
+        if (!function_exists('get_current_screen')) {
+            return;
+        }
+
         $screen = get_current_screen();
         if (!$screen || $screen->post_type !== 'mme_form' || $screen->base !== 'post') {
             return;

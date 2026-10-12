@@ -13,17 +13,20 @@
 
 - **Status:**
   - Done: Live preview modal, separate tab previews for full and form-only, copy buttons, white card styling & black field label customization.
-  - Current Focus: Ready for user verification.
-  - Next: Any additional customization requests.
+  - Done: Fix plugin fatal error on activation by guarding 33+ functions and constants against redeclaration collisions with mmeai-chatbot and themes, and guarding get_current_screen() and is_plugin_active() across all entry points.
+  - Current Focus: Verifying fix in WordPress activation.
+  - Next: User confirmation.
 
 - **Flags (Drift/Critical/Entropy):** None.
 - **Cost/Impact Alerts:** None.
 
 - **Registry & Recovery:**
   - Active Files:
+    - `mme-form.php`
+    - `includes/mme-chatbot.php`
+    - `includes/class-mme-form-admin.php`
     - `includes/class-mme-form-plugin.php`
     - `includes/class-mme-form-renderer.php`
-    - `includes/class-mme-form-admin.php`
     - `assets/public.css`
     - `assets/admin.css`
     - `assets/admin.js`

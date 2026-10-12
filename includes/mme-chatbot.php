@@ -3,21 +3,27 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define('MME_CHATBOT_VERSION', '1.2.0');
-define('MME_CHATBOT_CONTENT_DIR', 'mme-content');
+if (!defined('MME_CHATBOT_VERSION')) {
+    define('MME_CHATBOT_VERSION', '1.2.0');
+}
+if (!defined('MME_CHATBOT_CONTENT_DIR')) {
+    define('MME_CHATBOT_CONTENT_DIR', 'mme-content');
+}
 
 // Capture the actual template used on frontend pages so the iframe can send
 // precise context to chat.mme.vn.
-add_filter('template_include', 'mme_chatbot_capture_template_path', 999);
-function mme_chatbot_capture_template_path($template) {
-    $theme_dir = wp_normalize_path(get_stylesheet_directory());
-    $template_path = wp_normalize_path($template);
-    if (strpos($template_path, $theme_dir . '/') === 0) {
-        $GLOBALS['mme_chatbot_current_template_file'] = ltrim(substr($template_path, strlen($theme_dir)), '/');
-    } else {
-        $GLOBALS['mme_chatbot_current_template_file'] = basename($template);
+if (!function_exists('mme_chatbot_capture_template_path')) {
+    add_filter('template_include', 'mme_chatbot_capture_template_path', 999);
+    function mme_chatbot_capture_template_path($template) {
+        $theme_dir = wp_normalize_path(get_stylesheet_directory());
+        $template_path = wp_normalize_path($template);
+        if (strpos($template_path, $theme_dir . '/') === 0) {
+            $GLOBALS['mme_chatbot_current_template_file'] = ltrim(substr($template_path, strlen($theme_dir)), '/');
+        } else {
+            $GLOBALS['mme_chatbot_current_template_file'] = basename($template);
+        }
+        return $template;
     }
-    return $template;
 }
 
 // --- MME Editable Template Standard helpers ---
@@ -60,6 +66,7 @@ if (!function_exists('mme_html')) {
     }
 }
 
+if (!function_exists('mme_chatbot_content_data')) {
 function mme_chatbot_content_data($file = '') {
     static $cache = [];
     $cache_key = $file ?: '__merged__';
@@ -93,13 +100,17 @@ function mme_chatbot_content_data($file = '') {
     $cache[$cache_key] = $merged;
     return $merged;
 }
+}
 
+if (!function_exists('mme_chatbot_read_json_file')) {
 function mme_chatbot_read_json_file($relative_file) {
     $relative_file = ltrim(str_replace(['..', '\\'], ['', '/'], $relative_file), '/');
     $full_path = trailingslashit(get_stylesheet_directory()) . $relative_file;
     return mme_chatbot_decode_json_file($full_path);
 }
+}
 
+if (!function_exists('mme_chatbot_decode_json_file')) {
 function mme_chatbot_decode_json_file($full_path) {
     if (!file_exists($full_path)) {
         return [];
@@ -107,29 +118,39 @@ function mme_chatbot_decode_json_file($full_path) {
     $decoded = json_decode(file_get_contents($full_path), true);
     return is_array($decoded) ? $decoded : [];
 }
+}
 
+if (!function_exists('mme_chatbot_manifest_path')) {
 function mme_chatbot_manifest_path() {
     return trailingslashit(get_stylesheet_directory()) . MME_CHATBOT_CONTENT_DIR . '/manifest.json';
 }
+}
 
+if (!function_exists('mme_chatbot_get_manifest')) {
 function mme_chatbot_get_manifest() {
     return mme_chatbot_decode_json_file(mme_chatbot_manifest_path());
 }
+}
 
+if (!function_exists('mme_chatbot_template_exists')) {
 function mme_chatbot_template_exists($template_file) {
     if (!$template_file) {
         return false;
     }
     return file_exists(trailingslashit(get_stylesheet_directory()) . ltrim($template_file, '/'));
 }
+}
 
+if (!function_exists('mme_chatbot_relative_theme_file_exists')) {
 function mme_chatbot_relative_theme_file_exists($relative_file) {
     if (!$relative_file) {
         return false;
     }
     return file_exists(trailingslashit(get_stylesheet_directory()) . ltrim($relative_file, '/'));
 }
+}
 
+if (!function_exists('mme_chatbot_get_acf_field_names')) {
 function mme_chatbot_get_acf_field_names($post_id) {
     if (!$post_id || !function_exists('get_field_objects')) {
         return [];
@@ -146,7 +167,9 @@ function mme_chatbot_get_acf_field_names($post_id) {
     }
     return array_values(array_unique($names));
 }
+}
 
+if (!function_exists('mme_chatbot_current_page_context')) {
 function mme_chatbot_current_page_context($mode = 'editor') {
     $post_id = get_queried_object_id();
     if (is_admin() && isset($_GET['post'])) {
@@ -180,14 +203,23 @@ function mme_chatbot_current_page_context($mode = 'editor') {
         'content_dir' => MME_CHATBOT_CONTENT_DIR,
     ];
 }
-
-// 1. ĐĂNG KÝ TRANG CÀI ĐẶT
-add_action('admin_menu', 'mme_chatbot_add_admin_menu');
-function mme_chatbot_add_admin_menu() {
-    add_submenu_page('edit.php?post_type=mme_form', 'Cài đặt chung', 'Cài đặt chung', 'manage_options', 'mme_chatbot', 'mme_chatbot_options_page');
 }
 
-function mme_chatbot_options_page() {
+// 1. ĐĂNG KÝ TRANG CÀI ĐẶT
+if (!function_exists('mme_form_chatbot_admin_menu')) {
+    add_action('admin_menu', 'mme_form_chatbot_admin_menu');
+    function mme_form_chatbot_admin_menu() {
+        add_submenu_page('edit.php?post_type=mme_form', 'Cài đặt chung', 'Cài đặt chung', 'manage_options', 'mme_chatbot', 'mme_form_chatbot_options_page');
+    }
+}
+if (!function_exists('mme_chatbot_add_admin_menu')) {
+    function mme_chatbot_add_admin_menu() {
+        mme_form_chatbot_admin_menu();
+    }
+}
+
+if (!function_exists('mme_form_chatbot_options_page')) {
+function mme_form_chatbot_options_page() {
     ?>
     <div class="wrap">
         <h2>MME Chatbot Settings</h2>
@@ -265,73 +297,100 @@ function mme_chatbot_options_page() {
     </div>
     <?php
 }
-
-add_action('admin_init', 'mme_chatbot_settings_init');
-function mme_chatbot_settings_init() {
-    register_setting('mme_chatbot_options', 'mme_chatbot_slug', ['sanitize_callback' => 'sanitize_text_field']);
-    register_setting('mme_chatbot_options', 'mme_chatbot_token', ['sanitize_callback' => 'sanitize_text_field']);
-    register_setting('mme_chatbot_options', 'mme_chatbot_base_url', ['sanitize_callback' => 'esc_url_raw']);
-    register_setting('mme_chatbot_options', 'mme_chatbot_github_repo', ['sanitize_callback' => 'sanitize_text_field']);
-    register_setting('mme_chatbot_options', 'mme_chatbot_github_branch', ['sanitize_callback' => 'sanitize_text_field']);
-    register_setting('mme_chatbot_options', 'mme_chatbot_github_token', ['sanitize_callback' => 'sanitize_text_field']);
-    register_setting('mme_chatbot_options', 'mme_chatbot_sync_token', ['sanitize_callback' => 'sanitize_text_field']);
-    
-    add_settings_section('mme_chatbot_main', 'Cấu hình kết nối API', null, 'mme_chatbot');
-    add_settings_section('mme_chatbot_sync', 'Content Sync Webhook', 'mme_chatbot_sync_section_render', 'mme_chatbot');
-    
-    add_settings_field('mme_chatbot_base_url', 'Chatbot Base URL', 'mme_chatbot_base_url_render', 'mme_chatbot', 'mme_chatbot_main');
-    add_settings_field('mme_chatbot_slug', 'Chatbot Slug', 'mme_chatbot_slug_render', 'mme_chatbot', 'mme_chatbot_main');
-    add_settings_field('mme_chatbot_token', 'Admin Token (Secret)', 'mme_chatbot_token_render', 'mme_chatbot', 'mme_chatbot_main');
-    add_settings_field('mme_chatbot_github_repo', 'GitHub Repo', 'mme_chatbot_github_repo_render', 'mme_chatbot', 'mme_chatbot_sync');
-    add_settings_field('mme_chatbot_github_branch', 'GitHub Branch', 'mme_chatbot_github_branch_render', 'mme_chatbot', 'mme_chatbot_sync');
-    add_settings_field('mme_chatbot_github_token', 'GitHub Token', 'mme_chatbot_github_token_render', 'mme_chatbot', 'mme_chatbot_sync');
-    add_settings_field('mme_chatbot_sync_token', 'Sync Webhook Secret', 'mme_chatbot_sync_token_render', 'mme_chatbot', 'mme_chatbot_sync');
-    add_settings_field('mme_chatbot_sync_url', 'Deploy Webhook URL', 'mme_chatbot_sync_url_render', 'mme_chatbot', 'mme_chatbot_sync');
 }
 
+if (!function_exists('mme_chatbot_options_page')) {
+    function mme_chatbot_options_page() {
+        mme_form_chatbot_options_page();
+    }
+}
+
+if (!function_exists('mme_chatbot_settings_init')) {
+    add_action('admin_init', 'mme_chatbot_settings_init');
+    function mme_chatbot_settings_init() {
+        register_setting('mme_chatbot_options', 'mme_chatbot_slug', ['sanitize_callback' => 'sanitize_text_field']);
+        register_setting('mme_chatbot_options', 'mme_chatbot_token', ['sanitize_callback' => 'sanitize_text_field']);
+        register_setting('mme_chatbot_options', 'mme_chatbot_base_url', ['sanitize_callback' => 'esc_url_raw']);
+        register_setting('mme_chatbot_options', 'mme_chatbot_github_repo', ['sanitize_callback' => 'sanitize_text_field']);
+        register_setting('mme_chatbot_options', 'mme_chatbot_github_branch', ['sanitize_callback' => 'sanitize_text_field']);
+        register_setting('mme_chatbot_options', 'mme_chatbot_github_token', ['sanitize_callback' => 'sanitize_text_field']);
+        register_setting('mme_chatbot_options', 'mme_chatbot_sync_token', ['sanitize_callback' => 'sanitize_text_field']);
+        
+        add_settings_section('mme_chatbot_main', 'Cấu hình kết nối API', null, 'mme_chatbot');
+        add_settings_section('mme_chatbot_sync', 'Content Sync Webhook', 'mme_chatbot_sync_section_render', 'mme_chatbot');
+        
+        add_settings_field('mme_chatbot_base_url', 'Chatbot Base URL', 'mme_chatbot_base_url_render', 'mme_chatbot', 'mme_chatbot_main');
+        add_settings_field('mme_chatbot_slug', 'Chatbot Slug', 'mme_chatbot_slug_render', 'mme_chatbot', 'mme_chatbot_main');
+        add_settings_field('mme_chatbot_token', 'Admin Token (Secret)', 'mme_chatbot_token_render', 'mme_chatbot', 'mme_chatbot_main');
+        add_settings_field('mme_chatbot_github_repo', 'GitHub Repo', 'mme_chatbot_github_repo_render', 'mme_chatbot', 'mme_chatbot_sync');
+        add_settings_field('mme_chatbot_github_branch', 'GitHub Branch', 'mme_chatbot_github_branch_render', 'mme_chatbot', 'mme_chatbot_sync');
+        add_settings_field('mme_chatbot_github_token', 'GitHub Token', 'mme_chatbot_github_token_render', 'mme_chatbot', 'mme_chatbot_sync');
+        add_settings_field('mme_chatbot_sync_token', 'Sync Webhook Secret', 'mme_chatbot_sync_token_render', 'mme_chatbot', 'mme_chatbot_sync');
+        add_settings_field('mme_chatbot_sync_url', 'Deploy Webhook URL', 'mme_chatbot_sync_url_render', 'mme_chatbot', 'mme_chatbot_sync');
+    }
+}
+
+if (!function_exists('mme_chatbot_base_url_render')) {
 function mme_chatbot_base_url_render() {
     $val = get_option('mme_chatbot_base_url', 'https://chat.mme.vn');
     echo "<input type='url' name='mme_chatbot_base_url' value='" . esc_attr($val) . "' style='width:300px;' placeholder='https://...' />";
     echo "<p class='description'>Đường dẫn gốc tới server MME Chatbot của bạn (VD: https://chat.mme.vn).</p>";
 }
+}
 
+if (!function_exists('mme_chatbot_slug_render')) {
 function mme_chatbot_slug_render() {
     $val = get_option('mme_chatbot_slug');
     echo "<input type='text' name='mme_chatbot_slug' value='" . esc_attr($val) . "' style='width:300px;' placeholder='VD: khach-a' />";
 }
+}
+
+if (!function_exists('mme_chatbot_token_render')) {
 function mme_chatbot_token_render() {
     $val = get_option('mme_chatbot_token');
     echo "<input type='password' name='mme_chatbot_token' value='" . esc_attr($val) . "' style='width:300px;' placeholder='MME Admin Token' />";
     echo "<p class='description'>Token này dùng để mở khóa tính năng AI Editor & SEO Writer cho Admin.</p>";
 }
+}
 
+if (!function_exists('mme_chatbot_sync_section_render')) {
 function mme_chatbot_sync_section_render() {
     echo "<p>Webhook này cho phép <code>chat.mme.vn</code> sau khi sửa JSON trên GitHub sẽ gọi về website, plugin tải lại <code>mme-content/*.json</code> và chạy sync nếu theme có <code>mme-content/sync-to-wp.php</code>.</p>";
 }
+}
 
+if (!function_exists('mme_chatbot_github_repo_render')) {
 function mme_chatbot_github_repo_render() {
     $val = get_option('mme_chatbot_github_repo');
     echo "<input type='text' name='mme_chatbot_github_repo' value='" . esc_attr($val) . "' style='width:300px;' placeholder='hoangmme/aptrubber' />";
     echo "<p class='description'>Repo theme chứa thư mục <code>mme-content</code>.</p>";
 }
+}
 
+if (!function_exists('mme_chatbot_github_branch_render')) {
 function mme_chatbot_github_branch_render() {
     $val = get_option('mme_chatbot_github_branch', 'main');
     echo "<input type='text' name='mme_chatbot_github_branch' value='" . esc_attr($val) . "' style='width:300px;' placeholder='main' />";
 }
+}
 
+if (!function_exists('mme_chatbot_github_token_render')) {
 function mme_chatbot_github_token_render() {
     $val = get_option('mme_chatbot_github_token');
     echo "<input type='password' name='mme_chatbot_github_token' value='" . esc_attr($val) . "' style='width:300px;' placeholder='Fine-grained PAT nếu repo private' autocomplete='off' />";
     echo "<p class='description'>Repo private cần token có quyền Contents: Read. Repo public có thể để trống.</p>";
 }
+}
 
+if (!function_exists('mme_chatbot_sync_token_render')) {
 function mme_chatbot_sync_token_render() {
     $val = get_option('mme_chatbot_sync_token');
     echo "<input type='password' name='mme_chatbot_sync_token' value='" . esc_attr($val) . "' style='width:300px;' placeholder='Chuỗi bí mật webhook' autocomplete='off' />";
     echo "<p class='description'>Tạo chuỗi dài ngẫu nhiên, ví dụ: <code>" . esc_html(wp_generate_password(40, false, false)) . "</code></p>";
 }
+}
 
+if (!function_exists('mme_chatbot_sync_url_render')) {
 function mme_chatbot_sync_url_render() {
     $secret = get_option('mme_chatbot_sync_token');
     if (!$secret) {
@@ -342,7 +401,9 @@ function mme_chatbot_sync_url_render() {
     echo "<code style='display:inline-block;max-width:100%;padding:8px;background:#f6f7f7;word-break:break-all;'>" . esc_html($url) . "</code>";
     echo "<p class='description'>Dán URL này vào <strong>Deploy webhook URL</strong> trong admin <code>chat.mme.vn</code> của chatbot/tenant tương ứng.</p>";
 }
+}
 
+if (!function_exists('mme_chatbot_render_content_status')) {
 function mme_chatbot_render_content_status() {
     $manifest_path = mme_chatbot_manifest_path();
     $manifest = mme_chatbot_get_manifest();
@@ -423,17 +484,21 @@ function mme_chatbot_render_content_status() {
     <?php endif; ?>
     <?php
 }
-
-// 2. REST WEBHOOK: SYNC mme-content JSON FROM GITHUB TO CURRENT THEME
-add_action('rest_api_init', 'mme_chatbot_register_rest_routes');
-function mme_chatbot_register_rest_routes() {
-    register_rest_route('mme-chatbot/v1', '/sync-content', [
-        'methods' => ['GET', 'POST'],
-        'callback' => 'mme_chatbot_rest_sync_content',
-        'permission_callback' => '__return_true',
-    ]);
 }
 
+// 2. REST WEBHOOK: SYNC mme-content JSON FROM GITHUB TO CURRENT THEME
+if (!function_exists('mme_chatbot_register_rest_routes')) {
+    add_action('rest_api_init', 'mme_chatbot_register_rest_routes');
+    function mme_chatbot_register_rest_routes() {
+        register_rest_route('mme-chatbot/v1', '/sync-content', [
+            'methods' => ['GET', 'POST'],
+            'callback' => 'mme_chatbot_rest_sync_content',
+            'permission_callback' => '__return_true',
+        ]);
+    }
+}
+
+if (!function_exists('mme_chatbot_rest_sync_content')) {
 function mme_chatbot_rest_sync_content(WP_REST_Request $request) {
     $configured_secret = (string) get_option('mme_chatbot_sync_token');
     $request_secret = (string) ($request->get_param('token') ?: $request->get_header('x-mme-sync-token'));
@@ -526,12 +591,16 @@ function mme_chatbot_rest_sync_content(WP_REST_Request $request) {
         'sync_output' => substr($sync_output, 0, 2000),
     ]);
 }
+}
 
+if (!function_exists('mme_chatbot_github_repo_path')) {
 function mme_chatbot_github_repo_path($repo) {
     [$owner, $name] = explode('/', $repo, 2);
     return rawurlencode($owner) . '/' . rawurlencode($name);
 }
+}
 
+if (!function_exists('mme_chatbot_github_headers')) {
 function mme_chatbot_github_headers() {
     $headers = [
         'Accept' => 'application/vnd.github+json',
@@ -543,7 +612,9 @@ function mme_chatbot_github_headers() {
     }
     return $headers;
 }
+}
 
+if (!function_exists('mme_chatbot_github_get_json')) {
 function mme_chatbot_github_get_json($url) {
     $response = wp_remote_get($url, [
         'timeout' => 30,
@@ -569,7 +640,9 @@ function mme_chatbot_github_get_json($url) {
 
     return $data;
 }
+}
 
+if (!function_exists('mme_chatbot_github_fetch_tree')) {
 function mme_chatbot_github_fetch_tree($repo, $branch) {
     $repo_path = mme_chatbot_github_repo_path($repo);
     $branch_url = 'https://api.github.com/repos/' . $repo_path . '/branches/' . rawurlencode($branch);
@@ -586,7 +659,9 @@ function mme_chatbot_github_fetch_tree($repo, $branch) {
     $tree_url = 'https://api.github.com/repos/' . $repo_path . '/git/trees/' . rawurlencode($tree_sha) . '?recursive=1';
     return mme_chatbot_github_get_json($tree_url);
 }
+}
 
+if (!function_exists('mme_chatbot_github_fetch_blob_content')) {
 function mme_chatbot_github_fetch_blob_content($repo, $sha) {
     $blob_url = 'https://api.github.com/repos/' . mme_chatbot_github_repo_path($repo) . '/git/blobs/' . rawurlencode($sha);
     $blob = mme_chatbot_github_get_json($blob_url);
@@ -605,8 +680,10 @@ function mme_chatbot_github_fetch_blob_content($repo, $sha) {
 
     return $decoded;
 }
+}
 
 // 3. NHÚNG CHATBOT VÀO FRONTEND
+if (!function_exists('mme_chatbot_render_frontend')) {
 add_action('wp_footer', 'mme_chatbot_render_frontend');
 function mme_chatbot_render_frontend() {
     $slug = get_option('mme_chatbot_slug');
@@ -656,8 +733,10 @@ function mme_chatbot_render_frontend() {
         </script>';
     }
 }
+}
 
 // 4. NHÚNG CHATBOT VÀO BACKEND (CHỈ TRANG EDIT POST/PAGE CÓ RANKMATH)
+if (!function_exists('mme_chatbot_render_backend')) {
 add_action('admin_footer', 'mme_chatbot_render_backend');
 function mme_chatbot_render_backend() {
     $slug = get_option('mme_chatbot_slug');
@@ -667,14 +746,23 @@ function mme_chatbot_render_backend() {
 
     if (empty($slug) || empty($token)) return;
 
+    if (!function_exists('get_current_screen')) {
+        return;
+    }
+
     $screen = get_current_screen();
     if (!$screen || !in_array($screen->base, ['post'])) {
         return; // Không phải trang chỉnh sửa post/page/product
     }
 
     // Kiểm tra RankMath có active không
-    if (!is_plugin_active('seo-by-rank-math/rank-math.php')) {
-        return; // Yêu cầu chỉ bật khi có RankMath
+    if (!defined('RANK_MATH_VERSION')) {
+        if (!function_exists('is_plugin_active')) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+        if (!function_exists('is_plugin_active') || !is_plugin_active('seo-by-rank-math/rank-math.php')) {
+            return; // Yêu cầu chỉ bật khi có RankMath
+        }
     }
 
 
@@ -755,8 +843,10 @@ function mme_chatbot_render_backend() {
       })();
     </script>';
 }
+}
 
 // Thêm AJAX handler cho nút Git Pull
+if (!function_exists('mme_form_git_pull_handler')) {
 add_action('wp_ajax_mme_form_git_pull', 'mme_form_git_pull_handler');
 function mme_form_git_pull_handler() {
     check_ajax_referer('mme_form_git_pull_nonce');
@@ -788,3 +878,5 @@ function mme_form_git_pull_handler() {
     
     wp_send_json_success('Đã gửi lệnh kích hoạt Deploy cho domain: ' . $domain . '. Vui lòng chờ vài giây để server tự động cập nhật!');
 }
+}
+
