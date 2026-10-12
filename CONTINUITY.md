@@ -14,7 +14,8 @@
 - **Status:**
   - Done: Live preview modal, separate tab previews for full and form-only, copy buttons, white card styling & black field label customization.
   - Done: Fix plugin fatal error on activation by guarding 33+ functions and constants against redeclaration collisions with mmeai-chatbot and themes, and guarding get_current_screen() and is_plugin_active() across all entry points.
-  - Current Focus: Verifying fix in WordPress activation.
+  - Done: Added MME_FORM_BOOTSTRAPPED singleton guard and class_exists wrappers on all classes (MME_Form_Plugin, MME_Form_Renderer, MME_Form_Admin, MME_Form_Submissions) to prevent fatal errors when multiple plugin folders (e.g. mmeform and mmeform-main) coexist on the server.
+  - Current Focus: Verifying fix in WordPress activation and guiding user on cleanup of duplicate folder.
   - Next: User confirmation.
 
 - **Flags (Drift/Critical/Entropy):** None.

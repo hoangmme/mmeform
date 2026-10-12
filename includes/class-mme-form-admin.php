@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+if (!class_exists('MME_Form_Admin')) {
 final class MME_Form_Admin
 {
     private static ?MME_Form_Admin $instance = null;
@@ -882,3 +883,5 @@ function doPost(e) {
         <?php
     }
 }
+}
+

@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+if (!class_exists('MME_Form_Renderer')) {
 final class MME_Form_Renderer
 {
     public static function render(int $form_id, array $args = array()): string
@@ -461,3 +462,5 @@ final class MME_Form_Renderer
         return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' . $path . '</svg>';
     }
 }
+}
+

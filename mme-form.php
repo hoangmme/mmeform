@@ -14,6 +14,12 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Ngăn chặn xung đột khi trên server tồn tại 2 thư mục plugin (ví dụ: mmeform và mmeform-main)
+if (defined('MME_FORM_BOOTSTRAPPED')) {
+    return;
+}
+define('MME_FORM_BOOTSTRAPPED', true);
+
 if (!defined('MME_FORM_VERSION')) {
     define('MME_FORM_VERSION', '0.4.6');
 }

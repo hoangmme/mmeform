@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+if (!class_exists('MME_Form_Submissions')) {
 final class MME_Form_Submissions
 {
     private static ?MME_Form_Submissions $instance = null;
@@ -513,3 +514,5 @@ final class MME_Form_Submissions
         return array('success' => $status >= 200 && $status < 300, 'status_code' => $status, 'response' => json_decode($body, true));
     }
 }
+}
+

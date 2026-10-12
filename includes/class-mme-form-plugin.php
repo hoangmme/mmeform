@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+if (!class_exists('MME_Form_Plugin')) {
 final class MME_Form_Plugin
 {
     private static ?MME_Form_Plugin $instance = null;
@@ -384,3 +385,5 @@ final class MME_Form_Plugin
         }
     }
 }
+}
+
