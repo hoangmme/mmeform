@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+if (!class_exists('MME_Form_Renderer')) {
 final class MME_Form_Renderer
 {
     public static function render(int $form_id, array $args = array()): string
@@ -59,41 +60,117 @@ final class MME_Form_Renderer
         $font = $font_map[$settings['font_family']] ?? $font_map['system'];
         $instance_id = wp_unique_id('mme-form-');
         $parent_url = !empty($args['parent_url']) ? esc_url_raw($args['parent_url']) : '';
-        $image_position = in_array($settings['image_position'], array('left', 'right', 'top'), true)
-            ? $settings['image_position']
+        $layout_mode = ($settings['layout_mode'] ?? 'full') === 'form_only' || !empty($args['form_only']) ? 'form_only' : 'full';
+
+        $image_pos = $settings['image_position'] ?? 'left';
+        if ($image_pos === 'none') {
+            $image_pos = 'hidden';
+        }
+        $image_position = in_array($image_pos, array('left', 'right', 'top', 'hidden'), true)
+            ? $image_pos
             : 'left';
 
+        $padding_map = array(
+            'default'  => array('desktop' => '40px', 'mobile' => '24px'),
+            'spacious' => array('desktop' => '56px', 'mobile' => '32px'),
+            'compact'  => array('desktop' => '28px', 'mobile' => '20px'),
+            'small'    => array('desktop' => '16px', 'mobile' => '14px'),
+            'none'     => array('desktop' => '0px',  'mobile' => '0px'),
+        );
+        $padding_val = $padding_map[$settings['form_padding'] ?? 'default'] ?? $padding_map['default'];
+
+        $gap_map = array(
+            'default' => '20px',
+            'compact' => '14px',
+            'small'   => '10px',
+            'relaxed' => '28px',
+        );
+        $gap_val = $gap_map[$settings['form_field_gap'] ?? 'default'] ?? '20px';
+
+        $radius_map = array(
+            'default' => '28px',
+            'medium'  => '16px',
+            'small'   => '8px',
+            'none'    => '0px',
+            'full'    => '36px',
+        );
+        $radius_val = $radius_map[$settings['form_border_radius'] ?? 'default'] ?? '28px';
+
+        $shadow_map = array(
+            'default' => '0 20px 60px -15px rgba(0,0,0,0.1)',
+            'none'    => 'none',
+            'subtle'  => '0 4px 20px -2px rgba(0,0,0,0.06)',
+            'strong'  => '0 25px 70px -12px rgba(0,0,0,0.25)',
+        );
+        $shadow_val = $shadow_map[$settings['form_shadow'] ?? 'default'] ?? $shadow_map['default'];
+
+        $max_width_val = !empty($settings['form_max_width']) ? $settings['form_max_width'] : '680px';
+        $card_bg = !empty($args['bg']) ? $args['bg'] : (!empty($settings['form_card_bg']) ? $settings['form_card_bg'] : '#ffffff');
+        $card_border = !empty($settings['form_card_border']) ? $settings['form_card_border'] : 'rgba(226, 232, 240, 0.6)';
+        $field_bg = !empty($settings['field_bg_color']) ? $settings['field_bg_color'] : 'rgba(248, 250, 252, 0.5)';
+        $field_border = !empty($settings['field_border_color']) ? $settings['field_border_color'] : '#e2e8f0';
+        $field_text = !empty($settings['field_text_color']) ? $settings['field_text_color'] : '#1e293b';
+        $field_label = !empty($args['label_color']) ? $args['label_color'] : (!empty($settings['field_label_color']) ? $settings['field_label_color'] : '#1e293b');
+        $form_heading_color = !empty($settings['form_heading_color']) ? $settings['form_heading_color'] : '#0f172a';
+        $btn_text = !empty($settings['button_text_color']) ? $settings['button_text_color'] : '#ffffff';
+
+        $fields_card_style = $args['card'] ?? ($settings['fields_card_style'] ?? 'card');
+        $has_card_style = ($fields_card_style === 'card');
+
         $style = sprintf(
-            '--mme-button:%s;--mme-secondary:%s;--mme-accent:%s;--mme-bg:%s;--mme-text:%s;--mme-font:%s;',
+            '--mme-button:%s;--mme-secondary:%s;--mme-accent:%s;--mme-bg:%s;--mme-text:%s;--mme-font:%s;--mme-form-padding:%s;--mme-form-padding-mobile:%s;--mme-form-field-gap:%s;--mme-form-radius:%s;--mme-form-shadow:%s;--mme-form-max-width:%s;--mme-form-card-bg:%s;--mme-form-card-border:%s;--mme-field-bg:%s;--mme-field-border:%s;--mme-field-text:%s;--mme-field-label-color:%s;--mme-form-heading-color:%s;--mme-btn-text:%s;',
             esc_attr($settings['button_color']),
             esc_attr($settings['secondary_color']),
             esc_attr($settings['accent_color']),
             esc_attr($settings['background_color']),
             esc_attr($settings['text_color']),
-            esc_attr($font)
+            esc_attr($font),
+            esc_attr($padding_val['desktop']),
+            esc_attr($padding_val['mobile']),
+            esc_attr($gap_val),
+            esc_attr($radius_val),
+            esc_attr($shadow_val),
+            esc_attr($max_width_val),
+            esc_attr($card_bg),
+            esc_attr($card_border),
+            esc_attr($field_bg),
+            esc_attr($field_border),
+            esc_attr($field_text),
+            esc_attr($field_label),
+            esc_attr($form_heading_color),
+            esc_attr($btn_text)
         );
 
         $wrapper_style = $style;
-        if (!empty($args['fields_only'])) {
-            $wrapper_style .= ' padding: 0 !important; background: transparent !important;';
+        if (!empty($args['fields_only']) || $layout_mode === 'form_only') {
+            $wrapper_style .= ' padding: 0 !important;';
+            if ($layout_mode === 'form_only' || !$has_card_style) {
+                $wrapper_style .= ' background: transparent !important;';
+            }
         }
+
+        $show_heading = empty($args['fields_only'])
+            || (($args['heading'] ?? ($settings['fields_show_heading'] ?? 'yes')) === 'yes');
 
         ob_start();
         echo $inline_assets;
         ?>
         <section
             id="<?php echo esc_attr($instance_id); ?>"
-            class="mme-form-wrapper <?php echo !empty($args['embed']) ? 'is-embed' : ''; ?> <?php echo !empty($args['fields_only']) ? 'is-fields-only' : ''; ?>"
+            class="mme-form-wrapper <?php echo !empty($args['embed']) ? 'is-embed' : ''; ?> <?php echo !empty($args['fields_only']) ? 'is-fields-only' : ''; ?> <?php echo (!empty($args['fields_only']) && $has_card_style) ? 'has-card-style' : ''; ?> <?php echo $layout_mode === 'form_only' ? 'is-form-only' : ''; ?>"
             style="<?php echo esc_attr($wrapper_style); ?>"
             data-form-id="<?php echo esc_attr((string) $form_id); ?>"
         >
-            <?php if (empty($args['fields_only'])) : ?>
+            <?php if (empty($args['fields_only']) && $layout_mode !== 'form_only') : ?>
             <div class="mme-form-bg-blob mme-bg-blob-primary"></div>
             <div class="mme-form-bg-blob mme-bg-blob-secondary"></div>
+            <?php endif; ?>
 
+            <?php if (empty($args['fields_only'])) : ?>
             <div class="mme-layout-grid mme-layout-<?php echo esc_attr($image_position); ?>">
                 
                 <!-- Left Column -->
+                <?php if ($image_position !== 'hidden' && $layout_mode !== 'form_only') : ?>
                 <div class="mme-area-left">
                     <!-- Khu vực 1: Heading -->
                     <div class="mme-area-heading">
@@ -164,11 +241,12 @@ final class MME_Form_Renderer
                     </div>
                 </div>
                 <?php endif; ?>
+                <?php endif; ?>
 
                 <!-- Khu vực 2: Form Card -->
                 <div class="mme-area-form">
                     <div class="mme-form-card">
-                        <?php if (!empty($settings['form_heading']) && empty($args['fields_only'])) : ?>
+                        <?php if (!empty($settings['form_heading']) && $show_heading) : ?>
                             <header class="mme-form-header">
                                 <h2><?php echo esc_html($settings['form_heading']); ?></h2>
                             </header>
@@ -384,3 +462,5 @@ final class MME_Form_Renderer
         return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' . $path . '</svg>';
     }
 }
+}
+

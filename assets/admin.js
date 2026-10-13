@@ -373,5 +373,136 @@
         }
       });
     }
+
+    // Copy Buttons Handler
+    var copyBtns = document.querySelectorAll(".mme-copy-btn");
+    copyBtns.forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        var targetId = btn.dataset.target;
+        var targetInput = document.getElementById(targetId);
+        if (!targetInput) return;
+
+        var textToCopy = targetInput.value || targetInput.textContent || "";
+        var origText = btn.textContent;
+
+        function showSuccess() {
+          btn.textContent = "✓ Đã chép!";
+          var fbId = btn.dataset.feedback;
+          if (fbId) {
+            var fb = document.getElementById(fbId);
+            if (fb) {
+              fb.classList.add("is-shown");
+              setTimeout(function () {
+                fb.classList.remove("is-shown");
+              }, 2200);
+            }
+          }
+          setTimeout(function () {
+            btn.textContent = origText;
+          }, 2000);
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(textToCopy).then(showSuccess).catch(function () {
+            targetInput.select();
+            document.execCommand("copy");
+            showSuccess();
+          });
+        } else {
+          targetInput.select();
+          document.execCommand("copy");
+          showSuccess();
+        }
+      });
+    });
+
+    // Modal Live Preview Handler
+    var previewModal = document.getElementById("mme-preview-modal");
+    var openPreviewBtn = document.getElementById("mme-open-preview-modal-btn");
+    if (previewModal && openPreviewBtn) {
+      var previewIframe = document.getElementById("mme-preview-iframe");
+      var previewClose = previewModal.querySelector(".mme-modal-close");
+      var previewBackdrop = previewModal.querySelector(".mme-modal-backdrop");
+      var modeButtons = previewModal.querySelectorAll(".mme-btn-mode");
+      var bgButtons = previewModal.querySelectorAll(".mme-btn-bg");
+      var modalBody = document.getElementById("mme-modal-body-wrapper");
+
+      var currentMode = "full";
+      var currentBg = "white";
+
+      function getPreviewUrl() {
+        var base = previewModal.dataset.baseUrl || "";
+        var delim = base.indexOf("?") !== -1 ? "&" : "?";
+        return base + delim + "mode=" + currentMode + "&bg_sim=" + currentBg;
+      }
+
+      function updatePreview() {
+        if (!previewIframe) return;
+        previewIframe.src = getPreviewUrl();
+        if (modalBody) {
+          var bgColors = {
+            white: "#ffffff",
+            gray: "#e2e8f0",
+            dark: "#0f172a",
+          };
+          modalBody.style.backgroundColor = bgColors[currentBg] || "#ffffff";
+        }
+      }
+
+      function openModal() {
+        previewModal.style.display = "flex";
+        previewModal.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+        updatePreview();
+      }
+
+      function closeModal() {
+        previewModal.style.display = "none";
+        previewModal.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+        if (previewIframe) {
+          previewIframe.src = "about:blank";
+        }
+      }
+
+      openPreviewBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        openModal();
+      });
+
+      if (previewClose) {
+        previewClose.addEventListener("click", closeModal);
+      }
+      if (previewBackdrop) {
+        previewBackdrop.addEventListener("click", closeModal);
+      }
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && previewModal.style.display !== "none") {
+          closeModal();
+        }
+      });
+
+      modeButtons.forEach(function (mBtn) {
+        mBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          modeButtons.forEach(function (b) { b.classList.remove("is-active"); });
+          mBtn.classList.add("is-active");
+          currentMode = mBtn.dataset.mode || "full";
+          updatePreview();
+        });
+      });
+
+      bgButtons.forEach(function (bBtn) {
+        bBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          bgButtons.forEach(function (b) { b.classList.remove("is-active"); });
+          bBtn.classList.add("is-active");
+          currentBg = bBtn.dataset.bg || "white";
+          updatePreview();
+        });
+      });
+    }
   });
 })();
