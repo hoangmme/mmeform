@@ -8,6 +8,8 @@
   - In-admin Interactive Live Preview Modal + tab preview with mode toggle (Full vs Form-Only) and background simulator (White, Gray, Dark) for instant visual feedback.
   - Native Pancake CRM Integration: Direct sync to Pancake CRM (supports both modern `crm.pancake.vn` v2 and legacy `pos.pages.fm` v1 fallback) with custom fields, attribution, and note compilation.
   - Live Version & Build Info: Automatic Git commit + date/time detection across WP-Admin (Plugins list row meta, MME Forms list banner notice, form editor sidebar metabox, and admin footer) so user immediately knows which build/pull is active.
+  - Programmatic Lead Pipeline Bridge: Added `MME_Form_Submissions::record_lead()` and global helper `mme_record_lead()` allowing themes and custom AJAX handlers to directly store leads to WordPress database (`mme_form_submission` post type) and simultaneously dispatch to Pancake CRM and Google Sheets Webhook with full execution logs.
+  - Full Flattened Payload Aliases: Added top-level alias fields (`name`, `fullname`, `phone`, `email`, `sheet_need`, etc.) to webhook payloads alongside structured nested objects for 100% backward compatibility with legacy Google Apps Script and custom webhooks.
 
 - **Operational Constraints:**
   - Seamless backward compatibility with existing shortcodes `[mme_form id="..."]` and `[mme_form_fields id="..."]`.
@@ -21,8 +23,9 @@
   - Done: Added MME_FORM_BOOTSTRAPPED singleton guard and class_exists wrappers on all classes (MME_Form_Plugin, MME_Form_Renderer, MME_Form_Admin, MME_Form_Submissions) to prevent fatal errors when multiple plugin folders (e.g. mmeform and mmeform-main) coexist on the server.
   - Done: Added native Pancake CRM integration in MME Form (settings, admin metabox, and submission pipeline with v2/v1 dual fallback).
   - Done: Added dynamic version, date/time, and git commit display across WordPress admin (Plugins list, Admin notices, Edit screen sidebar, Footer text).
-  - Current Focus: Commit & push versioning feature to git.
-  - Next: User confirmation.
+  - Done: Added `mme_record_lead()` helper & `MME_Form_Submissions::record_lead()` with Google Apps Script flat aliases for Option 2 theme backend bridge.
+  - Current Focus: Commit & push mmeform to GitHub, then bridge theme form-handler.php.
+  - Next: Bridge `ieltsmentor.edu.vn/mme-platform/inc/form-handler.php` to `mme_record_lead()`.
 
 - **Flags (Drift/Critical/Entropy):** None.
 - **Cost/Impact Alerts:** None.

@@ -3,7 +3,7 @@
  * Plugin Name: MME Form
  * Plugin URI: https://mme.vn
  * Description: Compact form builder with external embeds, source URL tracking, chatbot, Google Sheets webhooks, and Twenty CRM sync.
- * Version: 0.5.0 (2026-10-16 12:05)
+ * Version: 0.5.1 (2026-10-16 12:30)
  * Author: MME
  * Text Domain: mme-form
  * Requires at least: 6.4
@@ -21,10 +21,10 @@ if (defined('MME_FORM_BOOTSTRAPPED')) {
 define('MME_FORM_BOOTSTRAPPED', true);
 
 if (!defined('MME_FORM_VERSION')) {
-    define('MME_FORM_VERSION', '0.5.0');
+    define('MME_FORM_VERSION', '0.5.1');
 }
 if (!defined('MME_FORM_BUILD_TIME')) {
-    define('MME_FORM_BUILD_TIME', '2026-10-16 12:05:00');
+    define('MME_FORM_BUILD_TIME', '2026-10-16 12:30:00');
 }
 if (!defined('MME_FORM_FILE')) {
     define('MME_FORM_FILE', __FILE__);
@@ -105,6 +105,23 @@ function mme_form_auto(string $slug, string $title = '', $fields = array(), $set
 
     $shortcode = $fields_only ? 'mme_form_fields' : 'mme_form';
     return do_shortcode('[' . $shortcode . ' id="' . $form_id . '"]');
+}
+}
+
+/**
+ * Ghi nhận lead trực tiếp vào MME Form submission và tự động đồng bộ sang CRM Pancake / Webhook.
+ * Dùng cho Theme, Landing page, hoặc các form AJAX tự code.
+ *
+ * @param array $lead_data Dữ liệu lead (fullname, phone, email, need, fields, source_url...)
+ * @param int $form_id Form ID liên kết (0 để tự động lấy Form mặc định)
+ * @return array|WP_Error Kết quả submission và đồng bộ integration
+ */
+if (!function_exists('mme_record_lead')) {
+function mme_record_lead(array $lead_data, int $form_id = 0): array|WP_Error {
+    if (!class_exists('MME_Form_Submissions')) {
+        return new WP_Error('mme_form_not_active', 'Plugin MME Form chưa được kích hoạt.');
+    }
+    return MME_Form_Submissions::instance()->record_lead($lead_data, $form_id);
 }
 }
 
