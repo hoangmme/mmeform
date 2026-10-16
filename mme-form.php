@@ -57,6 +57,7 @@ require_once MME_FORM_DIR . 'includes/class-mme-form-renderer.php';
 require_once MME_FORM_DIR . 'includes/class-mme-form-submissions.php';
 require_once MME_FORM_DIR . 'includes/class-mme-form-admin.php';
 require_once MME_FORM_DIR . 'includes/class-mme-form-plugin.php';
+require_once MME_FORM_DIR . 'includes/class-mme-form-updater.php';
 require_once MME_FORM_DIR . 'includes/mme-chatbot.php';
 
 register_activation_hook(__FILE__, array('MME_Form_Plugin', 'activate'));

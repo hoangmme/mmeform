@@ -7,23 +7,26 @@
   - Added customizable `field_label_color` (default `#1e293b`) and `form_heading_color` (default `#0f172a`) wired to CSS variables (`--mme-field-label-color`, `--mme-form-heading-color`) so field titles can easily be set to bold black or custom colors.
   - In-admin Interactive Live Preview Modal + tab preview with mode toggle (Full vs Form-Only) and background simulator (White, Gray, Dark) for instant visual feedback.
   - Native Pancake CRM Integration: Direct sync to Pancake CRM (supports both modern `crm.pancake.vn` v2 and legacy `pos.pages.fm` v1 fallback) with custom fields, attribution, and note compilation.
-  - Live Version & Build Info: Automatic Git commit + date/time detection across WP-Admin (Plugins list row meta, MME Forms list banner notice, form editor sidebar metabox, and admin footer) so user immediately knows which build/pull is active.
+  - 1-Click GitHub In-Place Updater (WPMME Architecture): Ported native WordPress filesystem updater from `/Users/hoji/Documents/code/mmewp/wpmme`. Uses `WP_Filesystem()`, `download_url()`, `unzip_file()`, and `copy_dir()` to download the latest `main.zip` from GitHub and overwrite `MME_FORM_DIR` in-place. Eliminates duplicate plugin folders (`mmeform-main`) and removes need for SSH/terminal `git pull`.
+  - Accessible via 1-click buttons across WP Admin: Forms list banner notice, form editor sidebar metabox, and Plugins list table row meta.
 
 - **Operational Constraints:**
   - Seamless backward compatibility with existing shortcodes `[mme_form id="..."]` and `[mme_form_fields id="..."]`.
   - No external library dependencies for admin live preview modal.
   - Backward compatibility with Google Sheets Webhook and Twenty CRM.
   - Resilient Git detection with multi-tier fallback (exec git log -> file read .git/HEAD -> filemtime -> MME_FORM_BUILD_TIME constant).
+  - Updater runs with WordPress admin privileges (`manage_options`) and nonce verification (`mme_form_admin_nonce`).
 
 - **Status:**
   - Done: Live preview modal, separate tab previews for full and form-only, copy buttons, white card styling & black field label customization.
   - Done: Fix plugin fatal error on activation by guarding 33+ functions and constants against redeclaration collisions with mmeai-chatbot and themes, and guarding get_current_screen() and is_plugin_active() across all entry points.
-  - Done: Added MME_FORM_BOOTSTRAPPED singleton guard and class_exists wrappers on all classes (MME_Form_Plugin, MME_Form_Renderer, MME_Form_Admin, MME_Form_Submissions) to prevent fatal errors when multiple plugin folders (e.g. mmeform and mmeform-main) coexist on the server.
+  - Done: Added MME_FORM_BOOTSTRAPPED singleton guard and class_exists wrappers on all classes to prevent fatal errors when multiple plugin folders coexist on the server.
   - Done: Added native Pancake CRM integration in MME Form (settings, admin metabox, and submission pipeline with v2/v1 dual fallback).
   - Done: Added dynamic version, date/time, and git commit display across WordPress admin (Plugins list, Admin notices, Edit screen sidebar, Footer text).
-  - Done: Resolved critical syntax / parse error for PHP 7.4 by removing PHP 8-only union return type `WP_REST_Response|WP_Error` and `mixed $raw` parameter, replacing `str_contains`/`str_starts_with`/`str_ends_with` with native PHP 7 equivalents + polyfills, removing shell `exec()` from `get_build_info()`, and making admin hook callbacks type-safe.
-  - Current Focus: Commit & push PHP 7.4 compatibility & syntax fixes to GitHub (v0.5.2).
-  - Next: User verification on server after git pull.
+  - Done: 100% PHP 7.4 through PHP 8.3+ syntax compatibility.
+  - Done: Implemented 1-Click GitHub Updater mechanism (`MME_Form_Updater`, UI buttons, and client-side AJAX handler) modeled after `wpmme`.
+  - Current Focus: Commit & push 1-Click GitHub Updater to origin main.
+  - Next: User can test 1-click update directly from WordPress Admin.
 
 - **Flags (Drift/Critical/Entropy):** None.
 - **Cost/Impact Alerts:** None.
@@ -31,12 +34,14 @@
 - **Registry & Recovery:**
   - Active Files:
     - `mme-form.php`
-    - `includes/mme-chatbot.php`
+    - `includes/class-mme-form-updater.php`
     - `includes/class-mme-form-admin.php`
     - `includes/class-mme-form-plugin.php`
     - `includes/class-mme-form-renderer.php`
     - `includes/class-mme-form-submissions.php`
+    - `includes/mme-chatbot.php`
     - `assets/public.css`
     - `assets/admin.css`
     - `assets/admin.js`
     - `CONTINUITY.md`
+

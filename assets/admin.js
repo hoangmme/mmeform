@@ -505,4 +505,78 @@
       });
     }
   });
+
+  // 1-Click Force Updater from GitHub
+  ready(function () {
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest(".mme-force-update-btn");
+      if (!btn) return;
+
+      e.preventDefault();
+
+      if (
+        !confirm(
+          "Bạn có chắc chắn muốn tải và ghi đè phiên bản mới nhất của MME Form từ GitHub không?"
+        )
+      ) {
+        return;
+      }
+
+      var originalHtml = btn.innerHTML;
+      btn.style.pointerEvents = "none";
+      if (btn.tagName === "BUTTON") {
+        btn.disabled = true;
+      }
+      btn.innerHTML =
+        '<span class="dashicons dashicons-update" style="animation: mme-spin 1.5s infinite linear; margin-top: 2px;"></span> Đang tải & cập nhật...';
+
+      var ajaxUrl =
+        (window.mme_form_admin_data && window.mme_form_admin_data.ajax_url) ||
+        (typeof ajaxurl !== "undefined" ? ajaxurl : "/wp-admin/admin-ajax.php");
+      var nonce =
+        window.mme_form_admin_data && window.mme_form_admin_data.nonce
+          ? window.mme_form_admin_data.nonce
+          : "";
+
+      var formData = new URLSearchParams();
+      formData.append("action", "mme_form_force_update");
+      formData.append("nonce", nonce);
+
+      fetch(ajaxUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        },
+        body: formData.toString(),
+      })
+        .then(function (res) {
+          return res.json();
+        })
+        .then(function (res) {
+          if (res.success) {
+            btn.innerHTML =
+              '<span class="dashicons dashicons-yes-alt" style="color: #10b981; margin-top: 2px;"></span> Cập nhật thành công! Đang tải lại...';
+            setTimeout(function () {
+              location.reload();
+            }, 1200);
+          } else {
+            alert("Cập nhật thất bại: " + (res.data || "Lỗi không xác định"));
+            btn.innerHTML = originalHtml;
+            if (btn.tagName === "BUTTON") {
+              btn.disabled = false;
+            }
+            btn.style.pointerEvents = "";
+          }
+        })
+        .catch(function () {
+          alert("Lỗi kết nối máy chủ trong quá trình cập nhật.");
+          btn.innerHTML = originalHtml;
+          if (btn.tagName === "BUTTON") {
+            btn.disabled = false;
+          }
+          btn.style.pointerEvents = "";
+        });
+    });
+  });
 })();
+

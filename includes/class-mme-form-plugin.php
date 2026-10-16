@@ -27,6 +27,7 @@ final class MME_Form_Plugin
 
         MME_Form_Admin::instance()->boot();
         MME_Form_Submissions::instance()->boot();
+        MME_Form_Updater::instance()->boot();
     }
 
     public function register_post_types(): void

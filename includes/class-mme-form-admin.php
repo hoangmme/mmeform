@@ -42,16 +42,29 @@ final class MME_Form_Admin
         }
 
         $screen = get_current_screen();
-        if (!$screen || !in_array($screen->post_type, array('mme_form', 'mme_form_submission'), true)) {
+        if (!$screen) {
             return;
         }
 
-        wp_enqueue_style('mme-form-admin', MME_FORM_URL . 'assets/admin.css', array(), MME_FORM_VERSION);
+        $is_form_screen = in_array($screen->post_type, array('mme_form', 'mme_form_submission'), true);
+        $is_plugins_screen = ($screen->base === 'plugins' || $screen->id === 'plugins');
 
-        if ($screen->post_type === 'mme_form') {
-            wp_enqueue_media();
-            wp_enqueue_script('mme-form-admin', MME_FORM_URL . 'assets/admin.js', array(), MME_FORM_VERSION, true);
+        if (!$is_form_screen && !$is_plugins_screen) {
+            return;
         }
+
+        if ($is_form_screen) {
+            wp_enqueue_style('mme-form-admin', MME_FORM_URL . 'assets/admin.css', array(), MME_FORM_VERSION);
+            if ($screen->post_type === 'mme_form' && $screen->base === 'post') {
+                wp_enqueue_media();
+            }
+        }
+
+        wp_enqueue_script('mme-form-admin', MME_FORM_URL . 'assets/admin.js', array(), MME_FORM_VERSION, true);
+        wp_localize_script('mme-form-admin', 'mme_form_admin_data', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce'    => wp_create_nonce('mme_form_admin_nonce'),
+        ));
     }
 
     public function register_meta_boxes(): void
@@ -491,6 +504,9 @@ function doPost(e) {
             <?php if (!empty($build_info['commit'])) : ?>
                 <div>🔖 Git Commit: <code><?php echo esc_html($build_info['commit']); ?></code> (<?php echo esc_html($build_info['branch']); ?>)</div>
             <?php endif; ?>
+            <button type="button" class="button button-secondary button-small mme-force-update-btn" style="width: 100%; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                <span class="dashicons dashicons-update" style="margin-top: 2px;"></span> Cập nhật bản mới từ GitHub
+            </button>
         </div>
         <?php
     }
@@ -935,6 +951,7 @@ function doPost(e) {
                 esc_html($info['date']),
                 !empty($info['commit']) ? ' (<code>' . esc_html($info['commit']) . '</code>)' : ''
             );
+            $meta[] = '<a href="#" class="mme-force-update-btn" style="color: #0284c7; font-weight: 600;">Cập nhật từ GitHub</a>';
         }
         return $meta;
     }
@@ -977,7 +994,11 @@ function doPost(e) {
                     &bull; Git Commit: <code><?php echo esc_html($info['commit']); ?></code> (<?php echo esc_html($info['branch']); ?>)
                 <?php endif; ?>
             </span>
-            <span style="font-size: 11px; color: #0369a1; background: #e0f2fe; padding: 2px 8px; border-radius: 12px; font-weight: 600;">Git Sync Active</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button type="button" class="button button-secondary mme-force-update-btn" style="display: inline-flex; align-items: center; gap: 4px; font-weight: 500;">
+                    <span class="dashicons dashicons-update" style="margin-top: 2px;"></span> Cập nhật từ GitHub
+                </button>
+            </div>
         </div>
         <?php
     }
