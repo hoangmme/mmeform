@@ -388,6 +388,79 @@ final class MME_Form_Plugin
             update_option('mme_form_default_created', (int) $form_id, false);
         }
     }
+
+    public static function get_version(): string
+    {
+        return defined('MME_FORM_VERSION') ? MME_FORM_VERSION : '0.5.0';
+    }
+
+    public static function get_build_info(): array
+    {
+        $version = self::get_version();
+        $fallback_time = defined('MME_FORM_BUILD_TIME') ? MME_FORM_BUILD_TIME : '2026-10-16 12:05:00';
+        $commit = '';
+        $date = $fallback_time;
+        $branch = 'main';
+
+        $base_dir = defined('MME_FORM_DIR') ? MME_FORM_DIR : dirname(__DIR__) . '/';
+        $git_dir = rtrim($base_dir, '/\\') . '/.git';
+
+        // 1. Thử đọc nhanh qua git log nếu exec() được phép
+        if (is_dir($git_dir) && function_exists('exec')) {
+            $disabled = explode(',', (string) ini_get('disable_functions'));
+            if (!in_array('exec', array_map('trim', $disabled), true)) {
+                $output = array();
+                $code = 0;
+                @exec('cd ' . escapeshellarg($base_dir) . ' && git log -1 --format="%h|%cd" --date=format:"%Y-%m-%d %H:%M:%S" 2>/dev/null', $output, $code);
+                if ($code === 0 && !empty($output[0]) && str_contains($output[0], '|')) {
+                    $parts = explode('|', trim($output[0]), 2);
+                    if (!empty($parts[0])) {
+                        $commit = $parts[0];
+                    }
+                    if (!empty($parts[1])) {
+                        $date = $parts[1];
+                    }
+                }
+            }
+        }
+
+        // 2. Dự phòng: Đọc trực tiếp các file trong .git nếu exec bị tắt
+        if (!$commit && is_dir($git_dir)) {
+            $head_file = $git_dir . '/HEAD';
+            if (file_exists($head_file)) {
+                $head = trim((string) @file_get_contents($head_file));
+                if (str_starts_with($head, 'ref: ')) {
+                    $ref = trim(substr($head, 5));
+                    $branch = basename($ref);
+                    $ref_path = $git_dir . '/' . $ref;
+                    if (file_exists($ref_path)) {
+                        $commit = substr(trim((string) @file_get_contents($ref_path)), 0, 7);
+                        $mtime = @filemtime($ref_path);
+                        if ($mtime) {
+                            $date = function_exists('wp_date') ? wp_date('Y-m-d H:i:s', $mtime) : date('Y-m-d H:i:s', $mtime);
+                        }
+                    }
+                } elseif (strlen($head) >= 7) {
+                    $commit = substr($head, 0, 7);
+                }
+            }
+        }
+
+        // 3. Dự phòng cuối: Nếu không có .git, dùng filemtime của file chính
+        if (!$commit && defined('MME_FORM_FILE')) {
+            $file_mtime = @filemtime(MME_FORM_FILE);
+            if ($file_mtime) {
+                $date = function_exists('wp_date') ? wp_date('Y-m-d H:i:s', $file_mtime) : date('Y-m-d H:i:s', $file_mtime);
+            }
+        }
+
+        return array(
+            'version' => $version,
+            'commit' => $commit,
+            'branch' => $branch,
+            'date' => $date,
+        );
+    }
 }
 }
 

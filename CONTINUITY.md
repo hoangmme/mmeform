@@ -7,19 +7,21 @@
   - Added customizable `field_label_color` (default `#1e293b`) and `form_heading_color` (default `#0f172a`) wired to CSS variables (`--mme-field-label-color`, `--mme-form-heading-color`) so field titles can easily be set to bold black or custom colors.
   - In-admin Interactive Live Preview Modal + tab preview with mode toggle (Full vs Form-Only) and background simulator (White, Gray, Dark) for instant visual feedback.
   - Native Pancake CRM Integration: Direct sync to Pancake CRM (supports both modern `crm.pancake.vn` v2 and legacy `pos.pages.fm` v1 fallback) with custom fields, attribution, and note compilation.
+  - Live Version & Build Info: Automatic Git commit + date/time detection across WP-Admin (Plugins list row meta, MME Forms list banner notice, form editor sidebar metabox, and admin footer) so user immediately knows which build/pull is active.
 
 - **Operational Constraints:**
   - Seamless backward compatibility with existing shortcodes `[mme_form id="..."]` and `[mme_form_fields id="..."]`.
   - No external library dependencies for admin live preview modal.
   - Backward compatibility with Google Sheets Webhook and Twenty CRM.
+  - Resilient Git detection with multi-tier fallback (exec git log -> file read .git/HEAD -> filemtime -> MME_FORM_BUILD_TIME constant).
 
 - **Status:**
   - Done: Live preview modal, separate tab previews for full and form-only, copy buttons, white card styling & black field label customization.
   - Done: Fix plugin fatal error on activation by guarding 33+ functions and constants against redeclaration collisions with mmeai-chatbot and themes, and guarding get_current_screen() and is_plugin_active() across all entry points.
   - Done: Added MME_FORM_BOOTSTRAPPED singleton guard and class_exists wrappers on all classes (MME_Form_Plugin, MME_Form_Renderer, MME_Form_Admin, MME_Form_Submissions) to prevent fatal errors when multiple plugin folders (e.g. mmeform and mmeform-main) coexist on the server.
   - Done: Added native Pancake CRM integration in MME Form (settings, admin metabox, and submission pipeline with v2/v1 dual fallback).
-  - Done: Prepared modernized Google Apps Script (GAS) supporting Pancake CRM v2 (`crm.pancake.vn`) and legacy v1 (`pos.pages.fm`).
-  - Current Focus: Verifying git commit & push, and presenting the updated GAS and native plugin settings to user.
+  - Done: Added dynamic version, date/time, and git commit display across WordPress admin (Plugins list, Admin notices, Edit screen sidebar, Footer text).
+  - Current Focus: Commit & push versioning feature to git.
   - Next: User confirmation.
 
 - **Flags (Drift/Critical/Entropy):** None.

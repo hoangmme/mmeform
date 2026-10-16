@@ -30,6 +30,9 @@ final class MME_Form_Admin
         add_filter('post_row_actions', array($this, 'remove_submission_quick_actions'), 10, 2);
         add_action('wp_ajax_mme_twenty_check_fields', array($this, 'ajax_twenty_check_fields'));
         add_action('admin_footer', array($this, 'render_preview_modal'));
+        add_filter('plugin_row_meta', array($this, 'plugin_row_meta'), 10, 2);
+        add_filter('admin_footer_text', array($this, 'admin_footer_text'), 11);
+        add_action('admin_notices', array($this, 'render_admin_version_notice'));
     }
 
     public function enqueue_assets(string $hook): void
@@ -475,6 +478,20 @@ function doPost(e) {
                 <button type="button" class="button mme-copy-btn" data-target="mme-embed-script-input" data-feedback="mme-copied-embed">Copy mã Embed</button>
             </div>
         </div>
+
+        <?php
+        $build_info = MME_Form_Plugin::get_build_info();
+        ?>
+        <div class="mme-shortcode-card" style="margin-top: 14px; margin-bottom: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; font-size: 11px; color: #475569; line-height: 1.5;">
+            <div style="font-weight: 600; color: #0f172a; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+                <span>📦 Phiên bản MME Form</span>
+                <span style="background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px; font-weight: 600;">v<?php echo esc_html($build_info['version']); ?></span>
+            </div>
+            <div>🕒 Cập nhật: <strong><?php echo esc_html($build_info['date']); ?></strong></div>
+            <?php if (!empty($build_info['commit'])) : ?>
+                <div>🔖 Git Commit: <code><?php echo esc_html($build_info['commit']); ?></code> (<?php echo esc_html($build_info['branch']); ?>)</div>
+            <?php endif; ?>
+        </div>
         <?php
     }
 
@@ -904,6 +921,61 @@ function doPost(e) {
                     <iframe id="mme-preview-iframe" src="about:blank" title="MME Form Preview" frameborder="0"></iframe>
                 </div>
             </div>
+        </div>
+        <?php
+    }
+
+    public function plugin_row_meta(array $meta, string $file): array
+    {
+        if (defined('MME_FORM_FILE') && plugin_basename(MME_FORM_FILE) === $file) {
+            $info = MME_Form_Plugin::get_build_info();
+            $meta[] = sprintf(
+                '<span style="color:#059669; font-weight: 600;">🕒 Bản cập nhật: %s%s</span>',
+                esc_html($info['date']),
+                !empty($info['commit']) ? ' (<code>' . esc_html($info['commit']) . '</code>)' : ''
+            );
+        }
+        return $meta;
+    }
+
+    public function admin_footer_text(string $text): string
+    {
+        if (!function_exists('get_current_screen')) {
+            return $text;
+        }
+        $screen = get_current_screen();
+        if ($screen && in_array($screen->post_type, array('mme_form', 'mme_form_submission'), true)) {
+            $info = MME_Form_Plugin::get_build_info();
+            return sprintf(
+                '<strong>MME Form</strong> v%s &bull; Bản cập nhật: <strong>%s</strong>%s',
+                esc_html($info['version']),
+                esc_html($info['date']),
+                !empty($info['commit']) ? ' &bull; Git: <code>' . esc_html($info['commit']) . '</code>' : ''
+            );
+        }
+        return $text;
+    }
+
+    public function render_admin_version_notice(): void
+    {
+        if (!function_exists('get_current_screen')) {
+            return;
+        }
+        $screen = get_current_screen();
+        if (!$screen || $screen->post_type !== 'mme_form' || $screen->base !== 'edit') {
+            return;
+        }
+        $info = MME_Form_Plugin::get_build_info();
+        ?>
+        <div class="notice notice-info" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: #f8fafc; border-left: 4px solid #0284c7; margin: 15px 0 10px;">
+            <span style="font-size: 13px; color: #0f172a;">
+                <strong>MME Form v<?php echo esc_html($info['version']); ?></strong> &bull; 
+                Bản cập nhật lúc: <strong><?php echo esc_html($info['date']); ?></strong>
+                <?php if (!empty($info['commit'])) : ?>
+                    &bull; Git Commit: <code><?php echo esc_html($info['commit']); ?></code> (<?php echo esc_html($info['branch']); ?>)
+                <?php endif; ?>
+            </span>
+            <span style="font-size: 11px; color: #0369a1; background: #e0f2fe; padding: 2px 8px; border-radius: 12px; font-weight: 600;">Git Sync Active</span>
         </div>
         <?php
     }
