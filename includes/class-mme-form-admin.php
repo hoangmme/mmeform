@@ -394,6 +394,20 @@ function doPost(e) {
                 <div id="mme-twenty-check-results" style="margin-top: 10px; display: none; background: #fff; padding: 15px; border: 1px solid #ccd0d4; border-radius: 4px; box-shadow: 0 1px 1px rgba(0,0,0,.04);"></div>
             </div>
         </div>
+
+        <div class="mme-integration-card">
+            <h3>Pancake CRM (crm.pancake.vn)</h3>
+            <?php $this->toggle('pancake_enabled', 'Đồng bộ khách hàng sang Pancake CRM', $settings['pancake_enabled']); ?>
+            <div class="mme-admin-grid">
+                <?php $this->text_input('pancake_workspace_id', 'Workspace ID (Shop ID)', $settings['pancake_workspace_id']); ?>
+                <?php $this->password_input('pancake_api_key', 'Pancake API Key', !empty($settings['pancake_api_key'])); ?>
+                <?php $this->select_input('pancake_table', 'Bảng đích (Table)', $settings['pancake_table'], array('contact' => 'Contacts (Khách hàng)', 'lead' => 'Leads (Tiềm năng)')); ?>
+            </div>
+            <p class="description" style="margin-top: 10px; font-size: 12px; color: #64748b;">
+                <strong>Hướng dẫn:</strong> Lấy API key tại: <code>crm.pancake.vn → Cài đặt (Settings) → Công cụ (Tools) → Tạo API Key</code>.<br>
+                Workspace ID là dãy số trên URL khi đăng nhập workspace (ví dụ: <code>crm.pancake.vn/workspaces/<strong>1720028340</strong>/...</code>).
+            </p>
+        </div>
         <?php
     }
 
@@ -561,13 +575,15 @@ function doPost(e) {
         $settings['form_shadow'] = in_array(($submitted['form_shadow'] ?? ''), array('default', 'none', 'subtle', 'strong'), true) ? $submitted['form_shadow'] : 'default';
         $settings['font_family'] = in_array(($submitted['font_family'] ?? ''), array('system', 'inter', 'arial', 'georgia'), true) ? $submitted['font_family'] : 'system';
         $settings['trust_items'] = array_slice(array_values(array_filter(array_map('sanitize_text_field', preg_split('/\r\n|\r|\n/', (string) ($submitted['trust_items'] ?? ''))))), 0, 4);
-        foreach (array('chatbot_enabled', 'webhook_enabled', 'twenty_enabled') as $key) {
+        foreach (array('chatbot_enabled', 'webhook_enabled', 'twenty_enabled', 'pancake_enabled') as $key) {
             $settings[$key] = ($submitted[$key] ?? 'no') === 'yes' ? 'yes' : 'no';
         }
-        foreach (array('webhook_secret', 'twenty_api_key') as $key) {
+        foreach (array('webhook_secret', 'twenty_api_key', 'pancake_api_key') as $key) {
             $new_value = sanitize_text_field($submitted[$key] ?? '');
             $settings[$key] = $new_value !== '' ? $new_value : $current[$key];
         }
+        $settings['pancake_workspace_id'] = sanitize_text_field($submitted['pancake_workspace_id'] ?? '');
+        $settings['pancake_table'] = in_array($submitted['pancake_table'] ?? '', array('contact', 'lead'), true) ? $submitted['pancake_table'] : 'contact';
 
         update_post_meta($post_id, '_mme_form_settings', $settings);
     }
@@ -827,6 +843,15 @@ function doPost(e) {
     private function password_input(string $key, string $label, bool $is_set): void
     {
         echo '<label class="mme-admin-field"><span>' . esc_html($label) . ($is_set ? ' <small>(đã lưu)</small>' : '') . '</span><input type="password" name="mme_settings[' . esc_attr($key) . ']" value="" autocomplete="new-password" placeholder="' . ($is_set ? 'Để trống để giữ secret cũ' : '') . '"></label>';
+    }
+
+    private function select_input(string $key, string $label, string $value, array $options): void
+    {
+        echo '<label class="mme-admin-field"><span>' . esc_html($label) . '</span><select name="mme_settings[' . esc_attr($key) . ']">';
+        foreach ($options as $opt_val => $opt_label) {
+            echo '<option value="' . esc_attr($opt_val) . '" ' . selected($value, $opt_val, false) . '>' . esc_html($opt_label) . '</option>';
+        }
+        echo '</select></label>';
     }
 
     private function toggle(string $key, string $label, string $value): void

@@ -168,15 +168,20 @@ final class MME_Form_Submissions
         $integration_results = array(
             'webhook' => $this->send_webhook($settings, $payload),
             'twenty' => $this->send_twenty($form_id, $settings, $payload),
+            'pancake' => $this->send_pancake($settings, $payload),
         );
         update_post_meta($submission_id, '_mme_submission_integrations', $integration_results);
 
         $message = sanitize_text_field($settings['success_message']);
         
         if (current_user_can('manage_options')) {
-            if (isset($integration_results['twenty']) && empty($integration_results['twenty']['success'])) {
+            if (isset($integration_results['twenty']) && empty($integration_results['twenty']['success']) && empty($integration_results['twenty']['skipped'])) {
                 $err = $integration_results['twenty']['error'] ?? json_encode($integration_results['twenty']['response'] ?? 'Unknown error', JSON_UNESCAPED_UNICODE);
                 $message .= '<br><br><b style="color:#d63638">⚠️ Lỗi đồng bộ Twenty CRM (Chỉ Admin mới thấy):</b><br> ' . esc_html($err);
+            }
+            if (isset($integration_results['pancake']) && empty($integration_results['pancake']['success']) && empty($integration_results['pancake']['skipped'])) {
+                $err = $integration_results['pancake']['error'] ?? json_encode($integration_results['pancake']['response'] ?? 'Unknown error', JSON_UNESCAPED_UNICODE);
+                $message .= '<br><br><b style="color:#d63638">⚠️ Lỗi đồng bộ Pancake CRM (Chỉ Admin mới thấy):</b><br> ' . esc_html($err);
             }
         }
 
@@ -512,6 +517,117 @@ final class MME_Form_Submissions
             error_log('MME Form - Twenty CRM Error HTTP ' . $status . ': ' . $body);
         }
         return array('success' => $status >= 200 && $status < 300, 'status_code' => $status, 'response' => json_decode($body, true));
+    }
+
+    public function send_pancake(array $settings, array $payload): array
+    {
+        if (($settings['pancake_enabled'] ?? 'no') !== 'yes') {
+            return array('success' => false, 'skipped' => true);
+        }
+        if (empty($settings['pancake_workspace_id']) || empty($settings['pancake_api_key'])) {
+            return array('success' => false, 'skipped' => true, 'reason' => 'missing_credentials');
+        }
+
+        $workspace_id = rawurlencode(trim((string) $settings['pancake_workspace_id']));
+        $api_key = rawurlencode(trim((string) $settings['pancake_api_key']));
+        $table = in_array($settings['pancake_table'] ?? '', array('contact', 'lead'), true) ? $settings['pancake_table'] : 'contact';
+
+        $contact = (array) ($payload['contact'] ?? array());
+        $fields = (array) ($payload['fields'] ?? array());
+        $raw_name = !empty($contact['name']) ? $contact['name'] : (!empty($payload['lead']['name']) ? $payload['lead']['name'] : '');
+        $phone = !empty($contact['phone']) ? $contact['phone'] : '';
+        $email = !empty($contact['email']) ? $contact['email'] : '';
+        $source_url = (string) ($payload['source']['url'] ?? '');
+        $form_title = (string) ($payload['form']['title'] ?? 'MME Form');
+
+        $notes = array();
+        $notes[] = 'Loại Form: ' . $form_title;
+        if ($source_url) {
+            $notes[] = 'Nguồn: ' . $source_url;
+        }
+        if (!empty($payload['lead']['need'])) {
+            $notes[] = 'Nhu cầu: ' . $payload['lead']['need'];
+        }
+        foreach ($fields as $k => $v) {
+            if (in_array(strtolower($k), array('full_name', 'name', 'fullname', 'ho_ten', 'phone', 'telephone', 'mobile', 'sdt', 'email'), true)) {
+                continue;
+            }
+            if (is_scalar($v) && trim((string) $v) !== '') {
+                $notes[] = $k . ': ' . trim((string) $v);
+            }
+        }
+        if (!empty($payload['attribution']) && is_array($payload['attribution'])) {
+            $utms = array();
+            foreach ($payload['attribution'] as $uk => $uv) {
+                if ($uv) {
+                    $utms[] = $uk . '=' . $uv;
+                }
+            }
+            if (!empty($utms)) {
+                $notes[] = 'UTM: ' . implode(', ', $utms);
+            }
+        }
+        $note_str = implode("\n", $notes);
+
+        // 1. Try Pancake CRM v2 (crm.pancake.vn)
+        $v2_url = sprintf('https://crm.pancake.vn/api/workspaces/%s/%s/records?api_key=%s', $workspace_id, $table, $api_key);
+        $v2_payload = array(
+            'name' => $raw_name ?: ($phone ?: 'Khách Website'),
+            'phone_number' => $phone,
+            'email' => $email,
+            'note' => $note_str,
+        );
+
+        $response = wp_remote_post($v2_url, array(
+            'headers' => array('Content-Type' => 'application/json'),
+            'body' => wp_json_encode($v2_payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'timeout' => 10,
+        ));
+
+        if (!is_wp_error($response)) {
+            $status = wp_remote_retrieve_response_code($response);
+            if ($status >= 200 && $status < 300) {
+                return array('success' => true, 'status_code' => $status, 'api' => 'crm_v2');
+            }
+        }
+
+        // 2. Fallback to Pancake POS v1 (pos.pages.fm)
+        $v1_table = ucfirst($table);
+        $v1_url = sprintf('https://pos.pages.fm/api/v1/shops/%s/crm/%s/records?api_key=%s', $workspace_id, $v1_table, $api_key);
+        $v1_payload = array(
+            'Name' => $raw_name ?: ($phone ?: 'Khách Website'),
+            'Phone' => $phone,
+            'Email' => $email,
+            'link' => $source_url,
+            'Note' => $note_str,
+        );
+
+        $v1_response = wp_remote_post($v1_url, array(
+            'headers' => array('Content-Type' => 'application/json'),
+            'body' => wp_json_encode($v1_payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'timeout' => 10,
+        ));
+
+        if (is_wp_error($v1_response)) {
+            $err = $v1_response->get_error_message();
+            error_log('MME Form - Pancake CRM Error: ' . $err);
+            return array('success' => false, 'error' => $err);
+        }
+
+        $v1_status = wp_remote_retrieve_response_code($v1_response);
+        $v1_body = wp_remote_retrieve_body($v1_response);
+
+        if ($v1_status >= 200 && $v1_status < 300) {
+            return array('success' => true, 'status_code' => $v1_status, 'api' => 'pos_v1');
+        }
+
+        $v2_err = is_wp_error($response) ? $response->get_error_message() : ('HTTP ' . wp_remote_retrieve_response_code($response) . ': ' . wp_remote_retrieve_body($response));
+        error_log('MME Form - Pancake CRM Failed. v2: ' . $v2_err . ' | v1: HTTP ' . $v1_status . ': ' . $v1_body);
+        return array(
+            'success' => false,
+            'status_code' => $v1_status,
+            'error' => 'Pancake CRM v2 (' . $v2_err . ') | POS v1 (' . $v1_body . ')',
+        );
     }
 }
 }

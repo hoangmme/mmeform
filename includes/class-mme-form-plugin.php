@@ -361,6 +361,10 @@ final class MME_Form_Plugin
             'twenty_enabled' => 'no',
             'twenty_base_url' => '',
             'twenty_api_key' => '',
+            'pancake_enabled' => 'no',
+            'pancake_workspace_id' => '',
+            'pancake_api_key' => '',
+            'pancake_table' => 'contact',
         );
     }
 
