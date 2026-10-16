@@ -34,7 +34,11 @@ final class MME_Form_Submissions
         ));
     }
 
-    public function submit(WP_REST_Request $request): WP_REST_Response|WP_Error
+    /**
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+    public function submit(WP_REST_Request $request)
     {
         $form_id = absint($request['id']);
         $form = get_post($form_id);
@@ -205,7 +209,7 @@ final class MME_Form_Submissions
         return true;
     }
 
-    private function sanitize_attribution(mixed $raw): array
+    private function sanitize_attribution($raw): array
     {
         if (!is_array($raw)) {
             return array();
@@ -262,7 +266,7 @@ final class MME_Form_Submissions
     {
         $haystack = strtolower(implode(' ', array_values($values)));
         foreach (array('đặt lịch', 'dat lich', 'booking', 'meeting', 'hẹn', 'hen lich') as $needle) {
-            if (str_contains($haystack, $needle)) {
+            if (strpos($haystack, $needle) !== false) {
                 return true;
             }
         }
@@ -281,7 +285,7 @@ final class MME_Form_Submissions
         parse_str((string) wp_parse_url($url, PHP_URL_QUERY), $query);
         if (!empty($query['secret'])) {
             $payload['secret'] = sanitize_text_field((string) $query['secret']);
-        } elseif ($secret && str_contains((string) wp_parse_url($url, PHP_URL_HOST), 'script.google.com')) {
+        } elseif ($secret && strpos((string) wp_parse_url($url, PHP_URL_HOST), 'script.google.com') !== false) {
             $payload['secret'] = $secret;
         }
 
@@ -315,7 +319,7 @@ final class MME_Form_Submissions
             return $cached;
         }
         
-        $url = $base_url . (str_ends_with(strtolower($base_url), '/rest') ? '/metadata/objects' : '/rest/metadata/objects');
+        $url = $base_url . (substr(strtolower($base_url), -5) === '/rest' ? '/metadata/objects' : '/rest/metadata/objects');
         $response = wp_remote_get($url, array(
             'headers' => array(
                 'Authorization' => 'Bearer ' . $api_key,
@@ -382,7 +386,7 @@ final class MME_Form_Submissions
         
         if (!empty($contact['phone'])) {
             $phone = preg_replace('/[^0-9+]/', '', $contact['phone']);
-            if (str_starts_with($phone, '0') && strlen($phone) === 10) {
+            if (strpos($phone, '0') === 0 && strlen($phone) === 10) {
                 $phone = '+84' . substr($phone, 1);
             }
             $person['phones'] = array('primaryPhoneNumber' => $phone);
@@ -492,7 +496,7 @@ final class MME_Form_Submissions
         }
 
         $base_url = untrailingslashit(esc_url_raw($settings['twenty_base_url']));
-        if (str_ends_with(strtolower($base_url), '/rest')) {
+        if (substr(strtolower($base_url), -5) === '/rest') {
             $url = $base_url . '/people';
         } else {
             $url = $base_url . '/rest/people';

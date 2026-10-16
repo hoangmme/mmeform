@@ -21,8 +21,9 @@
   - Done: Added MME_FORM_BOOTSTRAPPED singleton guard and class_exists wrappers on all classes (MME_Form_Plugin, MME_Form_Renderer, MME_Form_Admin, MME_Form_Submissions) to prevent fatal errors when multiple plugin folders (e.g. mmeform and mmeform-main) coexist on the server.
   - Done: Added native Pancake CRM integration in MME Form (settings, admin metabox, and submission pipeline with v2/v1 dual fallback).
   - Done: Added dynamic version, date/time, and git commit display across WordPress admin (Plugins list, Admin notices, Edit screen sidebar, Footer text).
-  - Current Focus: Commit & push versioning feature to git.
-  - Next: User confirmation.
+  - Done: Resolved critical syntax / parse error for PHP 7.4 by removing PHP 8-only union return type `WP_REST_Response|WP_Error` and `mixed $raw` parameter, replacing `str_contains`/`str_starts_with`/`str_ends_with` with native PHP 7 equivalents + polyfills, removing shell `exec()` from `get_build_info()`, and making admin hook callbacks type-safe.
+  - Current Focus: Commit & push PHP 7.4 compatibility & syntax fixes to GitHub (v0.5.2).
+  - Next: User verification on server after git pull.
 
 - **Flags (Drift/Critical/Entropy):** None.
 - **Cost/Impact Alerts:** None.

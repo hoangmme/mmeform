@@ -678,7 +678,7 @@ function doPost(e) {
         
         $base_url = untrailingslashit(esc_url_raw($settings['twenty_base_url']));
         $api_key = sanitize_text_field($settings['twenty_api_key']);
-        $url = $base_url . (str_ends_with(strtolower($base_url), '/rest') ? '/metadata/objects' : '/rest/metadata/objects');
+        $url = $base_url . (substr(strtolower($base_url), -5) === '/rest' ? '/metadata/objects' : '/rest/metadata/objects');
         
         $response = wp_remote_get($url, array(
             'headers' => array(
@@ -925,9 +925,10 @@ function doPost(e) {
         <?php
     }
 
-    public function plugin_row_meta(array $meta, string $file): array
+    public function plugin_row_meta($meta = array(), $file = '')
     {
-        if (defined('MME_FORM_FILE') && plugin_basename(MME_FORM_FILE) === $file) {
+        $meta = is_array($meta) ? $meta : array();
+        if (defined('MME_FORM_FILE') && is_string($file) && plugin_basename(MME_FORM_FILE) === $file) {
             $info = MME_Form_Plugin::get_build_info();
             $meta[] = sprintf(
                 '<span style="color:#059669; font-weight: 600;">🕒 Bản cập nhật: %s%s</span>',
@@ -938,13 +939,14 @@ function doPost(e) {
         return $meta;
     }
 
-    public function admin_footer_text(string $text): string
+    public function admin_footer_text($text = '')
     {
+        $text = is_scalar($text) ? (string) $text : '';
         if (!function_exists('get_current_screen')) {
             return $text;
         }
         $screen = get_current_screen();
-        if ($screen && in_array($screen->post_type, array('mme_form', 'mme_form_submission'), true)) {
+        if ($screen && !empty($screen->post_type) && in_array($screen->post_type, array('mme_form', 'mme_form_submission'), true)) {
             $info = MME_Form_Plugin::get_build_info();
             return sprintf(
                 '<strong>MME Form</strong> v%s &bull; Bản cập nhật: <strong>%s</strong>%s',
@@ -962,7 +964,7 @@ function doPost(e) {
             return;
         }
         $screen = get_current_screen();
-        if (!$screen || $screen->post_type !== 'mme_form' || $screen->base !== 'edit') {
+        if (!$screen || empty($screen->post_type) || $screen->post_type !== 'mme_form' || empty($screen->base) || $screen->base !== 'edit') {
             return;
         }
         $info = MME_Form_Plugin::get_build_info();

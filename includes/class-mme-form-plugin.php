@@ -405,31 +405,12 @@ final class MME_Form_Plugin
         $base_dir = defined('MME_FORM_DIR') ? MME_FORM_DIR : dirname(__DIR__) . '/';
         $git_dir = rtrim($base_dir, '/\\') . '/.git';
 
-        // 1. Thử đọc nhanh qua git log nếu exec() được phép
-        if (is_dir($git_dir) && function_exists('exec')) {
-            $disabled = explode(',', (string) ini_get('disable_functions'));
-            if (!in_array('exec', array_map('trim', $disabled), true)) {
-                $output = array();
-                $code = 0;
-                @exec('cd ' . escapeshellarg($base_dir) . ' && git log -1 --format="%h|%cd" --date=format:"%Y-%m-%d %H:%M:%S" 2>/dev/null', $output, $code);
-                if ($code === 0 && !empty($output[0]) && str_contains($output[0], '|')) {
-                    $parts = explode('|', trim($output[0]), 2);
-                    if (!empty($parts[0])) {
-                        $commit = $parts[0];
-                    }
-                    if (!empty($parts[1])) {
-                        $date = $parts[1];
-                    }
-                }
-            }
-        }
-
-        // 2. Dự phòng: Đọc trực tiếp các file trong .git nếu exec bị tắt
-        if (!$commit && is_dir($git_dir)) {
+        // Đọc an toàn trực tiếp từ .git/HEAD và ref (không cần shell exec)
+        if (is_dir($git_dir)) {
             $head_file = $git_dir . '/HEAD';
             if (file_exists($head_file)) {
                 $head = trim((string) @file_get_contents($head_file));
-                if (str_starts_with($head, 'ref: ')) {
+                if (substr($head, 0, 5) === 'ref: ') {
                     $ref = trim(substr($head, 5));
                     $branch = basename($ref);
                     $ref_path = $git_dir . '/' . $ref;
@@ -446,7 +427,7 @@ final class MME_Form_Plugin
             }
         }
 
-        // 3. Dự phòng cuối: Nếu không có .git, dùng filemtime của file chính
+        // Dự phòng nếu không có .git: dùng filemtime của file chính
         if (!$commit && defined('MME_FORM_FILE')) {
             $file_mtime = @filemtime(MME_FORM_FILE);
             if ($file_mtime) {
