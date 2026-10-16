@@ -149,20 +149,6 @@ final class MME_Form_Submissions
             'attribution' => $attribution,
             'timestamp' => $timestamp,
             'started_at' => $input['started_at'] ?? '',
-
-            // Flat aliases for direct Google Apps Script / simple webhook compatibility
-            'fullname' => $contact['name'],
-            'name' => $contact['name'],
-            'Name' => $contact['name'],
-            'full_name' => $contact['name'],
-            'Họ tên' => $contact['name'],
-            'phone' => $contact['phone'],
-            'Phone' => $contact['phone'],
-            'sdt' => $contact['phone'],
-            'telephone' => $contact['phone'],
-            'Số điện thoại' => $contact['phone'],
-            'email' => $contact['email'],
-            'sheet_need' => $need,
         );
 
         $submission_id = wp_insert_post(array(
@@ -204,250 +190,6 @@ final class MME_Form_Submissions
             'event_id' => $event_id,
             'message' => $message,
         ), 201);
-    }
-
-    /**
-     * Programmatic submission handler for internal PHP callers (themes, landing pages, custom AJAX handlers).
-     *
-     * @param array $lead_data Lead information (name/fullname, phone, email, need, fields, attribution, etc.)
-     * @param int $form_id Optional form ID. If 0, resolves to default created form or first published form.
-     * @return array|WP_Error Returns submission status, post ID, and integration results.
-     */
-    public function record_lead(array $lead_data, int $form_id = 0): array|WP_Error
-    {
-        $form = null;
-        if ($form_id > 0) {
-            $form = get_post($form_id);
-            if (!$form || $form->post_type !== 'mme_form' || $form->post_status !== 'publish') {
-                $form = null;
-                $form_id = 0;
-            }
-        }
-
-        if (!$form_id) {
-            $default_id = absint(get_option('mme_form_default_created', 0));
-            if ($default_id) {
-                $candidate = get_post($default_id);
-                if ($candidate && $candidate->post_type === 'mme_form' && $candidate->post_status === 'publish') {
-                    $form = $candidate;
-                    $form_id = $default_id;
-                }
-            }
-        }
-
-        if (!$form_id) {
-            $posts = get_posts(array(
-                'post_type' => 'mme_form',
-                'post_status' => 'publish',
-                'posts_per_page' => 1,
-                'suppress_filters' => true,
-            ));
-            if (!empty($posts)) {
-                $form = $posts[0];
-                $form_id = $posts[0]->ID;
-            }
-        }
-
-        if (!$form_id) {
-            $created_id = wp_insert_post(array(
-                'post_type' => 'mme_form',
-                'post_status' => 'publish',
-                'post_title' => 'Form tư vấn MME',
-            ));
-            if (!is_wp_error($created_id) && $created_id) {
-                update_post_meta($created_id, '_mme_form_fields', MME_Form_Plugin::default_fields());
-                update_post_meta($created_id, '_mme_form_settings', MME_Form_Plugin::default_settings());
-                update_option('mme_form_default_created', (int) $created_id, false);
-                $form_id = (int) $created_id;
-                $form = get_post($form_id);
-            }
-        }
-
-        if (!$form_id) {
-            return new WP_Error('mme_form_no_form', 'Không thể khởi tạo hoặc tìm thấy form phù hợp.');
-        }
-
-        $name = '';
-        foreach (array('fullname', 'name', 'Name', 'full_name', 'Họ tên', 'hoten', 'ho_ten') as $k) {
-            if (!empty($lead_data[$k]) && is_scalar($lead_data[$k])) {
-                $name = sanitize_text_field((string) $lead_data[$k]);
-                break;
-            }
-        }
-
-        $phone = '';
-        foreach (array('phone', 'Phone', 'telephone', 'mobile', 'sdt', 'so_dien_thoai', 'Số điện thoại', 'zalo_verified_phone') as $k) {
-            if (!empty($lead_data[$k]) && is_scalar($lead_data[$k])) {
-                $phone = sanitize_text_field((string) $lead_data[$k]);
-                break;
-            }
-        }
-        $phone = preg_replace('/[^0-9+]/', '', $phone);
-        if (str_starts_with($phone, '84') && strlen($phone) >= 10 && strlen($phone) <= 12) {
-            $phone = '0' . substr($phone, 2);
-        }
-
-        $email = '';
-        foreach (array('email', 'Email', 'email_address') as $k) {
-            if (!empty($lead_data[$k]) && is_scalar($lead_data[$k])) {
-                $email = sanitize_email((string) $lead_data[$k]);
-                break;
-            }
-        }
-
-        $contact = array('name' => $name, 'phone' => $phone, 'email' => $email);
-
-        $need = '';
-        foreach (array('sheet_need', 'request_type', 'ban_muon', 'need', 'nhu_cau') as $k) {
-            if (!empty($lead_data[$k]) && is_scalar($lead_data[$k])) {
-                $need = sanitize_text_field((string) $lead_data[$k]);
-                break;
-            }
-        }
-
-        $detail = '';
-        foreach (array('sheet_detail', 'goal', 'trinh_do', 'detail', 'muc_tieu', 'thoi_gian', 'khu_vuc', 'hoc_phi') as $k) {
-            if (!empty($lead_data[$k]) && is_scalar($lead_data[$k])) {
-                $detail = sanitize_text_field((string) $lead_data[$k]);
-                break;
-            }
-        }
-
-        $raw_fields = array();
-        if (isset($lead_data['form_fields']) && is_array($lead_data['form_fields'])) {
-            $raw_fields = $lead_data['form_fields'];
-        } elseif (isset($lead_data['fields']) && is_array($lead_data['fields'])) {
-            $raw_fields = $lead_data['fields'];
-        } else {
-            $raw_fields = $lead_data;
-        }
-
-        $ignore_keys = array(
-            '_wpnonce', 'action', 'webhook_url', 'form_fields', 'fields', 'attribution',
-            'qr_session_id', 'otp', 'hidden_otp', 'user_ip', 'zalo_id', 'zalo_name', 'avatar_url'
-        );
-
-        $fields_values = array();
-        foreach ($raw_fields as $k => $v) {
-            if (in_array($k, $ignore_keys, true)) {
-                continue;
-            }
-            if (is_scalar($v)) {
-                $fields_values[sanitize_key($k)] = sanitize_text_field((string) $v);
-            }
-        }
-
-        $source_url = isset($lead_data['source_url']) && is_scalar($lead_data['source_url'])
-            ? esc_url_raw((string) $lead_data['source_url'])
-            : (wp_get_referer() ?: '');
-        $referrer_url = isset($lead_data['referrer_url']) && is_scalar($lead_data['referrer_url'])
-            ? esc_url_raw((string) $lead_data['referrer_url'])
-            : '';
-        $attribution = isset($lead_data['attribution']) && is_array($lead_data['attribution'])
-            ? $this->sanitize_attribution($lead_data['attribution'])
-            : $this->sanitize_attribution($_REQUEST);
-
-        $event_id = wp_generate_uuid4();
-        $timestamp = gmdate('c');
-        $form_title = $form ? get_the_title($form) : 'Form tư vấn';
-
-        $payload = array(
-            'event_id' => $event_id,
-            'event' => 'lead_collected',
-            'tenant' => (string) wp_parse_url(home_url('/'), PHP_URL_HOST),
-            'channel' => !empty($lead_data['channel']) ? sanitize_text_field($lead_data['channel']) : 'theme_form',
-            'conversation_id' => null,
-            'form' => array(
-                'id' => $form_id,
-                'title' => $form_title,
-            ),
-            'contact' => $contact,
-            'lead' => array(
-                'need' => $need,
-                'detail' => $detail,
-                'booking_requested' => $this->looks_like_booking($fields_values),
-                'note' => $detail ? ($need ? "$need - $detail" : $detail) : $need,
-            ),
-            'fields' => $fields_values,
-            'source' => array(
-                'provider' => 'theme_form',
-                'url' => $source_url,
-                'origin' => $source_url ? (string) wp_parse_url($source_url, PHP_URL_HOST) : '',
-                'referrer' => $referrer_url,
-                'form_id' => $form_id,
-            ),
-            'attribution' => $attribution,
-            'timestamp' => $timestamp,
-            'started_at' => $lead_data['started_at'] ?? (time() * 1000),
-
-            // Flat aliases for direct Google Apps Script / simple webhook compatibility
-            'fullname' => $contact['name'],
-            'name' => $contact['name'],
-            'Name' => $contact['name'],
-            'full_name' => $contact['name'],
-            'Họ tên' => $contact['name'],
-            'phone' => $contact['phone'],
-            'Phone' => $contact['phone'],
-            'sdt' => $contact['phone'],
-            'telephone' => $contact['phone'],
-            'Số điện thoại' => $contact['phone'],
-            'email' => $contact['email'],
-            'sheet_need' => $need,
-            'sheet_detail' => $detail,
-            'form_type' => $lead_data['form_type'] ?? 'consultation',
-            'user_ip' => $lead_data['user_ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''),
-        );
-
-        $submission_id = wp_insert_post(array(
-            'post_type' => 'mme_form_submission',
-            'post_status' => 'publish',
-            'post_title' => sprintf('%s — %s', $contact['name'] ?: ($contact['phone'] ?: 'Lead'), wp_date('Y-m-d H:i:s')),
-        ));
-
-        if (is_wp_error($submission_id)) {
-            return $submission_id;
-        }
-
-        update_post_meta($submission_id, '_mme_submission_payload', $payload);
-        update_post_meta($submission_id, '_mme_submission_form_id', $form_id);
-
-        $settings = wp_parse_args((array) get_post_meta($form_id, '_mme_form_settings', true), MME_Form_Plugin::default_settings());
-
-        // Webhook URL fallback: if form has no webhook configured, fallback to theme option or caller's webhook_url
-        if (($settings['webhook_enabled'] ?? 'no') !== 'yes' || empty($settings['webhook_url'])) {
-            $fallback_url = '';
-            if (!empty($lead_data['webhook_url']) && is_scalar($lead_data['webhook_url'])) {
-                $fallback_url = esc_url_raw((string) $lead_data['webhook_url']);
-            }
-            if (!$fallback_url && function_exists('get_field')) {
-                $fallback_url = esc_url_raw(get_field('webhook_form_url', 'option'));
-            }
-            if (!$fallback_url) {
-                $fallback_url = esc_url_raw(get_option('webhook_form_url', ''));
-            }
-            if (!$fallback_url) {
-                $fallback_url = esc_url_raw(get_option('options_webhook_form_url', ''));
-            }
-
-            if ($fallback_url) {
-                $settings['webhook_enabled'] = 'yes';
-                $settings['webhook_url'] = $fallback_url;
-            }
-        }
-
-        $integration_results = array(
-            'webhook' => $this->send_webhook($settings, $payload),
-            'twenty' => $this->send_twenty($form_id, $settings, $payload),
-            'pancake' => $this->send_pancake($settings, $payload),
-        );
-        update_post_meta($submission_id, '_mme_submission_integrations', $integration_results);
-
-        return array(
-            'success' => true,
-            'submission_id' => $submission_id,
-            'event_id' => $event_id,
-            'integrations' => $integration_results,
-        );
     }
 
     private function allow_request(): bool
@@ -554,17 +296,12 @@ final class MME_Form_Submissions
             $headers['X-MME-Signature'] = 'sha256=' . hash_hmac('sha256', $timestamp . '.' . $body, $secret);
         }
 
-        $response = wp_remote_post($url, array('headers' => $headers, 'body' => $body, 'timeout' => 15, 'redirection' => 5));
+        $response = wp_remote_post($url, array('headers' => $headers, 'body' => $body, 'timeout' => 10, 'redirection' => 3));
         if (is_wp_error($response)) {
-            $err = $response->get_error_message();
-            error_log('MME Form - Webhook Error: ' . $err . ' | Target: ' . $url);
-            return array('success' => false, 'error' => $err);
+            return array('success' => false, 'error' => $response->get_error_message());
         }
         $status = wp_remote_retrieve_response_code($response);
-        $res_body = wp_remote_retrieve_body($response);
-        $success = ($status >= 200 && $status < 400);
-        error_log('MME Form - Webhook Result: ' . ($success ? 'SUCCESS' : 'FAIL') . ' (HTTP ' . $status . ') | Target: ' . $url);
-        return array('success' => $success, 'status_code' => $status, 'body' => substr($res_body, 0, 500));
+        return array('success' => $status >= 200 && $status < 300, 'status_code' => $status);
     }
 
     private function get_twenty_person_fields(array $settings): array
@@ -811,11 +548,8 @@ final class MME_Form_Submissions
         if (!empty($payload['lead']['need'])) {
             $notes[] = 'Nhu cầu: ' . $payload['lead']['need'];
         }
-        if (!empty($payload['lead']['detail'])) {
-            $notes[] = 'Chi tiết: ' . $payload['lead']['detail'];
-        }
         foreach ($fields as $k => $v) {
-            if (in_array(strtolower($k), array('full_name', 'name', 'fullname', 'ho_ten', 'phone', 'telephone', 'mobile', 'sdt', 'email', 'secret', 'event_id', 'event', 'tenant', 'channel', 'sheet_need', 'sheet_detail', 'form_type', 'user_ip', 'started_at'), true)) {
+            if (in_array(strtolower($k), array('full_name', 'name', 'fullname', 'ho_ten', 'phone', 'telephone', 'mobile', 'sdt', 'email'), true)) {
                 continue;
             }
             if (is_scalar($v) && trim((string) $v) !== '') {
@@ -834,10 +568,6 @@ final class MME_Form_Submissions
             }
         }
         $note_str = implode("\n", $notes);
-
-        if (str_starts_with($phone, '84') && strlen($phone) >= 10 && strlen($phone) <= 12) {
-            $phone = '0' . substr($phone, 2);
-        }
 
         // 1. Try Pancake CRM v2 (crm.pancake.vn)
         $v2_url = sprintf('https://crm.pancake.vn/api/workspaces/%s/%s/records?api_key=%s', $workspace_id, $table, $api_key);
