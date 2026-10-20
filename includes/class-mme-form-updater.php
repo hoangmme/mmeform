@@ -30,6 +30,16 @@ final class MME_Form_Updater
             wp_send_json_error('Bạn không có quyền quản trị để cập nhật plugin.');
         }
 
+        $result = $this->perform_update();
+        if ($result['success']) {
+            wp_send_json_success($result);
+        } else {
+            wp_send_json_error($result['error'] ?? 'Lỗi không xác định khi cập nhật.');
+        }
+    }
+
+    public function perform_update(): array
+    {
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/misc.php';
         require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
@@ -38,14 +48,14 @@ final class MME_Form_Updater
         global $wp_filesystem;
 
         if (!$wp_filesystem) {
-            wp_send_json_error('Không thể khởi tạo WP_Filesystem.');
+            return array('success' => false, 'error' => 'Không thể khởi tạo WP_Filesystem.');
         }
 
         $zip_url = 'https://github.com/hoangmme/mmeform/archive/refs/heads/main.zip';
         $temp_file = download_url($zip_url, 60);
 
         if (is_wp_error($temp_file)) {
-            wp_send_json_error('Không thể tải từ GitHub: ' . $temp_file->get_error_message());
+            return array('success' => false, 'error' => 'Không thể tải từ GitHub: ' . $temp_file->get_error_message());
         }
 
         $temp_dir = get_temp_dir() . 'mmeform_update_' . time() . '/';
@@ -56,7 +66,7 @@ final class MME_Form_Updater
 
         if (is_wp_error($unzip_result)) {
             $wp_filesystem->delete($temp_dir, true);
-            wp_send_json_error('Lỗi giải nén ZIP: ' . $unzip_result->get_error_message());
+            return array('success' => false, 'error' => 'Lỗi giải nén ZIP: ' . $unzip_result->get_error_message());
         }
 
         // GitHub zips contain a root folder: "mmeform-main"
@@ -75,7 +85,7 @@ final class MME_Form_Updater
 
         if (!file_exists($source_dir)) {
             $wp_filesystem->delete($temp_dir, true);
-            wp_send_json_error('Không tìm thấy thư mục plugin trong file ZIP tải về.');
+            return array('success' => false, 'error' => 'Không tìm thấy thư mục plugin trong file ZIP tải về.');
         }
 
         // Overwrite the current active plugin directory
@@ -86,12 +96,12 @@ final class MME_Form_Updater
         $wp_filesystem->delete($temp_dir, true);
 
         if (is_wp_error($copy_result)) {
-            wp_send_json_error('Lỗi chép file đè lên plugin: ' . $copy_result->get_error_message());
+            return array('success' => false, 'error' => 'Lỗi chép file đè lên plugin: ' . $copy_result->get_error_message());
         } elseif ($copy_result === false) {
-            wp_send_json_error('Không có quyền ghi đè thư mục plugin (kiểm tra phân quyền thư mục wp-content/plugins/mmeform).');
+            return array('success' => false, 'error' => 'Không có quyền ghi đè thư mục plugin (kiểm tra phân quyền thư mục wp-content/plugins/mmeform).');
         }
 
-        wp_send_json_success(array('message' => 'Cập nhật MME Form thành công!'));
+        return array('success' => true, 'message' => 'Cập nhật MME Form thành công!');
     }
 }
 }

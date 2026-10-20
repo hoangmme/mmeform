@@ -281,54 +281,75 @@ function mme_form_chatbot_options_page() {
             <div id="mme-form-git-pull-result" style="margin-top: 15px; padding: 15px; background: #1e1e1e; color: #00ff00; font-family: monospace; border-radius: 4px; display: none; white-space: pre-wrap;"></div>
         </div>
 
+        <textarea id="mme-ai-prompt-content" style="display: none;"><?php echo esc_textarea("Khi code Landing Page WordPress bằng PHP template, hãy sử dụng hàm PHP mme_form_auto(\$slug, \$title, \$json_fields) của plugin MME Form để hiển thị form.\nHàm này tự động kiểm tra/tạo form và trả về shortcode Chỉ Form (ẩn cột thông tin bên trái để lọt vào khung giao diện của bạn).\n\nQuy tắc viết mảng \$json_fields (JSON array các object):\n- Các thuộc tính hỗ trợ:\n  + type: text, email, tel, textarea, select, hoặc radio.\n  + name: Tên biến (viết thường, không dấu, dùng dấu gạch dưới, VD: full_name, phone).\n  + label: Nhãn hiển thị (VD: \"Họ và tên\").\n  + placeholder: Gợi ý mờ trong ô nhập.\n  + width: \"100\" (Full dòng) hoặc \"50\" (Chia đôi dòng).\n  + required: true hoặc false.\n  + options: Chỉ cho select/radio, các lựa chọn cách nhau bằng \\n (xuống dòng).\n\nVí dụ PHP:\n<" . "?php\n\$fields = '[\n  {\"type\":\"text\", \"name\":\"fullname\", \"label\":\"Họ tên\", \"placeholder\":\"Nhập tên...\", \"required\":true, \"width\":\"100\"},\n  {\"type\":\"tel\", \"name\":\"phone\", \"label\":\"Số điện thoại\", \"placeholder\":\"09xx...\", \"required\":true, \"width\":\"50\"}\n]';\nif (function_exists('mme_form_auto')) {\n    echo mme_form_auto('landing-su-kien-2026', 'Form Sự Kiện', \$fields);\n}\n?" . ">\nLưu ý: Bạn hãy tự thiết kế Container/Card giao diện cho form đẹp mắt theo bố cục website rồi gọi echo mme_form_auto(...) vào đúng vị trí!"); ?></textarea>
+
         <script>
-        document.getElementById('mme-copy-ai-prompt-btn').addEventListener('click', function() {
-            var promptText = "Khi code Landing Page WordPress bằng PHP template, hãy sử dụng hàm PHP mme_form_auto($slug, $title, $json_fields) của plugin MME Form để hiển thị form.\nHàm này tự động kiểm tra/tạo form và trả về shortcode Chỉ Form (ẩn cột thông tin bên trái để lọt vào khung giao diện của bạn).\n\nQuy tắc viết mảng $json_fields (JSON array các object):\n- Các thuộc tính hỗ trợ:\n  + type: text, email, tel, textarea, select, hoặc radio.\n  + name: Tên biến (viết thường, không dấu, dùng dấu gạch dưới, VD: full_name, phone).\n  + label: Nhãn hiển thị (VD: \"Họ và tên\").\n  + placeholder: Gợi ý mờ trong ô nhập.\n  + width: \"100\" (Full dòng) hoặc \"50\" (Chia đôi dòng).\n  + required: true hoặc false.\n  + options: Chỉ cho select/radio, các lựa chọn cách nhau bằng \\n (xuống dòng).\n\nVí dụ PHP:\n<?php\n$fields = '[\n  {\"type\":\"text\", \"name\":\"fullname\", \"label\":\"Họ tên\", \"placeholder\":\"Nhập tên...\", \"required\":true, \"width\":\"100\"},\n  {\"type\":\"tel\", \"name\":\"phone\", \"label\":\"Số điện thoại\", \"placeholder\":\"09xx...\", \"required\":true, \"width\":\"50\"}\n]';\nif (function_exists('mme_form_auto')) {\n    echo mme_form_auto('landing-su-kien-2026', 'Form Sự Kiện', $fields);\n}\n?>\nLưu ý: Bạn hãy tự thiết kế Container/Card giao diện cho form đẹp mắt theo bố cục website rồi gọi echo mme_form_auto(...) vào đúng vị trí!";
-            
-            navigator.clipboard.writeText(promptText).then(function() {
-                var status = document.getElementById('mme-copy-ai-prompt-status');
-                status.style.display = 'inline';
-                setTimeout(function() { status.style.display = 'none'; }, 3000);
+        var promptBtn = document.getElementById('mme-copy-ai-prompt-btn');
+        if (promptBtn) {
+            promptBtn.addEventListener('click', function() {
+                var promptTextarea = document.getElementById('mme-ai-prompt-content');
+                var promptText = promptTextarea ? promptTextarea.value : '';
+                navigator.clipboard.writeText(promptText).then(function() {
+                    var status = document.getElementById('mme-copy-ai-prompt-status');
+                    if (status) {
+                        status.style.display = 'inline';
+                        setTimeout(function() { status.style.display = 'none'; }, 3000);
+                    }
+                });
             });
-        });
+        }
 
-        document.getElementById('mme-form-git-pull-btn').addEventListener('click', function() {
-            var btn = this;
-            var resultDiv = document.getElementById('mme-form-git-pull-result');
-            
-            btn.disabled = true;
-            btn.textContent = 'Đang đồng bộ...';
-            resultDiv.style.display = 'block';
-            resultDiv.textContent = 'Đang chạy git pull...';
-
-            var formData = new FormData();
-            formData.append('action', 'mme_form_git_pull');
-            formData.append('_ajax_nonce', '<?php echo wp_create_nonce('mme_form_git_pull_nonce'); ?>');
-
-            fetch(ajaxurl, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    resultDiv.textContent = data.data;
-                    resultDiv.textContent += '\n\n[INFO] Đang tải lại trang sau 3 giây để cập nhật phiên bản mới...';
-                    setTimeout(function() { location.reload(); }, 3000);
-                } else {
-                    resultDiv.textContent = 'Lỗi: ' + (data.data || 'Không rõ nguyên nhân');
-                    resultDiv.style.color = '#ff5555';
+        var gitPullBtn = document.getElementById('mme-form-git-pull-btn');
+        if (gitPullBtn) {
+            gitPullBtn.addEventListener('click', function() {
+                var btn = this;
+                var resultDiv = document.getElementById('mme-form-git-pull-result');
+                
+                btn.disabled = true;
+                btn.textContent = 'Đang đồng bộ...';
+                if (resultDiv) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.textContent = 'Đang tải bản cập nhật mới nhất từ GitHub...';
                 }
-            })
-            .catch(error => {
-                resultDiv.textContent = 'Lỗi kết nối: ' + error;
-                resultDiv.style.color = '#ff5555';
-            })
-            .finally(() => {
-                btn.disabled = false;
-                btn.textContent = 'Đồng bộ code MME Form từ GitHub (Git Pull)';
+
+                var formData = new FormData();
+                formData.append('action', 'mme_form_git_pull');
+                formData.append('_ajax_nonce', '<?php echo wp_create_nonce('mme_form_git_pull_nonce'); ?>');
+
+                var ajaxUrl = typeof ajaxurl !== 'undefined' ? ajaxurl : '<?php echo esc_url(admin_url('admin-ajax.php')); ?>';
+
+                fetch(ajaxUrl, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        if (resultDiv) {
+                            resultDiv.textContent = data.data;
+                            resultDiv.style.color = '#00ff00';
+                            resultDiv.textContent += '\n\n[INFO] Đang tải lại trang sau 2 giây để cập nhật phiên bản mới...';
+                        }
+                        setTimeout(function() { location.reload(); }, 2000);
+                    } else {
+                        if (resultDiv) {
+                            resultDiv.textContent = 'Lỗi: ' + (data.data || 'Không rõ nguyên nhân');
+                            resultDiv.style.color = '#ff5555';
+                        }
+                    }
+                })
+                .catch(function(error) {
+                    if (resultDiv) {
+                        resultDiv.textContent = 'Lỗi kết nối: ' + error;
+                        resultDiv.style.color = '#ff5555';
+                    }
+                })
+                .finally(function() {
+                    btn.disabled = false;
+                    btn.textContent = 'Đồng bộ code MME Form từ GitHub (Git Pull)';
+                });
             });
-        });
+        }
         </script>
 
         <?php mme_chatbot_render_content_status(); ?>
@@ -883,7 +904,7 @@ function mme_chatbot_render_backend() {
 }
 }
 
-// Thêm AJAX handler cho nút Git Pull
+// Thêm AJAX handler cho nút Git Pull / Đồng bộ
 if (!function_exists('mme_form_git_pull_handler')) {
 add_action('wp_ajax_mme_form_git_pull', 'mme_form_git_pull_handler');
 function mme_form_git_pull_handler() {
@@ -892,6 +913,16 @@ function mme_form_git_pull_handler() {
         wp_send_json_error('Không đủ quyền hạn');
     }
 
+    // 1. Ưu tiên cập nhật in-place chuẩn qua MME_Form_Updater (tải ZIP từ GitHub)
+    if (class_exists('MME_Form_Updater')) {
+        $update_res = MME_Form_Updater::instance()->perform_update();
+        if (!empty($update_res['success'])) {
+            $version_str = defined('MME_FORM_VERSION') ? MME_FORM_VERSION : 'mới nhất';
+            wp_send_json_success('✅ Đã tải và cập nhật thành công MME Form (v' . $version_str . ') trực tiếp từ GitHub!');
+        }
+    }
+
+    // 2. Fallback: Nếu không ghi đè file được, ping webhook daemon (cổng 8989)
     $domain = $_SERVER['HTTP_HOST'] ?? '';
     $domain = preg_replace('/^www\./', '', $domain);
 
