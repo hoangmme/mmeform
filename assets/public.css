@@ -470,6 +470,78 @@
   color: var(--mme-button);
 }
 
+/* Email OTP Verification */
+.mme-otp-wrap {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.mme-otp-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.mme-btn-send-otp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid var(--mme-button);
+  background: color-mix(in srgb, var(--mme-button) 10%, transparent);
+  color: var(--mme-button);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.mme-btn-send-otp:hover:not(:disabled) {
+  background: var(--mme-button);
+  color: var(--mme-btn-text, #ffffff);
+}
+
+.mme-btn-send-otp:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.mme-otp-input-box {
+  flex: 1;
+  min-width: 140px;
+}
+
+.mme-otp-input-box input.mme-otp-input {
+  height: 44px;
+  text-align: center;
+  letter-spacing: 4px;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 10px;
+  background: #ffffff !important;
+  border: 2px solid var(--mme-secondary, #10b981) !important;
+}
+
+.mme-otp-status {
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.mme-otp-status.is-success {
+  color: #059669;
+}
+
+.mme-otp-status.is-error {
+  color: #dc2626;
+}
+
 .mme-form-field .iti {
   width: 100%;
 }

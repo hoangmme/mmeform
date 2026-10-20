@@ -8,12 +8,14 @@
   - In-admin Interactive Live Preview Modal + tab preview with mode toggle (Full vs Form-Only) and background simulator (White, Gray, Dark) for instant visual feedback.
   - Native Pancake CRM Integration: Direct sync to Pancake CRM (supports both modern `crm.pancake.vn` v2 and legacy `pos.pages.fm` v1 fallback) with custom fields, attribution, and note compilation.
   - 1-Click GitHub In-Place Updater (WPMME Architecture): Ported native WordPress filesystem updater from `/Users/hoji/Documents/code/mmewp/wpmme`. Uses `WP_Filesystem()`, `download_url()`, `unzip_file()`, and `copy_dir()` to download the latest `main.zip` from GitHub and overwrite `MME_FORM_DIR` in-place. Eliminates duplicate plugin folders (`mmeform-main`) and removes need for SSH/terminal `git pull`.
-  - Accessible via 1-click buttons across WP Admin: Forms list banner notice, form editor sidebar metabox, Plugins list table row meta, and General Settings page (`edit.php?post_type=mme_form&page=mme_chatbot`).
+  - Email OTP Verification System (Anti-Spam): Added 6-digit numeric OTP verification on email fields via `wp_mail()` (100% native compatibility with FluentSMTP). Configurable subject template, expiration (minutes), and request cooldown (seconds) backed by transient storage. Blocks submissions if OTP is missing, expired, or incorrect when enabled.
+  - Admin UI Redesign & Tabbed Architecture: Split appearance & configuration box into 4 clean tabs (Tab 1: Shortcode Chỉ Form, Tab 2: Form Thường 2 Cột, Tab 3: Màu sắc & Ô nhập, Tab 4: Xác thực OTP Email) to remove clutter and make form creation intuitive.
 
 - **Operational Constraints:**
   - Seamless backward compatibility with existing shortcodes `[mme_form id="..."]` and `[mme_form_fields id="..."]`.
-  - No external library dependencies for admin live preview modal.
+  - No external library dependencies for admin live preview modal or tab switching.
   - Backward compatibility with Google Sheets Webhook and Twenty CRM.
+  - FluentSMTP / WP Mail compatibility: uses native `wp_mail()`, requiring no separate SMTP credential setup.
   - Resilient Git detection with multi-tier fallback (exec git log -> file read .git/HEAD -> filemtime -> MME_FORM_BUILD_TIME constant).
   - Updater runs with WordPress admin privileges (`manage_options`) and nonce verification (`mme_form_admin_nonce`).
 
@@ -23,10 +25,11 @@
   - Done: Added MME_FORM_BOOTSTRAPPED singleton guard and class_exists wrappers on all classes to prevent fatal errors when multiple plugin folders coexist on the server.
   - Done: Added native Pancake CRM integration in MME Form (settings, admin metabox, and submission pipeline with v2/v1 dual fallback).
   - Done: Added dynamic version, date/time, and git commit display across WordPress admin (Plugins list, Admin notices, Edit screen sidebar, Footer text).
-  - Done: 100% PHP 7.4 through PHP 8.3+ syntax compatibility.
-  - Done: Implemented 1-Click GitHub Updater mechanism (`MME_Form_Updater`, UI buttons, and client-side AJAX handler) modeled after `wpmme`.
-  - Current Focus: Commit & push 1-Click GitHub Updater to origin main.
-  - Next: User can test 1-click update directly from WordPress Admin.
+  - Done: 1-Click GitHub Updater mechanism (`MME_Form_Updater`, UI buttons, and client-side AJAX handler) modeled after `wpmme`.
+  - Done: Email OTP verification for spam protection (endpoint `send-otp`, transient keys, cooldown timer, frontend countdown, submission validation).
+  - Done: Clean 4-tab admin interface separating "Chỉ Form" from "Form Thường".
+  - Current Focus: Commit & push version 0.5.3 to origin main.
+  - Next: User can update directly from WordPress Admin via 1-click update button and test Email OTP with FluentSMTP.
 
 - **Flags (Drift/Critical/Entropy):** None.
 - **Cost/Impact Alerts:** None.
@@ -41,6 +44,7 @@
     - `includes/class-mme-form-submissions.php`
     - `includes/mme-chatbot.php`
     - `assets/public.css`
+    - `assets/public.js`
     - `assets/admin.css`
     - `assets/admin.js`
     - `CONTINUITY.md`

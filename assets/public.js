@@ -113,6 +113,90 @@
     openChat(shell, sourceUrl);
     emitTracking("mme_form_view", Object.assign({ form_id: formId }, sourceParts(sourceUrl)));
 
+    // Setup Email OTP
+    var otpWrap = form.querySelector(".mme-otp-wrap");
+    if (otpWrap) {
+      var sendOtpBtn = otpWrap.querySelector(".mme-btn-send-otp");
+      var otpInputBox = otpWrap.querySelector(".mme-otp-input-box");
+      var otpStatus = otpWrap.querySelector(".mme-otp-status");
+      var emailFieldName = otpWrap.dataset.otpFor || "email";
+      var emailInput = form.querySelector('[name="fields[' + emailFieldName + ']"]');
+
+      if (sendOtpBtn && emailInput) {
+        var cooldownTimer = null;
+
+        sendOtpBtn.addEventListener("click", async function (e) {
+          e.preventDefault();
+          var emailVal = (emailInput.value || "").trim();
+          if (!emailVal || !emailInput.checkValidity()) {
+            emailInput.reportValidity();
+            if (otpStatus) {
+              otpStatus.style.display = "block";
+              otpStatus.className = "mme-otp-status is-error";
+              otpStatus.textContent = "Vui lòng nhập địa chỉ email hợp lệ trước khi lấy mã OTP.";
+            }
+            return;
+          }
+
+          sendOtpBtn.disabled = true;
+          var originalBtnText = sendOtpBtn.textContent;
+          sendOtpBtn.textContent = "Đang gửi OTP...";
+
+          try {
+            var otpEndpoint = form.dataset.otpEndpoint || "/wp-json/mme-form/v1/send-otp";
+            var res = await fetch(otpEndpoint, {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                form_id: Number(formId),
+                email: emailVal,
+              }),
+            });
+            var resData = await res.json().catch(function () { return {}; });
+
+            if (!res.ok) {
+              throw new Error(resData.message || "Không thể gửi mã OTP.");
+            }
+
+            if (otpInputBox) otpInputBox.style.display = "block";
+            if (otpStatus) {
+              otpStatus.style.display = "block";
+              otpStatus.className = "mme-otp-status is-success";
+              otpStatus.textContent = resData.message || "Đã gửi mã OTP đến email. Vui lòng kiểm tra hộp thư!";
+            }
+
+            var seconds = Number(resData.cooldown) || 60;
+            sendOtpBtn.textContent = "Gửi lại (" + seconds + "s)";
+            if (cooldownTimer) clearInterval(cooldownTimer);
+            cooldownTimer = setInterval(function () {
+              seconds--;
+              if (seconds <= 0) {
+                clearInterval(cooldownTimer);
+                sendOtpBtn.disabled = false;
+                sendOtpBtn.textContent = "Gửi lại mã OTP";
+              } else {
+                sendOtpBtn.textContent = "Gửi lại (" + seconds + "s)";
+              }
+            }, 1000);
+
+            var otpCodeInput = otpWrap.querySelector('input[name="otp_code"]');
+            if (otpCodeInput) otpCodeInput.focus();
+            resizeParent(formId);
+          } catch (err) {
+            sendOtpBtn.disabled = false;
+            sendOtpBtn.textContent = originalBtnText;
+            if (otpStatus) {
+              otpStatus.style.display = "block";
+              otpStatus.className = "mme-otp-status is-error";
+              otpStatus.textContent = err.message || "Lỗi khi gửi mã OTP.";
+            }
+            resizeParent(formId);
+          }
+        });
+      }
+    }
+
     window.addEventListener("message", function (event) {
       var data = event.data || {};
       if (data.type === "MME_FORM_CONTEXT" && data.formId === formId && data.url) {
@@ -149,6 +233,7 @@
         referrer_url: referrerInput.value,
         started_at: Number(startedInput.value),
         website: formData.get("website") || "",
+        otp_code: (formData.get("otp_code") || "").trim(),
         attribution: attribution(currentInput.value || sourceUrl),
       };
 

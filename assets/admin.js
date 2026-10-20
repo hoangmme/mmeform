@@ -506,6 +506,38 @@
     }
   });
 
+  // Appearance Box Tab Navigation
+  ready(function () {
+    var navTabs = document.querySelectorAll(".mme-tab-nav .nav-tab");
+    if (!navTabs.length) return;
+
+    navTabs.forEach(function (tab) {
+      tab.addEventListener("click", function (e) {
+        e.preventDefault();
+        var targetId = tab.dataset.tab;
+        if (!targetId) return;
+
+        navTabs.forEach(function (t) {
+          t.classList.remove("nav-tab-active");
+        });
+        tab.classList.add("nav-tab-active");
+
+        var wrapper = tab.closest(".mme-admin-tabs-wrapper");
+        if (!wrapper) return;
+        var panes = wrapper.querySelectorAll(".mme-tab-pane");
+        panes.forEach(function (pane) {
+          if (pane.id === targetId) {
+            pane.style.display = "block";
+            pane.classList.add("is-active");
+          } else {
+            pane.style.display = "none";
+            pane.classList.remove("is-active");
+          }
+        });
+      });
+    });
+  });
+
   // 1-Click Force Updater from GitHub
   ready(function () {
     document.addEventListener("click", function (e) {

@@ -32,6 +32,86 @@ final class MME_Form_Submissions
                 'id' => array('sanitize_callback' => 'absint'),
             ),
         ));
+
+        register_rest_route('mme-form/v1', '/send-otp', array(
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => array($this, 'send_otp'),
+            'permission_callback' => '__return_true',
+        ));
+    }
+
+    /**
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+    public function send_otp(WP_REST_Request $request)
+    {
+        $input = $request->get_json_params();
+        if (!is_array($input)) {
+            return new WP_Error('mme_form_invalid_json', 'Dữ liệu không hợp lệ.', array('status' => 400));
+        }
+
+        $form_id = absint($input['form_id'] ?? 0);
+        $form = get_post($form_id);
+        if (!$form || $form->post_type !== 'mme_form' || $form->post_status !== 'publish') {
+            return new WP_Error('mme_form_not_found', 'Form không tồn tại.', array('status' => 404));
+        }
+
+        $settings = wp_parse_args((array) get_post_meta($form_id, '_mme_form_settings', true), MME_Form_Plugin::default_settings());
+        if (($settings['otp_enabled'] ?? 'no') !== 'yes') {
+            return new WP_Error('mme_form_otp_disabled', 'Tính năng xác thực OTP chưa được bật cho form này.', array('status' => 400));
+        }
+
+        $email = sanitize_email($input['email'] ?? '');
+        if (!$email || !is_email($email)) {
+            return new WP_Error('mme_form_invalid_email', 'Vui lòng nhập địa chỉ email hợp lệ.', array('status' => 400));
+        }
+
+        // Cooldown check (default 60 seconds)
+        $cooldown_secs = !empty($settings['otp_cooldown_seconds']) ? absint($settings['otp_cooldown_seconds']) : 60;
+        $cd_key = 'mme_otp_cd_' . md5($form_id . '_' . strtolower($email));
+        $last_sent = get_transient($cd_key);
+        if ($last_sent) {
+            $remaining = $cooldown_secs - (time() - $last_sent);
+            if ($remaining > 0) {
+                return new WP_Error('mme_form_otp_cooldown', sprintf('Vui lòng đợi %d giây trước khi yêu cầu gửi lại mã.', $remaining), array('status' => 429, 'cooldown' => $remaining));
+            }
+        }
+
+        // Generate 6-digit numeric OTP
+        $otp = (string) wp_rand(100000, 999999);
+        $expiry_mins = !empty($settings['otp_expiry_minutes']) ? absint($settings['otp_expiry_minutes']) : 5;
+        $otp_key = 'mme_otp_' . md5($form_id . '_' . strtolower($email));
+
+        set_transient($otp_key, array('code' => $otp, 'created_at' => time()), $expiry_mins * MINUTE_IN_SECONDS);
+        set_transient($cd_key, time(), $cooldown_secs);
+
+        $site_name = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
+        $form_title = get_the_title($form_id);
+
+        $subject_template = !empty($settings['otp_email_subject']) ? $settings['otp_email_subject'] : '[{site_name}] Mã xác thực đăng ký: {otp}';
+        $subject = str_replace(
+            array('{site_name}', '{form_title}', '{otp}'),
+            array($site_name, $form_title, $otp),
+            $subject_template
+        );
+
+        $message = sprintf(
+            "Xin chào,\n\nMã xác thực OTP của bạn cho form \"%s\" là: %s\n\nMã này có hiệu lực trong vòng %d phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.\n\nTrân trọng,\n%s",
+            $form_title,
+            $otp,
+            $expiry_mins,
+            $site_name
+        );
+
+        $headers = array('Content-Type: text/plain; charset=UTF-8');
+        wp_mail($email, $subject, $message, $headers);
+
+        return new WP_REST_Response(array(
+            'success'  => true,
+            'message'  => sprintf('Đã gửi mã OTP 6 chữ số đến %s. Vui lòng kiểm tra hộp thư (kể cả mục Spam).', $email),
+            'cooldown' => $cooldown_secs,
+        ), 200);
     }
 
     /**
@@ -112,6 +192,46 @@ final class MME_Form_Submissions
         if ($errors) {
             $error_msg = implode(' ', array_values($errors));
             return new WP_Error('mme_form_validation_failed', $error_msg, array('status' => 400, 'errors' => $errors));
+        }
+
+        $settings = wp_parse_args((array) get_post_meta($form_id, '_mme_form_settings', true), MME_Form_Plugin::default_settings());
+        if (($settings['otp_enabled'] ?? 'no') === 'yes') {
+            $user_email = '';
+            $has_email_field = false;
+            foreach ($fields as $f) {
+                if (($f['type'] ?? '') === 'email') {
+                    $has_email_field = true;
+                    $n = trim(preg_replace('/\s+/', '_', $f['name'] ?? ''));
+                    if (!empty($values[$n]) && is_email($values[$n])) {
+                        $user_email = $values[$n];
+                        break;
+                    }
+                }
+            }
+
+            if ($has_email_field && empty($user_email)) {
+                return new WP_Error('mme_form_email_required_for_otp', 'Vui lòng nhập địa chỉ email hợp lệ để nhận mã xác thực OTP.', array('status' => 400));
+            }
+
+            if ($user_email) {
+                $submitted_otp = isset($input['otp_code']) ? trim((string) $input['otp_code']) : '';
+                if ($submitted_otp === '') {
+                    return new WP_Error('mme_form_otp_required', 'Vui lòng nhập mã OTP đã được gửi đến email của bạn.', array('status' => 400));
+                }
+
+                $otp_key = 'mme_otp_' . md5($form_id . '_' . strtolower($user_email));
+                $stored_otp = get_transient($otp_key);
+
+                if (!$stored_otp || empty($stored_otp['code'])) {
+                    return new WP_Error('mme_form_otp_expired', 'Mã OTP đã hết hạn hoặc chưa được tạo. Vui lòng bấm gửi lại mã OTP.', array('status' => 400));
+                }
+
+                if ((string) $stored_otp['code'] !== $submitted_otp) {
+                    return new WP_Error('mme_form_otp_invalid', 'Mã OTP không chính xác. Vui lòng kiểm tra lại.', array('status' => 400));
+                }
+
+                delete_transient($otp_key);
+            }
         }
 
         $current_url = isset($input['current_url']) && is_scalar($input['current_url'])

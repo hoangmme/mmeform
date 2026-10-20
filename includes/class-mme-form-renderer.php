@@ -257,6 +257,8 @@ final class MME_Form_Renderer
                         <form
                             class="mme-form"
                             data-endpoint="<?php echo esc_url(rest_url('mme-form/v1/submit/' . $form_id)); ?>"
+                            data-otp-endpoint="<?php echo esc_url(rest_url('mme-form/v1/send-otp')); ?>"
+                            data-otp-enabled="<?php echo esc_attr($settings['otp_enabled'] ?? 'no'); ?>"
                             novalidate
                         >
                             <input type="hidden" name="form_id" value="<?php echo esc_attr((string) $form_id); ?>">
@@ -267,7 +269,7 @@ final class MME_Form_Renderer
 
                             <div class="mme-form-grid">
                                 <?php foreach ($fields as $field) : ?>
-                                    <?php echo self::render_field($field); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                    <?php echo self::render_field($field, $settings); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                                 <?php endforeach; ?>
                             </div>
 
@@ -318,7 +320,7 @@ final class MME_Form_Renderer
         return (string) ob_get_clean();
     }
 
-    private static function render_field(array $field): string
+    private static function render_field(array $field, array $settings = array()): string
     {
         $type = sanitize_key($field['type'] ?? 'text');
         $allowed = array('text', 'email', 'tel', 'date', 'time', 'textarea', 'select', 'radio');
@@ -372,7 +374,6 @@ final class MME_Form_Renderer
                     <?php endforeach; ?>
                 </div>
 
-
             <?php else : ?>
                 <div class="mme-input-wrapper <?php echo $type !== 'tel' ? 'mme-has-icon' : ''; ?>">
                     <?php if ($type !== 'tel') : ?>
@@ -386,6 +387,20 @@ final class MME_Form_Renderer
                     <?php endif; ?>
                     <input id="<?php echo esc_attr($id); ?>" type="<?php echo esc_attr($type); ?>" name="fields[<?php echo esc_attr($name); ?>]" placeholder="<?php echo esc_attr($placeholder); ?>" <?php echo $required ? 'required' : ''; ?>>
                 </div>
+
+                <?php if ($type === 'email' && ($settings['otp_enabled'] ?? 'no') === 'yes') : ?>
+                    <div class="mme-otp-wrap" data-otp-for="<?php echo esc_attr($name); ?>">
+                        <div class="mme-otp-actions">
+                            <button type="button" class="mme-btn-send-otp">
+                                <span>Gửi mã xác thực OTP</span>
+                            </button>
+                            <div class="mme-otp-input-box" style="display: none;">
+                                <input type="text" name="otp_code" class="mme-otp-input" placeholder="Nhập mã 6 chữ số" maxlength="6" autocomplete="one-time-code">
+                            </div>
+                        </div>
+                        <div class="mme-otp-status" style="display: none;"></div>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
         <?php
