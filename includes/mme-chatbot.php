@@ -241,9 +241,45 @@ function mme_form_chatbot_options_page() {
             <span id="mme-copy-ai-prompt-status" style="margin-left: 10px; color: #10b981; font-weight: 600; display: none;">✔ Đã copy vào clipboard!</span>
         </div>
 
-        <p>Tính năng dưới đây giúp bạn đồng bộ (pull) mã nguồn mới nhất của plugin <strong>MME Form</strong> từ GitHub về máy chủ ngay lập tức.</p>
-        <button type="button" id="mme-form-git-pull-btn" class="button button-secondary">Đồng bộ code MME Form từ GitHub (Git Pull)</button>
-        <div id="mme-form-git-pull-result" style="margin-top: 15px; padding: 15px; background: #1e1e1e; color: #00ff00; font-family: monospace; border-radius: 4px; display: none; white-space: pre-wrap;"></div>
+        <?php
+        $build_info = class_exists('MME_Form_Plugin') ? MME_Form_Plugin::get_build_info() : array(
+            'version' => defined('MME_FORM_VERSION') ? MME_FORM_VERSION : '0.5.2',
+            'date'    => '',
+            'commit'  => '',
+            'branch'  => 'main',
+        );
+        ?>
+        <div style="margin-bottom: 25px; padding: 16px 20px; background: #fff; border: 1px solid #ccd0d4; border-left: 4px solid #0284c7; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
+                <div style="font-size: 13px; color: #0f172a; line-height: 1.6;">
+                    📦 <strong>Phiên bản hiện tại:</strong> 
+                    <span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: 700; margin: 0 4px;">
+                        v<?php echo esc_html($build_info['version']); ?>
+                    </span>
+                    &bull; Bản cập nhật: <strong><?php echo esc_html($build_info['date']); ?></strong>
+                    <?php if (!empty($build_info['commit'])) : ?>
+                        &bull; Git Commit: <code><?php echo esc_html($build_info['commit']); ?></code> (<?php echo esc_html($build_info['branch']); ?>)
+                    <?php endif; ?>
+                </div>
+                <div>
+                    <button type="button" class="button button-primary mme-force-update-btn" style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+                        <span class="dashicons dashicons-update" style="margin-top: 2px;"></span> Cập nhật từ GitHub (1-Click)
+                    </button>
+                </div>
+            </div>
+
+            <p style="margin: 0 0 12px; font-size: 13px; color: #475569;">
+                Tính năng dưới đây giúp bạn đồng bộ (pull) mã nguồn mới nhất của plugin <strong>MME Form</strong> từ GitHub về máy chủ ngay lập tức.
+            </p>
+
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <button type="button" id="mme-form-git-pull-btn" class="button button-secondary">
+                    Đồng bộ code MME Form từ GitHub (Git Pull)
+                </button>
+            </div>
+
+            <div id="mme-form-git-pull-result" style="margin-top: 15px; padding: 15px; background: #1e1e1e; color: #00ff00; font-family: monospace; border-radius: 4px; display: none; white-space: pre-wrap;"></div>
+        </div>
 
         <script>
         document.getElementById('mme-copy-ai-prompt-btn').addEventListener('click', function() {
@@ -277,6 +313,8 @@ function mme_form_chatbot_options_page() {
             .then(data => {
                 if (data.success) {
                     resultDiv.textContent = data.data;
+                    resultDiv.textContent += '\n\n[INFO] Đang tải lại trang sau 3 giây để cập nhật phiên bản mới...';
+                    setTimeout(function() { location.reload(); }, 3000);
                 } else {
                     resultDiv.textContent = 'Lỗi: ' + (data.data || 'Không rõ nguyên nhân');
                     resultDiv.style.color = '#ff5555';
