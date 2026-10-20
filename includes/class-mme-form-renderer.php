@@ -107,10 +107,11 @@ final class MME_Form_Renderer
         $max_width_val = !empty($settings['form_max_width']) ? $settings['form_max_width'] : '680px';
         $card_bg = !empty($args['bg']) ? $args['bg'] : (!empty($settings['form_card_bg']) ? $settings['form_card_bg'] : '#ffffff');
         $card_border = !empty($settings['form_card_border']) ? $settings['form_card_border'] : 'rgba(226, 232, 240, 0.6)';
-        $field_bg = !empty($settings['field_bg_color']) ? $settings['field_bg_color'] : 'rgba(248, 250, 252, 0.5)';
+        $field_bg = !empty($args['field_bg']) ? $args['field_bg'] : (!empty($settings['field_bg_color']) ? $settings['field_bg_color'] : 'rgba(248, 250, 252, 0.5)');
         $field_border = !empty($settings['field_border_color']) ? $settings['field_border_color'] : '#e2e8f0';
         $field_text = !empty($settings['field_text_color']) ? $settings['field_text_color'] : '#1e293b';
         $field_label = !empty($args['label_color']) ? $args['label_color'] : (!empty($settings['field_label_color']) ? $settings['field_label_color'] : '#1e293b');
+        $field_placeholder = !empty($args['placeholder_color']) ? $args['placeholder_color'] : (!empty($settings['field_placeholder_color']) ? $settings['field_placeholder_color'] : '#94a3b8');
         $form_heading_color = !empty($settings['form_heading_color']) ? $settings['form_heading_color'] : '#0f172a';
         $btn_text = !empty($settings['button_text_color']) ? $settings['button_text_color'] : '#ffffff';
 
@@ -118,7 +119,7 @@ final class MME_Form_Renderer
         $has_card_style = ($fields_card_style === 'card');
 
         $style = sprintf(
-            '--mme-button:%s;--mme-secondary:%s;--mme-accent:%s;--mme-bg:%s;--mme-text:%s;--mme-font:%s;--mme-form-padding:%s;--mme-form-padding-mobile:%s;--mme-form-field-gap:%s;--mme-form-radius:%s;--mme-form-shadow:%s;--mme-form-max-width:%s;--mme-form-card-bg:%s;--mme-form-card-border:%s;--mme-field-bg:%s;--mme-field-border:%s;--mme-field-text:%s;--mme-field-label-color:%s;--mme-form-heading-color:%s;--mme-btn-text:%s;',
+            '--mme-button:%s;--mme-secondary:%s;--mme-accent:%s;--mme-bg:%s;--mme-text:%s;--mme-font:%s;--mme-form-padding:%s;--mme-form-padding-mobile:%s;--mme-form-field-gap:%s;--mme-form-radius:%s;--mme-form-shadow:%s;--mme-form-max-width:%s;--mme-form-card-bg:%s;--mme-form-card-border:%s;--mme-field-bg:%s;--mme-field-border:%s;--mme-field-text:%s;--mme-field-label-color:%s;--mme-field-placeholder:%s;--mme-form-heading-color:%s;--mme-btn-text:%s;',
             esc_attr($settings['button_color']),
             esc_attr($settings['secondary_color']),
             esc_attr($settings['accent_color']),
@@ -137,6 +138,7 @@ final class MME_Form_Renderer
             esc_attr($field_border),
             esc_attr($field_text),
             esc_attr($field_label),
+            esc_attr($field_placeholder),
             esc_attr($form_heading_color),
             esc_attr($btn_text)
         );

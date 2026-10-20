@@ -411,6 +411,24 @@
   transition: all 0.2s ease;
 }
 
+.mme-form-field input::placeholder,
+.mme-form-field textarea::placeholder {
+  color: var(--mme-field-placeholder, #94a3b8);
+  opacity: 1;
+}
+
+.mme-form-field input::-webkit-input-placeholder,
+.mme-form-field textarea::-webkit-input-placeholder {
+  color: var(--mme-field-placeholder, #94a3b8);
+  opacity: 1;
+}
+
+.mme-form-field input::-moz-placeholder,
+.mme-form-field textarea::-moz-placeholder {
+  color: var(--mme-field-placeholder, #94a3b8);
+  opacity: 1;
+}
+
 .mme-form-field input:not([type="radio"]):hover,
 .mme-form-field textarea:hover,
 .mme-form-field select:hover {

@@ -77,7 +77,9 @@ final class MME_Form_Plugin
                 'card' => '',
                 'heading' => '',
                 'bg' => '',
+                'field_bg' => '',
                 'label_color' => '',
+                'placeholder_color' => '',
             ), $attributes, 'mme_form');
 
             $args = array();
@@ -95,8 +97,14 @@ final class MME_Form_Plugin
             if (!empty($attributes['bg'])) {
                 $args['bg'] = sanitize_text_field($attributes['bg']);
             }
+            if (!empty($attributes['field_bg'])) {
+                $args['field_bg'] = sanitize_text_field($attributes['field_bg']);
+            }
             if (!empty($attributes['label_color'])) {
                 $args['label_color'] = sanitize_text_field($attributes['label_color']);
+            }
+            if (!empty($attributes['placeholder_color'])) {
+                $args['placeholder_color'] = sanitize_text_field($attributes['placeholder_color']);
             }
 
             return MME_Form_Renderer::render(absint($attributes['id']), $args);
@@ -108,7 +116,9 @@ final class MME_Form_Plugin
                 'card' => '',
                 'heading' => '',
                 'bg' => '',
+                'field_bg' => '',
                 'label_color' => '',
+                'placeholder_color' => '',
             ), $attributes, 'mme_form_fields');
 
             $args = array(
@@ -123,8 +133,14 @@ final class MME_Form_Plugin
             if (!empty($attributes['bg'])) {
                 $args['bg'] = sanitize_text_field($attributes['bg']);
             }
+            if (!empty($attributes['field_bg'])) {
+                $args['field_bg'] = sanitize_text_field($attributes['field_bg']);
+            }
             if (!empty($attributes['label_color'])) {
                 $args['label_color'] = sanitize_text_field($attributes['label_color']);
+            }
+            if (!empty($attributes['placeholder_color'])) {
+                $args['placeholder_color'] = sanitize_text_field($attributes['placeholder_color']);
             }
 
             return MME_Form_Renderer::render(absint($attributes['id']), $args);
@@ -338,6 +354,7 @@ final class MME_Form_Plugin
             'field_border_color' => '#e2e8f0',
             'field_text_color' => '#1e293b',
             'field_label_color' => '#1e293b',
+            'field_placeholder_color' => '#94a3b8',
             'form_heading_color' => '#0f172a',
             'button_color' => '#0061ff',
             'button_text_color' => '#ffffff',

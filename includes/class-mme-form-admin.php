@@ -265,9 +265,10 @@ final class MME_Form_Admin
             <?php $this->color_input('form_card_border', 'Màu viền Form Card', $settings['form_card_border']); ?>
             <?php $this->color_input('form_heading_color', 'Màu chữ tiêu đề Form (Heading Form)', $settings['form_heading_color'] ?? '#0f172a'); ?>
             <?php $this->color_input('field_label_color', 'Màu chữ nhãn trường (Field Title / Label - Họ tên, SĐT,...)', $settings['field_label_color'] ?? '#1e293b'); ?>
-            <?php $this->color_input('field_bg_color', 'Màu nền ô nhập liệu', $settings['field_bg_color']); ?>
+            <?php $this->color_input('field_bg_color', 'Màu nền ô nhập liệu (Field Background)', $settings['field_bg_color']); ?>
             <?php $this->color_input('field_border_color', 'Màu viền ô nhập liệu', $settings['field_border_color']); ?>
             <?php $this->color_input('field_text_color', 'Màu chữ ô nhập liệu', $settings['field_text_color']); ?>
+            <?php $this->color_input('field_placeholder_color', 'Màu chữ gợi ý ô nhập (Placeholder)', $settings['field_placeholder_color'] ?? '#94a3b8'); ?>
             <?php $this->color_input('background_color', 'Màu nền ngoài cùng (Wrapper)', $settings['background_color']); ?>
             <?php $this->color_input('text_color', 'Màu chữ ngoài cùng', $settings['text_color']); ?>
 
@@ -475,9 +476,12 @@ function doPost(e) {
             <p class="description" style="margin: 4px 0 0; font-size: 11px; color: #475569;">
                 Chỉ hiện khung Form (thích hợp chèn vào mọi Section).<br>
                 <strong>Tùy chọn thêm vào shortcode:</strong><br>
-                • <code>card="yes"</code> : Giữ nền trắng Form Card (mặc định)<br>
-                • <code>card="no"</code> : Trong suốt phẳng<br>
-                • <code>heading="no"</code> : Ẩn tiêu đề Form
+                • <code>card="yes|no"</code> : Giữ nền Form Card (mặc định "yes") hoặc trong suốt ("no")<br>
+                • <code>bg="#ffffff"</code> : Màu nền của cả khung Form Card<br>
+                • <code>field_bg="#f8fafc"</code> : Màu nền các ô nhập liệu (Field Input)<br>
+                • <code>label_color="#1e293b"</code> : Màu chữ nhãn trường (Field Title / Label)<br>
+                • <code>placeholder_color="#94a3b8"</code> : Màu chữ gợi ý trong ô nhập (Placeholder)<br>
+                • <code>heading="yes|no"</code> : Ẩn hoặc hiện tiêu đề Form
             </p>
         </div>
 
