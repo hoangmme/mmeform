@@ -662,7 +662,7 @@ final class MME_Form_Submissions
         $phone = !empty($contact['phone']) ? $contact['phone'] : '';
         $email = !empty($contact['email']) ? $contact['email'] : '';
         $source_url = (string) ($payload['source']['url'] ?? '');
-        $form_title = (string) ($payload['form']['title'] ?? 'MME Form');
+        $form_title = (string) ($payload['form']['title'] ?? 'Form liên hệ');
 
         $notes = array();
         $notes[] = 'Loại Form: ' . $form_title;

@@ -22,6 +22,7 @@ final class MME_Form_Plugin
     {
         add_action('init', array($this, 'register_post_types'));
         add_action('init', array($this, 'register_shortcode'));
+        add_action('init', array($this, 'maybe_rename_legacy_form'));
         add_filter('query_vars', array($this, 'register_query_vars'));
         add_action('template_redirect', array($this, 'serve_embed'), 0);
 
@@ -30,15 +31,42 @@ final class MME_Form_Plugin
         MME_Form_Updater::instance()->boot();
     }
 
+    public function maybe_rename_legacy_form(): void
+    {
+        if (get_option('mme_form_renamed_default_v2')) {
+            return;
+        }
+        $posts = get_posts(array(
+            'post_type'      => 'mme_form',
+            'title'          => 'Form tư vấn MME',
+            'posts_per_page' => 1,
+            'post_status'    => 'any',
+        ));
+        if (!empty($posts)) {
+            wp_update_post(array(
+                'ID'         => $posts[0]->ID,
+                'post_title' => 'Form liên hệ',
+            ));
+        }
+        update_option('mme_form_renamed_default_v2', 1, false);
+    }
+
     public function register_post_types(): void
     {
         register_post_type('mme_form', array(
             'labels' => array(
-                'name' => __('MME Forms', 'mme-form'),
-                'singular_name' => __('MME Form', 'mme-form'),
-                'add_new_item' => __('Add compact form', 'mme-form'),
-                'edit_item' => __('Edit form', 'mme-form'),
-                'menu_name' => __('MME Forms', 'mme-form'),
+                'name'               => 'Form liên hệ',
+                'singular_name'      => 'Form liên hệ',
+                'menu_name'          => 'Form liên hệ',
+                'all_items'          => 'Tất cả Form',
+                'add_new'            => 'Thêm Form mới',
+                'add_new_item'       => 'Thêm Form liên hệ mới',
+                'edit_item'          => 'Sửa Form liên hệ',
+                'new_item'           => 'Form liên hệ mới',
+                'view_item'          => 'Xem Form',
+                'search_items'       => 'Tìm kiếm Form',
+                'not_found'          => 'Không tìm thấy Form nào',
+                'not_found_in_trash' => 'Không có Form nào trong thùng rác',
             ),
             'public' => false,
             'publicly_queryable' => true,
@@ -53,9 +81,13 @@ final class MME_Form_Plugin
 
         register_post_type('mme_form_submission', array(
             'labels' => array(
-                'name' => __('Submissions', 'mme-form'),
-                'singular_name' => __('Submission', 'mme-form'),
-                'menu_name' => __('Submissions', 'mme-form'),
+                'name'               => 'Dữ liệu gửi (Submissions)',
+                'singular_name'      => 'Submission',
+                'menu_name'          => 'Dữ liệu gửi',
+                'all_items'          => 'Dữ liệu gửi (Submissions)',
+                'search_items'       => 'Tìm kiếm dữ liệu',
+                'not_found'          => 'Không có dữ liệu gửi nào',
+                'not_found_in_trash' => 'Không có dữ liệu trong thùng rác',
             ),
             'public' => false,
             'show_ui' => true,
@@ -325,20 +357,25 @@ final class MME_Form_Plugin
 
     public static function default_settings(): array
     {
+        $admin_email = get_option('admin_email');
+        if (!is_string($admin_email) || !is_email($admin_email)) {
+            $admin_email = '';
+        }
+
         return array(
-            'kicker' => 'HỖ TRỢ 24/7',
-            'heading' => 'Sẵn sàng để',
-            'subheading' => 'chuyển đổi số?',
-            'description' => 'Để lại thông tin, chuyên viên của MMe sẽ liên hệ hỗ trợ bạn thiết lập hệ thống Bot AI và tư vấn lộ trình tự động hóa hoàn toàn miễn phí.',
-            'form_heading' => 'Nhận tư vấn giải pháp MMe Suite cho doanh nghiệp bạn',
+            'kicker' => 'LIÊN HỆ',
+            'heading' => 'Liên hệ',
+            'subheading' => 'với chúng tôi',
+            'description' => 'Vui lòng để lại thông tin theo mẫu bên dưới, chúng tôi sẽ liên hệ lại với bạn trong thời gian sớm nhất.',
+            'form_heading' => 'Để lại thông tin liên hệ',
             'form_footer' => 'Thông tin của bạn được bảo mật tuyệt đối.',
-            'hotline' => '0906 220 284',
+            'hotline' => '',
             'hotline_label' => 'Hotline tư vấn',
-            'support_email' => 'admin@mme.vn',
+            'support_email' => $admin_email,
             'email_label' => 'Email hỗ trợ',
             'social_label' => 'Theo dõi',
-            'button_text' => 'Đăng ký nhận tư vấn',
-            'success_message' => 'Đã nhận thông tin. MME sẽ liên hệ với bạn sớm!',
+            'button_text' => 'Gửi thông tin ngay',
+            'success_message' => 'Cảm ơn bạn! Thông tin đã được gửi thành công, chúng tôi sẽ liên hệ lại sớm.',
             'layout_mode' => 'full',
             'image_position' => 'left',
             'fields_card_style' => 'card',
@@ -363,7 +400,7 @@ final class MME_Form_Plugin
             'background_color' => '#f4f7fb',
             'text_color' => '#0f172a',
             'font_family' => 'system',
-            'trust_items' => array('Phản hồi nhanh', 'Bảo mật thông tin', 'Tư vấn miễn phí'),
+            'trust_items' => array('Phản hồi nhanh chóng', 'Bảo mật thông tin', 'Tư vấn miễn phí'),
             'facebook_url' => '',
             'zalo_url' => '',
             'linkedin_url' => '',
@@ -401,7 +438,7 @@ final class MME_Form_Plugin
         $form_id = wp_insert_post(array(
             'post_type' => 'mme_form',
             'post_status' => 'publish',
-            'post_title' => 'Form tư vấn MME',
+            'post_title' => 'Form liên hệ',
         ));
 
         if (!is_wp_error($form_id)) {
