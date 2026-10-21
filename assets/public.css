@@ -542,8 +542,70 @@
   color: #dc2626;
 }
 
+/* intl-tel-input: Xóa hoàn toàn viền và nền của cờ / mã vùng quốc gia */
+.mme-form .iti,
+.mme-form-wrapper .iti,
 .mme-form-field .iti {
   width: 100%;
+  position: relative;
+}
+
+.mme-form .iti .iti__selected-country,
+.mme-form .iti .iti__country-container,
+.mme-form .iti button.iti__selected-country,
+.mme-form .iti .iti__selected-country-primary,
+.mme-form .iti .iti__flag-container,
+.mme-form .iti .iti__selected-flag,
+.mme-form-wrapper .iti .iti__selected-country,
+.mme-form-wrapper .iti .iti__country-container,
+.mme-form-wrapper .iti button.iti__selected-country,
+.mme-form-wrapper .iti .iti__selected-country-primary,
+.mme-form-wrapper .iti .iti__flag-container,
+.mme-form-wrapper .iti .iti__selected-flag,
+.mme-form-field .iti .iti__selected-country,
+.mme-form-field .iti .iti__country-container,
+.mme-form-field .iti button.iti__selected-country,
+.mme-form-field .iti .iti__selected-country-primary,
+.mme-form-field .iti .iti__flag-container,
+.mme-form-field .iti .iti__selected-flag {
+  border: 0 !important;
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border-radius: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin: 0 !important;
+}
+
+.mme-form .iti .iti__selected-country:hover,
+.mme-form .iti .iti__selected-country:focus,
+.mme-form .iti .iti__selected-country:focus-visible,
+.mme-form .iti .iti__selected-country:active,
+.mme-form .iti button.iti__selected-country:hover,
+.mme-form .iti button.iti__selected-country:focus,
+.mme-form-wrapper .iti .iti__selected-country:hover,
+.mme-form-wrapper .iti .iti__selected-country:focus,
+.mme-form-wrapper .iti .iti__selected-country:focus-visible,
+.mme-form-wrapper .iti .iti__selected-country:active,
+.mme-form-wrapper .iti button.iti__selected-country:hover,
+.mme-form-wrapper .iti button.iti__selected-country:focus,
+.mme-form-field .iti .iti__selected-country:hover,
+.mme-form-field .iti .iti__selected-country:focus,
+.mme-form-field .iti .iti__selected-country:focus-visible,
+.mme-form-field .iti .iti__selected-country:active,
+.mme-form-field .iti button.iti__selected-country:hover,
+.mme-form-field .iti button.iti__selected-country:focus {
+  border: 0 !important;
+  border-width: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .mme-form-field .iti__country-list {
@@ -552,10 +614,13 @@
   border: 1px solid #e2e8f0;
   font-family: inherit;
   font-size: 14px;
+  background: #ffffff;
+  color: #1e293b;
+  z-index: 100;
 }
 
 .mme-form-field .iti input {
-  padding-left: 50px !important;
+  padding-left: 52px !important;
 }
 
 /* Status */

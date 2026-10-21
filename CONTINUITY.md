@@ -10,7 +10,8 @@
   - 1-Click GitHub In-Place Updater (WPMME Architecture): Ported native WordPress filesystem updater from `/Users/hoji/Documents/code/mmewp/wpmme`. Uses `WP_Filesystem()`, `download_url()`, `unzip_file()`, and `copy_dir()` to download the latest `main.zip` from GitHub and overwrite `MME_FORM_DIR` in-place. Eliminates duplicate plugin folders (`mmeform-main`) and removes need for SSH/terminal `git pull`.
   - Email OTP Verification System (Anti-Spam): Added 6-digit numeric OTP verification on email fields via `wp_mail()` (100% native compatibility with FluentSMTP). Configurable subject template, expiration (minutes), and request cooldown (seconds) backed by transient storage. Blocks submissions if OTP is missing, expired, or incorrect when enabled.
   - Admin UI Redesign & Tabbed Architecture: Split appearance & configuration box into 4 clean tabs (Tab 1: Shortcode Chỉ Form, Tab 2: Form Thường 2 Cột, Tab 3: Phông chữ & Nâng cao, Tab 4: Xác thực OTP Email).
-  - Tab 1 (Chỉ Form) UX Clarity: Directly unified Form Heading (show/hide, text, color), Form Card wrapper settings (with auto-hide on transparent mode), Field Inputs styling (Field background, border, title/label color, placeholder color, text color), and Submit Button styling right into Tab 1. Prevents tab jumping and eliminates confusion between transparent card mode and card background color.
+  - Tab 1 (Chỉ Form) UX Clarity: Directly unified Form Heading (show/hide, text, color), Form Card wrapper settings (with auto-hide on transparent mode), Field Inputs styling (Field background, border, title/label color, placeholder color, text color), Submit Button styling, Success Message (`success_message`), and Footer text (`form_footer`) right into Tab 1.
+  - Borderless Phone Country Code (intl-tel-input): Completely reset borders, outlines, box-shadows, and background on `.iti__selected-country` and `.iti__country-container` to remove the inner grey border around the flag.
   - Fixed settings persistence: Ensured `field_placeholder_color` and OTP settings are properly sanitized and persisted in `save_form()`.
 
 - **Operational Constraints:**
@@ -29,9 +30,10 @@
   - Done: Added dynamic version, date/time, and git commit display across WordPress admin (Plugins list, Admin notices, Edit screen sidebar, Footer text).
   - Done: 1-Click GitHub Updater mechanism (`MME_Form_Updater`, UI buttons, and client-side AJAX handler) modeled after `wpmme`.
   - Done: Email OTP verification for spam protection (endpoint `send-otp`, transient keys, cooldown timer, frontend countdown, submission validation).
-  - Done: Reorganized Admin Tab 1 (Chỉ Form) with direct controls for Form Title, Field Background, Field Title/Label color, Placeholder color, and responsive Card wrapper hiding.
-  - Current Focus: Commit & push version 0.5.4 to origin main.
-  - Next: User can update directly via 1-click update button in WordPress Admin and experience the clear, streamlined Tab Chỉ Form.
+  - Done: Reorganized Admin Tab 1 (Chỉ Form) with direct controls for Form Title, Field Background, Field Title/Label color, Placeholder color, Success Message, Footer, and responsive Card wrapper hiding.
+  - Done: Borderless flag styling on intl-tel-input phone fields.
+  - Current Focus: Commit & push version 0.5.5 to origin main.
+  - Next: User can update directly via 1-click update button in WordPress Admin.
 
 - **Flags (Drift/Critical/Entropy):** None.
 - **Cost/Impact Alerts:** None.

@@ -261,6 +261,19 @@ final class MME_Form_Admin
                     </div>
                     <?php $this->color_input('button_color', 'Màu nút bấm chính (Primary)', $settings['button_color']); ?>
                     <?php $this->color_input('button_text_color', 'Màu chữ trên nút bấm', $settings['button_text_color']); ?>
+
+                    <!-- 5. THÔNG BÁO THÀNH CÔNG & CHÂN FORM -->
+                    <h4 class="mme-admin-span-2" style="margin: 18px 0 0; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; font-size: 14px; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+                        <span class="dashicons dashicons-yes-alt" style="color: #10b981;"></span> 5. Thông báo khi gửi thành công & Chân Form
+                    </h4>
+
+                    <div class="mme-admin-span-2">
+                        <?php $this->text_input('success_message', 'Thông báo khi gửi thành công (Success Message)', $settings['success_message']); ?>
+                    </div>
+
+                    <div class="mme-admin-span-2">
+                        <?php $this->text_input('form_footer', 'Dòng chữ bảo mật dưới cùng Form (Footer)', $settings['form_footer']); ?>
+                    </div>
                 </div>
             </div>
 
@@ -268,7 +281,7 @@ final class MME_Form_Admin
             <div id="mme-tab-full" class="mme-tab-pane" style="display: none;">
                 <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 10px 14px; margin-bottom: 18px; border-radius: 0 4px 4px 0; font-size: 13px; color: #166534;">
                     📄 <strong>Cài đặt cho Form Thường (Giao diện Đầy đủ 2 Cột):</strong> Cấu hình cột thông tin giới thiệu và màu nền trang khi dùng shortcode đầy đủ <code>[mme_form id="<?php echo esc_attr($post->ID); ?>"]</code> hoặc trang Landing Page.<br>
-                    <span style="font-size: 12px; color: #15803d; display: inline-block; margin-top: 4px;">💡 <em>Khung Form (tiêu đề form, màu nền ô nhập field, nút bấm...) dùng chung và được tùy chỉnh tại Tab <strong>Shortcode Chỉ Form</strong>.</em></span>
+                    <span style="font-size: 12px; color: #15803d; display: inline-block; margin-top: 4px;">💡 <em>Khung Form (tiêu đề form, màu nền ô nhập field, nút bấm, thông báo thành công...) dùng chung và được tùy chỉnh tại Tab <strong>Shortcode Chỉ Form</strong>.</em></span>
                 </div>
                 <div class="mme-admin-grid">
                     <label class="mme-admin-field mme-admin-span-2">
@@ -308,7 +321,7 @@ final class MME_Form_Admin
             <!-- TAB 3: Phông chữ & Nâng cao -->
             <div id="mme-tab-styles" class="mme-tab-pane" style="display: none;">
                 <div style="background: #faf5ff; border-left: 4px solid #a855f7; padding: 10px 14px; margin-bottom: 18px; border-radius: 0 4px 4px 0; font-size: 13px; color: #581c87;">
-                    ⚙️ <strong>Phông chữ & Cài đặt bổ sung:</strong> Tùy chỉnh font chữ, khoảng cách giữa các ô nhập, dòng bảo mật chân form và thông báo khi gửi form thành công.
+                    ⚙️ <strong>Phông chữ & Cài đặt bổ sung:</strong> Tùy chỉnh font chữ, khoảng cách giữa các ô nhập và màu sắc bổ trợ.
                 </div>
                 <div class="mme-admin-grid">
                     <label class="mme-admin-field">
@@ -329,14 +342,6 @@ final class MME_Form_Admin
                             <option value="relaxed" <?php selected($settings['form_field_gap'] ?? 'default', 'relaxed'); ?>>Rộng rãi (28px)</option>
                         </select>
                     </label>
-
-                    <div class="mme-admin-span-2">
-                        <?php $this->text_input('success_message', 'Thông báo khi gửi thành công', $settings['success_message']); ?>
-                    </div>
-
-                    <div class="mme-admin-span-2">
-                        <?php $this->text_input('form_footer', 'Chữ bảo mật dưới cùng Form (Footer)', $settings['form_footer']); ?>
-                    </div>
 
                     <?php $this->color_input('secondary_color', 'Màu phụ (Secondary / Badge)', $settings['secondary_color']); ?>
                     <?php $this->color_input('accent_color', 'Màu nhấn (Accent)', $settings['accent_color']); ?>
