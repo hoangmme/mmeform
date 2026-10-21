@@ -310,5 +310,25 @@
   margin: 0 0 10px;
 }
 
+/* Quick View Submission Modal */
+#mme-quick-view-modal .mme-modal-container {
+  max-width: 840px;
+  max-height: 85vh;
+}
+.mme-qv-wrap {
+  display: flex;
+  flex-direction: column;
+}
+.mme-qv-card {
+  transition: border-color 0.15s ease;
+}
+.mme-qv-card:hover {
+  border-color: #cbd5e1 !important;
+}
+body.mme-modal-open {
+  overflow: hidden;
+}
+
+
 
 

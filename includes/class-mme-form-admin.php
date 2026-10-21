@@ -29,7 +29,9 @@ final class MME_Form_Admin
         add_action('manage_mme_form_submission_posts_custom_column', array($this, 'render_submission_column'), 10, 2);
         add_filter('post_row_actions', array($this, 'remove_submission_quick_actions'), 10, 2);
         add_action('wp_ajax_mme_twenty_check_fields', array($this, 'ajax_twenty_check_fields'));
+        add_action('wp_ajax_mme_submission_quick_view', array($this, 'ajax_submission_quick_view'));
         add_action('admin_footer', array($this, 'render_preview_modal'));
+        add_action('admin_footer', array($this, 'render_submission_quick_view_modal'));
         add_filter('plugin_row_meta', array($this, 'plugin_row_meta'), 10, 2);
         add_filter('admin_footer_text', array($this, 'admin_footer_text'), 11);
         add_action('admin_notices', array($this, 'render_admin_version_notice'));
@@ -620,10 +622,269 @@ function doPost(e) {
 
     public function render_submission_box(WP_Post $post): void
     {
-        $payload = get_post_meta($post->ID, '_mme_submission_payload', true);
-        $integrations = get_post_meta($post->ID, '_mme_submission_integrations', true);
-        echo '<h3>Lead payload</h3><pre class="mme-json-preview">' . esc_html(wp_json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '</pre>';
-        echo '<h3>Integration results</h3><pre class="mme-json-preview">' . esc_html(wp_json_encode($integrations, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '</pre>';
+        echo $this->get_submission_html($post->ID, false); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+    }
+
+    public function get_submission_html(int $post_id, bool $in_modal = true): string
+    {
+        $payload = (array) get_post_meta($post_id, '_mme_submission_payload', true);
+        $integrations = (array) get_post_meta($post_id, '_mme_submission_integrations', true);
+
+        if (empty($payload)) {
+            return '<div style="padding: 24px; text-align: center; color: #64748b;">Không có dữ liệu payload cho submission này.</div>';
+        }
+
+        $form_id = absint($payload['form']['id'] ?? get_post_meta($post_id, '_mme_submission_form_id', true));
+
+        // Map form field names to human labels
+        $field_labels = array();
+        if ($form_id) {
+            $raw_fields = get_post_meta($form_id, '_mme_form_fields', true);
+            if (is_array($raw_fields)) {
+                foreach ($raw_fields as $f) {
+                    $name = $f['name'] ?? '';
+                    $label = $f['label'] ?? $name;
+                    if ($name) {
+                        $field_labels[$name] = $label;
+                        $field_labels[sanitize_key($name)] = $label;
+                        $field_labels[trim(preg_replace('/\s+/', '_', $name))] = $label;
+                    }
+                }
+            }
+        }
+
+        $contact = (array) ($payload['contact'] ?? array());
+        $fields_data = (array) ($payload['fields'] ?? array());
+        $source = (array) ($payload['source'] ?? array());
+        $attribution = (array) ($payload['attribution'] ?? array());
+
+        ob_start();
+        ?>
+        <div class="mme-qv-wrap">
+            <!-- 1. THÔNG TIN KHÁCH HÀNG -->
+            <div class="mme-qv-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin-bottom: 16px;">
+                <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                    <span class="dashicons dashicons-admin-users" style="color: #2563eb;"></span> Khách hàng liên hệ
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
+                    <div>
+                        <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Họ và tên</span>
+                        <div style="font-size: 16px; font-weight: 700; color: #0f172a; margin-top: 2px;">
+                            <?php echo esc_html($contact['name'] ?: 'Chưa cung cấp'); ?>
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Số điện thoại</span>
+                        <div style="font-size: 15px; font-weight: 600; color: #0f172a; margin-top: 2px;">
+                            <?php if (!empty($contact['phone'])) : ?>
+                                <a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $contact['phone'])); ?>" style="color: #2563eb; text-decoration: none;">📞 <?php echo esc_html($contact['phone']); ?></a>
+                            <?php else : ?>
+                                <span style="color: #94a3b8;">Chưa có</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Email</span>
+                        <div style="font-size: 15px; font-weight: 600; color: #0f172a; margin-top: 2px;">
+                            <?php if (!empty($contact['email'])) : ?>
+                                <a href="mailto:<?php echo esc_attr($contact['email']); ?>" style="color: #2563eb; text-decoration: none;">✉️ <?php echo esc_html($contact['email']); ?></a>
+                            <?php else : ?>
+                                <span style="color: #94a3b8;">Chưa có</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. CHI TIẾT TẤT CẢ CÁC TRƯỜNG KHÁCH ĐIỀN -->
+            <div class="mme-qv-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin-bottom: 16px;">
+                <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                    <span class="dashicons dashicons-clipboard" style="color: #10b981;"></span> Nội dung Form khách đã gửi
+                </div>
+                
+                <?php if (!empty($fields_data)) : ?>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="background: #f8fafc; text-align: left; color: #475569; border-bottom: 1px solid #e2e8f0;">
+                                <th style="padding: 9px 12px; width: 35%;">Trường thông tin</th>
+                                <th style="padding: 9px 12px;">Dữ liệu khách điền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php 
+                            $i = 0;
+                            foreach ($fields_data as $key => $val) : 
+                                $label = $field_labels[$key] ?? $field_labels[sanitize_key($key)] ?? ucfirst(str_replace('_', ' ', $key));
+                                $bg = ($i++ % 2 === 0) ? '#ffffff' : '#f8fafc';
+                                $val_display = is_scalar($val) ? (string) $val : json_encode($val, JSON_UNESCAPED_UNICODE);
+                            ?>
+                                <tr style="background: <?php echo esc_attr($bg); ?>; border-bottom: 1px solid #f1f5f9;">
+                                    <td style="padding: 10px 12px; font-weight: 600; color: #334155; vertical-align: top;">
+                                        <?php echo esc_html($label); ?>
+                                        <div style="font-size: 11px; color: #94a3b8; font-weight: normal;">(<?php echo esc_html($key); ?>)</div>
+                                    </td>
+                                    <td style="padding: 10px 12px; color: #0f172a; vertical-align: top; white-space: pre-wrap; word-break: break-word;">
+                                        <strong><?php echo esc_html($val_display); ?></strong>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php else : ?>
+                    <p style="color: #94a3b8; font-style: italic; margin: 0;">Không có dữ liệu trường.</p>
+                <?php endif; ?>
+            </div>
+
+            <!-- 3. NGUỒN VÀ CHIẾN DỊCH THEO DÕI -->
+            <div class="mme-qv-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin-bottom: 16px;">
+                <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                    <span class="dashicons dashicons-admin-site-alt3" style="color: #f59e0b;"></span> Nguồn truy cập & Chiến dịch (Tracking)
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; font-size: 13px;">
+                    <div>
+                        <span style="color: #64748b;">Tên Form:</span>
+                        <strong>
+                            <?php if ($form_id) : ?>
+                                <a href="<?php echo esc_url(get_edit_post_link($form_id)); ?>" target="_blank"><?php echo esc_html(get_the_title($form_id)); ?> (#<?php echo esc_html((string)$form_id); ?>) ↗</a>
+                            <?php else : ?>
+                                <em>Không xác định</em>
+                            <?php endif; ?>
+                        </strong>
+                    </div>
+                    <div>
+                        <span style="color: #64748b;">Thời gian gửi:</span>
+                        <strong><?php echo esc_html(get_the_date('d/m/Y H:i:s', $post_id)); ?></strong>
+                    </div>
+                    <?php if (!empty($source['url'])) : ?>
+                        <div style="grid-column: 1 / -1;">
+                            <span style="color: #64748b;">URL trang gửi form:</span>
+                            <a href="<?php echo esc_url($source['url']); ?>" target="_blank" rel="noopener noreferrer" style="word-break: break-all;"><?php echo esc_html($source['url']); ?> ↗</a>
+                        </div>
+                    <?php endif; ?>
+                    <?php if (!empty($source['referrer'])) : ?>
+                        <div style="grid-column: 1 / -1;">
+                            <span style="color: #64748b;">Nguồn giới thiệu (Referrer):</span>
+                            <span style="color: #334155;"><?php echo esc_html($source['referrer']); ?></span>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php 
+                    $utms = array_filter($attribution);
+                    if (!empty($utms)) : 
+                    ?>
+                        <div style="grid-column: 1 / -1; margin-top: 6px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+                            <span style="font-weight: 600; color: #475569; display: block; margin-bottom: 6px;">Thông số chiến dịch (UTM):</span>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                <?php foreach ($utms as $utm_k => $utm_v) : ?>
+                                    <span style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-size: 12px;">
+                                        <strong><?php echo esc_html($utm_k); ?>:</strong> <?php echo esc_html((string)$utm_v); ?>
+                                    </span>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- 4. TRẠNG THÁI TÍCH HỢP -->
+            <?php if (!empty($integrations)) : ?>
+            <div class="mme-qv-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin-bottom: 16px;">
+                <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                    <span class="dashicons dashicons-networking" style="color: #8b5cf6;"></span> Trạng thái đồng bộ (Integrations)
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px;">
+                    <?php 
+                    $int_labels = array('webhook' => 'Google Sheets Webhook', 'pancake' => 'Pancake CRM', 'twenty' => 'Twenty CRM');
+                    foreach ($int_labels as $int_k => $int_title) :
+                        if (isset($integrations[$int_k])) :
+                            $res = $integrations[$int_k];
+                            $is_ok = !empty($res['success']);
+                            $is_skipped = !empty($res['skipped']);
+                            $badge_color = $is_ok ? '#10b981' : ($is_skipped ? '#94a3b8' : '#ef4444');
+                            $badge_bg = $is_ok ? '#ecfdf5' : ($is_skipped ? '#f8fafc' : '#fef2f2');
+                            $status_text = $is_ok ? '✅ Thành công' : ($is_skipped ? '⚪ Chưa bật' : '❌ Thất bại');
+                    ?>
+                        <div style="flex: 1; min-width: 170px; padding: 8px 12px; background: <?php echo esc_attr($badge_bg); ?>; border: 1px solid <?php echo esc_attr($badge_color); ?>; border-radius: 6px;">
+                            <div style="font-size: 11px; color: #64748b; font-weight: 600;"><?php echo esc_html($int_title); ?></div>
+                            <div style="font-weight: 700; color: <?php echo esc_attr($badge_color); ?>; margin-top: 2px;">
+                                <?php echo esc_html($status_text); ?>
+                            </div>
+                        </div>
+                    <?php 
+                        endif;
+                    endforeach; 
+                    ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- FOOTER ACTIONS & JSON DEBUG -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 12px; border-top: 1px solid #e2e8f0; flex-wrap: wrap; gap: 10px;">
+                <?php if ($in_modal) : ?>
+                    <a href="<?php echo esc_url(get_edit_post_link($post_id)); ?>" class="button button-primary" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <span class="dashicons dashicons-edit" style="margin-top: 2px;"></span> Mở trang chi tiết Submission
+                    </a>
+                <?php else : ?>
+                    <span style="font-size: 12px; color: #64748b;">ID Submission: #<?php echo esc_html((string)$post_id); ?></span>
+                <?php endif; ?>
+                <details style="font-size: 12px;">
+                    <summary style="cursor: pointer; color: #64748b; font-weight: 500;">Xem mã JSON thô (Debug)</summary>
+                    <pre class="mme-json-preview" style="max-height: 250px; margin-top: 8px;"><?php echo esc_html(wp_json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); ?></pre>
+                </details>
+            </div>
+        </div>
+        <?php
+        return (string) ob_get_clean();
+    }
+
+    public function ajax_submission_quick_view(): void
+    {
+        check_ajax_referer('mme_form_admin_nonce', 'nonce');
+
+        $post_id = isset($_POST['id']) ? absint($_POST['id']) : 0;
+        if (!$post_id || !current_user_can('edit_post', $post_id)) {
+            wp_send_json_error('Không có quyền truy cập hoặc ID không hợp lệ.');
+        }
+
+        $post = get_post($post_id);
+        if (!$post || $post->post_type !== 'mme_form_submission') {
+            wp_send_json_error('Submission không tồn tại.');
+        }
+
+        $html = $this->get_submission_html($post_id, true);
+
+        wp_send_json_success(array(
+            'title' => sprintf('Chi tiết Submission: %s', get_the_title($post_id)),
+            'html'  => $html,
+        ));
+    }
+
+    public function render_submission_quick_view_modal(): void
+    {
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        if (!$screen || $screen->post_type !== 'mme_form_submission') {
+            return;
+        }
+        ?>
+        <div id="mme-quick-view-modal" class="mme-modal" style="display: none;" aria-hidden="true" role="dialog">
+            <div class="mme-modal-backdrop" id="mme-quick-view-backdrop"></div>
+            <div class="mme-modal-container" style="max-width: 820px; max-height: 85vh;">
+                <header class="mme-modal-header" style="background: #0f172a; padding: 14px 20px;">
+                    <div class="mme-modal-title" style="font-size: 14px; font-weight: 600; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+                        <span class="dashicons dashicons-id" style="color: #38bdf8; font-size: 20px; width: 20px; height: 20px;"></span>
+                        <span id="mme-quick-view-title">Chi tiết Submission</span>
+                    </div>
+                    <button type="button" class="mme-modal-close" id="mme-quick-view-close" aria-label="Đóng">&times;</button>
+                </header>
+                <div class="mme-modal-body" id="mme-quick-view-content" style="padding: 20px; overflow-y: auto; background: #f8fafc;">
+                    <div style="text-align: center; padding: 40px; color: #64748b;">
+                        <span class="dashicons dashicons-update" style="animation: mme-spin 1.5s infinite linear; font-size: 28px; width: 28px; height: 28px;"></span>
+                        <p style="margin-top: 10px; font-size: 14px;">Đang tải dữ liệu...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
     }
 
     public function save_form(int $post_id): void
@@ -757,6 +1018,7 @@ function doPost(e) {
         return array(
             'cb' => $columns['cb'] ?? '<input type="checkbox">',
             'title' => 'Submission',
+            'mme_quick_view' => 'Xem nhanh',
             'mme_form' => 'Form',
             'mme_contact' => 'Liên hệ',
             'mme_source' => 'Nguồn',
@@ -767,7 +1029,11 @@ function doPost(e) {
     public function render_submission_column(string $column, int $post_id): void
     {
         $payload = (array) get_post_meta($post_id, '_mme_submission_payload', true);
-        if ($column === 'mme_form') {
+        if ($column === 'mme_quick_view') {
+            echo '<button type="button" class="button button-small mme-open-quick-view" data-id="' . esc_attr((string) $post_id) . '" style="display:inline-flex;align-items:center;gap:4px;color:#2563eb;border-color:#93c5fd;background:#eff6ff;font-weight:600;padding:2px 8px;">
+                <span class="dashicons dashicons-visibility" style="font-size:15px;width:15px;height:15px;margin-top:2px;"></span> Xem nhanh
+            </button>';
+        } elseif ($column === 'mme_form') {
             $form_id = absint($payload['form']['id'] ?? 0);
             echo $form_id ? '<a href="' . esc_url(get_edit_post_link($form_id)) . '">' . esc_html($payload['form']['title'] ?? '#' . $form_id) . '</a>' : '—';
         } elseif ($column === 'mme_contact') {
@@ -783,6 +1049,7 @@ function doPost(e) {
     {
         if ($post->post_type === 'mme_form_submission') {
             unset($actions['inline hide-if-no-js']);
+            $actions['mme_quick_view'] = '<a href="#" class="mme-open-quick-view" data-id="' . esc_attr((string) $post->ID) . '" style="color:#2563eb;font-weight:600;">👁️ Xem nhanh</a>';
         }
         return $actions;
     }

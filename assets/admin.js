@@ -568,6 +568,106 @@
     }
   });
 
+  // Quick View for Submissions
+  ready(function () {
+    var modal = document.getElementById("mme-quick-view-modal");
+    if (!modal) return;
+
+    var backdrop = document.getElementById("mme-quick-view-backdrop");
+    var closeBtn = document.getElementById("mme-quick-view-close");
+    var titleEl = document.getElementById("mme-quick-view-title");
+    var contentEl = document.getElementById("mme-quick-view-content");
+
+    function closeModal() {
+      modal.style.display = "none";
+      document.body.classList.remove("mme-modal-open");
+    }
+
+    if (backdrop) backdrop.addEventListener("click", closeModal);
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && modal.style.display !== "none") {
+        closeModal();
+      }
+    });
+
+    var cache = {};
+
+    document.addEventListener("click", function (e) {
+      var trigger = e.target.closest(".mme-open-quick-view");
+      if (!trigger) return;
+
+      e.preventDefault();
+      var id = trigger.dataset.id;
+      if (!id) return;
+
+      modal.style.display = "flex";
+      document.body.classList.add("mme-modal-open");
+
+      if (cache[id]) {
+        if (titleEl) titleEl.textContent = cache[id].title || "Chi tiết Submission";
+        if (contentEl) contentEl.innerHTML = cache[id].html;
+        return;
+      }
+
+      if (titleEl) titleEl.textContent = "Đang tải dữ liệu...";
+      if (contentEl) {
+        contentEl.innerHTML =
+          '<div style="text-align: center; padding: 50px 20px; color: #64748b;">' +
+          '<span class="dashicons dashicons-update" style="animation: mme-spin 1.5s infinite linear; font-size: 32px; width: 32px; height: 32px;"></span>' +
+          '<p style="margin-top: 12px; font-size: 14px; font-weight: 500;">Đang tải thông tin khách hàng...</p>' +
+          '</div>';
+      }
+
+      var ajaxUrl =
+        (window.mme_form_admin_data && window.mme_form_admin_data.ajax_url) ||
+        (typeof ajaxurl !== "undefined" ? ajaxurl : "/wp-admin/admin-ajax.php");
+      var nonce =
+        (window.mme_form_admin_data && window.mme_form_admin_data.nonce) || "";
+
+      var formData = new URLSearchParams();
+      formData.append("action", "mme_submission_quick_view");
+      formData.append("id", id);
+      formData.append("nonce", nonce);
+
+      fetch(ajaxUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        },
+        body: formData.toString(),
+      })
+        .then(function (res) {
+          return res.json();
+        })
+        .then(function (res) {
+          if (res.success && res.data) {
+            cache[id] = res.data;
+            if (titleEl) titleEl.textContent = res.data.title || "Chi tiết Submission";
+            if (contentEl) contentEl.innerHTML = res.data.html;
+          } else {
+            if (contentEl) {
+              contentEl.innerHTML =
+                '<div style="text-align: center; padding: 40px; color: #ef4444;">' +
+                '<span class="dashicons dashicons-warning" style="font-size: 36px; width: 36px; height: 36px;"></span>' +
+                '<p style="margin-top: 10px; font-size: 14px;">' +
+                (res.data || "Không thể tải dữ liệu submission.") +
+                "</p>" +
+                "</div>";
+            }
+          }
+        })
+        .catch(function () {
+          if (contentEl) {
+            contentEl.innerHTML =
+              '<div style="text-align: center; padding: 40px; color: #ef4444;">' +
+              '<p style="font-size: 14px;">Lỗi kết nối máy chủ.</p>' +
+              "</div>";
+          }
+        });
+    });
+  });
+
   // 1-Click Force Updater from GitHub
   ready(function () {
     document.addEventListener("click", function (e) {

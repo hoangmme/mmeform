@@ -11,12 +11,13 @@
   - Email OTP Verification System (Anti-Spam): Added 6-digit numeric OTP verification on email fields via `wp_mail()` (100% native compatibility with FluentSMTP). Configurable subject template, expiration (minutes), and request cooldown (seconds) backed by transient storage. Blocks submissions if OTP is missing, expired, or incorrect when enabled.
   - Admin UI Redesign & Tabbed Architecture: Split appearance & configuration box into 4 clean tabs (Tab 1: Shortcode Chỉ Form, Tab 2: Form Thường 2 Cột, Tab 3: Phông chữ & Nâng cao, Tab 4: Xác thực OTP Email).
   - Tab 1 (Chỉ Form) UX Clarity: Directly unified Form Heading (show/hide, text, color), Form Card wrapper settings (with auto-hide on transparent mode), Field Inputs styling (Field background, border, title/label color, placeholder color, text color), Submit Button styling, Success Message (`success_message`), and Footer text (`form_footer`) right into Tab 1.
+  - Submissions Quick View Modal: Added interactive Quick View button on the Submissions list table (`edit.php?post_type=mme_form_submission`) and row actions. Displays customer contact, all submitted form fields mapped to human-readable labels, source & UTM tracking, integration statuses (Sheets, Pancake, Twenty), and raw JSON debug in a modal without navigating away from the table.
   - Borderless Phone Country Code (intl-tel-input): Completely reset borders, outlines, box-shadows, and background on `.iti__selected-country` and `.iti__country-container` to remove the inner grey border around the flag.
   - Fixed settings persistence: Ensured `field_placeholder_color` and OTP settings are properly sanitized and persisted in `save_form()`.
 
 - **Operational Constraints:**
   - Seamless backward compatibility with existing shortcodes `[mme_form id="..."]` and `[mme_form_fields id="..."]`.
-  - No external library dependencies for admin live preview modal or tab switching.
+  - No external library dependencies for admin live preview modal, Quick View modal, or tab switching.
   - Backward compatibility with Google Sheets Webhook and Twenty CRM.
   - FluentSMTP / WP Mail compatibility: uses native `wp_mail()`, requiring no separate SMTP credential setup.
   - Resilient Git detection with multi-tier fallback (exec git log -> file read .git/HEAD -> filemtime -> MME_FORM_BUILD_TIME constant).
@@ -32,8 +33,9 @@
   - Done: Email OTP verification for spam protection (endpoint `send-otp`, transient keys, cooldown timer, frontend countdown, submission validation).
   - Done: Reorganized Admin Tab 1 (Chỉ Form) with direct controls for Form Title, Field Background, Field Title/Label color, Placeholder color, Success Message, Footer, and responsive Card wrapper hiding.
   - Done: Borderless flag styling on intl-tel-input phone fields.
-  - Current Focus: Commit & push version 0.5.5 to origin main.
-  - Next: User can update directly via 1-click update button in WordPress Admin.
+  - Done: Submissions Quick View Modal with customer contact, mapped fields, UTM parameters, and integration results.
+  - Current Focus: Commit & push version 0.5.6 to origin main.
+  - Next: User can update directly via 1-click update button in WordPress Admin and test Quick View on submissions.
 
 - **Flags (Drift/Critical/Entropy):** None.
 - **Cost/Impact Alerts:** None.
