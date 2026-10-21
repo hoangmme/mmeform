@@ -536,6 +536,36 @@
         });
       });
     });
+
+    // Sync Card Style Options (Hide card background/border/shadow when transparent)
+    var cardStyleSelect = document.getElementById("mme-fields-card-style");
+    var cardOptionsGroup = document.getElementById("mme-card-options-group");
+    if (cardStyleSelect && cardOptionsGroup) {
+      function syncCardOptions() {
+        if (cardStyleSelect.value === "transparent") {
+          cardOptionsGroup.style.display = "none";
+        } else {
+          cardOptionsGroup.style.display = "grid";
+        }
+      }
+      cardStyleSelect.addEventListener("change", syncCardOptions);
+      syncCardOptions();
+    }
+
+    // Sync Heading Visibility Options
+    var showHeadingSelect = document.getElementById("mme-fields-show-heading");
+    var headingTextWrapper = document.getElementById("mme-heading-text-wrapper");
+    if (showHeadingSelect && headingTextWrapper) {
+      function syncHeadingInputs() {
+        if (showHeadingSelect.value === "no") {
+          headingTextWrapper.style.opacity = "0.5";
+        } else {
+          headingTextWrapper.style.opacity = "1";
+        }
+      }
+      showHeadingSelect.addEventListener("change", syncHeadingInputs);
+      syncHeadingInputs();
+    }
   });
 
   // 1-Click Force Updater from GitHub

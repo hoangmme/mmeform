@@ -302,4 +302,13 @@
   display: block !important;
 }
 
+#mme-card-options-group {
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  margin: 0 0 10px;
+}
+
+
 
