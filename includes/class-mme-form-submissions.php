@@ -432,12 +432,35 @@ final class MME_Form_Submissions
         };
         add_action('http_api_curl', $force_ipv4, 10, 1);
 
+        $is_gas = strpos((string) wp_parse_url($url, PHP_URL_HOST), 'script.google.com') !== false;
+
+        // Google Apps Script runs doPost() then answers 302 -> script.googleusercontent.com.
+        // WP Requests re-POSTs on 302 (only 303 is converted to GET), which Google rejects with 405.
+        // So for GAS: don't auto-follow, then fetch the redirect target with GET to read the JSON result.
         $response = wp_remote_post($url, array(
             'headers' => $headers,
             'body' => $body,
             'timeout' => 20,
-            'redirection' => 5,
+            'redirection' => $is_gas ? 0 : 5,
         ));
+
+        if (!is_wp_error($response) && $is_gas) {
+            $first_status = (int) wp_remote_retrieve_response_code($response);
+            $location = wp_remote_retrieve_header($response, 'location');
+            if (is_array($location)) {
+                $location = end($location);
+            }
+            if ($first_status >= 300 && $first_status < 400 && $location) {
+                $follow = wp_remote_get((string) $location, array('timeout' => 20, 'redirection' => 3));
+                if (!is_wp_error($follow)) {
+                    $response = $follow;
+                } else {
+                    // doPost() already ran; we just couldn't read its JSON output.
+                    remove_action('http_api_curl', $force_ipv4, 10);
+                    return array('success' => true, 'status_code' => $first_status, 'body' => 'Redirect read failed: ' . $follow->get_error_message());
+                }
+            }
+        }
 
         remove_action('http_api_curl', $force_ipv4, 10);
 
@@ -447,14 +470,19 @@ final class MME_Form_Submissions
 
         $status = (int) wp_remote_retrieve_response_code($response);
         $resp_body = wp_remote_retrieve_body($response);
-        // Google Apps Script redirects with 302/307 after successfully running doPost()
-        $is_gas = strpos((string) wp_parse_url($url, PHP_URL_HOST), 'script.google.com') !== false;
-        $is_ok = ($status >= 200 && $status < 300) || ($is_gas && ($status === 302 || $status === 307));
+        $is_ok = $status >= 200 && $status < 300;
 
         $result = array(
             'success' => $is_ok,
             'status_code' => $status,
         );
+
+        // Apps Script always returns 200; honour {"success": false, "error": "..."} from the script itself.
+        $json = json_decode((string) $resp_body, true);
+        if ($is_ok && is_array($json) && array_key_exists('success', $json) && !$json['success']) {
+            $result['success'] = false;
+            $result['error'] = 'Apps Script: ' . (is_scalar($json['error'] ?? null) ? (string) $json['error'] : 'success=false');
+        }
         if (!empty($resp_body)) {
             $result['body'] = mb_substr(trim($resp_body), 0, 250);
         }
