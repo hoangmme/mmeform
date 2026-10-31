@@ -3,15 +3,32 @@
  * Plugin Name: MME Form
  * Plugin URI: https://mme.vn
  * Description: Compact form builder with external embeds, source URL tracking, chatbot, Google Sheets webhooks, and Twenty CRM sync.
- * Version: 0.4.6
+ * Version: 0.5.8 (2026-10-31 17:16)
  * Author: MME
  * Text Domain: mme-form
  * Requires at least: 6.4
- * Requires PHP: 8.0
+ * Requires PHP: 7.4
  */
 
 if (!defined('ABSPATH')) {
     exit;
+}
+
+// Polyfill cho PHP 7.4
+if (!function_exists('str_contains')) {
+    function str_contains($haystack, $needle) {
+        return (string)$needle === '' || mb_strpos((string)$haystack, (string)$needle) !== false;
+    }
+}
+if (!function_exists('str_starts_with')) {
+    function str_starts_with($haystack, $needle) {
+        return (string)$needle === '' || strncmp((string)$haystack, (string)$needle, strlen((string)$needle)) === 0;
+    }
+}
+if (!function_exists('str_ends_with')) {
+    function str_ends_with($haystack, $needle) {
+        return (string)$needle === '' || substr((string)$haystack, -strlen((string)$needle)) === (string)$needle;
+    }
 }
 
 // Ngăn chặn xung đột khi trên server tồn tại 2 thư mục plugin (ví dụ: mmeform và mmeform-main)
@@ -21,7 +38,10 @@ if (defined('MME_FORM_BOOTSTRAPPED')) {
 define('MME_FORM_BOOTSTRAPPED', true);
 
 if (!defined('MME_FORM_VERSION')) {
-    define('MME_FORM_VERSION', '0.4.6');
+    define('MME_FORM_VERSION', '0.5.8');
+}
+if (!defined('MME_FORM_BUILD_TIME')) {
+    define('MME_FORM_BUILD_TIME', '2026-10-31 17:16:00');
 }
 if (!defined('MME_FORM_FILE')) {
     define('MME_FORM_FILE', __FILE__);
@@ -37,6 +57,7 @@ require_once MME_FORM_DIR . 'includes/class-mme-form-renderer.php';
 require_once MME_FORM_DIR . 'includes/class-mme-form-submissions.php';
 require_once MME_FORM_DIR . 'includes/class-mme-form-admin.php';
 require_once MME_FORM_DIR . 'includes/class-mme-form-plugin.php';
+require_once MME_FORM_DIR . 'includes/class-mme-form-updater.php';
 require_once MME_FORM_DIR . 'includes/mme-chatbot.php';
 
 register_activation_hook(__FILE__, array('MME_Form_Plugin', 'activate'));

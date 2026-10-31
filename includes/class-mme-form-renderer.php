@@ -107,10 +107,11 @@ final class MME_Form_Renderer
         $max_width_val = !empty($settings['form_max_width']) ? $settings['form_max_width'] : '680px';
         $card_bg = !empty($args['bg']) ? $args['bg'] : (!empty($settings['form_card_bg']) ? $settings['form_card_bg'] : '#ffffff');
         $card_border = !empty($settings['form_card_border']) ? $settings['form_card_border'] : 'rgba(226, 232, 240, 0.6)';
-        $field_bg = !empty($settings['field_bg_color']) ? $settings['field_bg_color'] : 'rgba(248, 250, 252, 0.5)';
+        $field_bg = !empty($args['field_bg']) ? $args['field_bg'] : (!empty($settings['field_bg_color']) ? $settings['field_bg_color'] : 'rgba(248, 250, 252, 0.5)');
         $field_border = !empty($settings['field_border_color']) ? $settings['field_border_color'] : '#e2e8f0';
         $field_text = !empty($settings['field_text_color']) ? $settings['field_text_color'] : '#1e293b';
         $field_label = !empty($args['label_color']) ? $args['label_color'] : (!empty($settings['field_label_color']) ? $settings['field_label_color'] : '#1e293b');
+        $field_placeholder = !empty($args['placeholder_color']) ? $args['placeholder_color'] : (!empty($settings['field_placeholder_color']) ? $settings['field_placeholder_color'] : '#94a3b8');
         $form_heading_color = !empty($settings['form_heading_color']) ? $settings['form_heading_color'] : '#0f172a';
         $btn_text = !empty($settings['button_text_color']) ? $settings['button_text_color'] : '#ffffff';
 
@@ -118,7 +119,7 @@ final class MME_Form_Renderer
         $has_card_style = ($fields_card_style === 'card');
 
         $style = sprintf(
-            '--mme-button:%s;--mme-secondary:%s;--mme-accent:%s;--mme-bg:%s;--mme-text:%s;--mme-font:%s;--mme-form-padding:%s;--mme-form-padding-mobile:%s;--mme-form-field-gap:%s;--mme-form-radius:%s;--mme-form-shadow:%s;--mme-form-max-width:%s;--mme-form-card-bg:%s;--mme-form-card-border:%s;--mme-field-bg:%s;--mme-field-border:%s;--mme-field-text:%s;--mme-field-label-color:%s;--mme-form-heading-color:%s;--mme-btn-text:%s;',
+            '--mme-button:%s;--mme-secondary:%s;--mme-accent:%s;--mme-bg:%s;--mme-text:%s;--mme-font:%s;--mme-form-padding:%s;--mme-form-padding-mobile:%s;--mme-form-field-gap:%s;--mme-form-radius:%s;--mme-form-shadow:%s;--mme-form-max-width:%s;--mme-form-card-bg:%s;--mme-form-card-border:%s;--mme-field-bg:%s;--mme-field-border:%s;--mme-field-text:%s;--mme-field-label-color:%s;--mme-field-placeholder:%s;--mme-form-heading-color:%s;--mme-btn-text:%s;',
             esc_attr($settings['button_color']),
             esc_attr($settings['secondary_color']),
             esc_attr($settings['accent_color']),
@@ -137,6 +138,7 @@ final class MME_Form_Renderer
             esc_attr($field_border),
             esc_attr($field_text),
             esc_attr($field_label),
+            esc_attr($field_placeholder),
             esc_attr($form_heading_color),
             esc_attr($btn_text)
         );
@@ -255,6 +257,8 @@ final class MME_Form_Renderer
                         <form
                             class="mme-form"
                             data-endpoint="<?php echo esc_url(rest_url('mme-form/v1/submit/' . $form_id)); ?>"
+                            data-otp-endpoint="<?php echo esc_url(rest_url('mme-form/v1/send-otp')); ?>"
+                            data-otp-enabled="<?php echo esc_attr($settings['otp_enabled'] ?? 'no'); ?>"
                             novalidate
                         >
                             <input type="hidden" name="form_id" value="<?php echo esc_attr((string) $form_id); ?>">
@@ -265,7 +269,7 @@ final class MME_Form_Renderer
 
                             <div class="mme-form-grid">
                                 <?php foreach ($fields as $field) : ?>
-                                    <?php echo self::render_field($field); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                    <?php echo self::render_field($field, $settings); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                                 <?php endforeach; ?>
                             </div>
 
@@ -316,7 +320,7 @@ final class MME_Form_Renderer
         return (string) ob_get_clean();
     }
 
-    private static function render_field(array $field): string
+    private static function render_field(array $field, array $settings = array()): string
     {
         $type = sanitize_key($field['type'] ?? 'text');
         $allowed = array('text', 'email', 'tel', 'date', 'time', 'textarea', 'select', 'radio');
@@ -370,7 +374,6 @@ final class MME_Form_Renderer
                     <?php endforeach; ?>
                 </div>
 
-
             <?php else : ?>
                 <div class="mme-input-wrapper <?php echo $type !== 'tel' ? 'mme-has-icon' : ''; ?>">
                     <?php if ($type !== 'tel') : ?>
@@ -384,6 +387,20 @@ final class MME_Form_Renderer
                     <?php endif; ?>
                     <input id="<?php echo esc_attr($id); ?>" type="<?php echo esc_attr($type); ?>" name="fields[<?php echo esc_attr($name); ?>]" placeholder="<?php echo esc_attr($placeholder); ?>" <?php echo $required ? 'required' : ''; ?>>
                 </div>
+
+                <?php if ($type === 'email' && ($settings['otp_enabled'] ?? 'no') === 'yes') : ?>
+                    <div class="mme-otp-wrap" data-otp-for="<?php echo esc_attr($name); ?>">
+                        <div class="mme-otp-actions">
+                            <button type="button" class="mme-btn-send-otp">
+                                <span>Gửi mã xác thực OTP</span>
+                            </button>
+                            <div class="mme-otp-input-box" style="display: none;">
+                                <input type="text" name="otp_code" class="mme-otp-input" placeholder="Nhập mã 6 chữ số" maxlength="6" autocomplete="one-time-code">
+                            </div>
+                        </div>
+                        <div class="mme-otp-status" style="display: none;"></div>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
         <?php

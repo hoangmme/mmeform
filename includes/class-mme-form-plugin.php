@@ -22,22 +22,51 @@ final class MME_Form_Plugin
     {
         add_action('init', array($this, 'register_post_types'));
         add_action('init', array($this, 'register_shortcode'));
+        add_action('init', array($this, 'maybe_rename_legacy_form'));
         add_filter('query_vars', array($this, 'register_query_vars'));
         add_action('template_redirect', array($this, 'serve_embed'), 0);
 
         MME_Form_Admin::instance()->boot();
         MME_Form_Submissions::instance()->boot();
+        MME_Form_Updater::instance()->boot();
+    }
+
+    public function maybe_rename_legacy_form(): void
+    {
+        if (get_option('mme_form_renamed_default_v2')) {
+            return;
+        }
+        $posts = get_posts(array(
+            'post_type'      => 'mme_form',
+            'title'          => 'Form tư vấn MME',
+            'posts_per_page' => 1,
+            'post_status'    => 'any',
+        ));
+        if (!empty($posts)) {
+            wp_update_post(array(
+                'ID'         => $posts[0]->ID,
+                'post_title' => 'Form liên hệ',
+            ));
+        }
+        update_option('mme_form_renamed_default_v2', 1, false);
     }
 
     public function register_post_types(): void
     {
         register_post_type('mme_form', array(
             'labels' => array(
-                'name' => __('MME Forms', 'mme-form'),
-                'singular_name' => __('MME Form', 'mme-form'),
-                'add_new_item' => __('Add compact form', 'mme-form'),
-                'edit_item' => __('Edit form', 'mme-form'),
-                'menu_name' => __('MME Forms', 'mme-form'),
+                'name'               => 'Form liên hệ',
+                'singular_name'      => 'Form liên hệ',
+                'menu_name'          => 'Form liên hệ',
+                'all_items'          => 'Tất cả Form',
+                'add_new'            => 'Thêm Form mới',
+                'add_new_item'       => 'Thêm Form liên hệ mới',
+                'edit_item'          => 'Sửa Form liên hệ',
+                'new_item'           => 'Form liên hệ mới',
+                'view_item'          => 'Xem Form',
+                'search_items'       => 'Tìm kiếm Form',
+                'not_found'          => 'Không tìm thấy Form nào',
+                'not_found_in_trash' => 'Không có Form nào trong thùng rác',
             ),
             'public' => false,
             'publicly_queryable' => true,
@@ -52,9 +81,13 @@ final class MME_Form_Plugin
 
         register_post_type('mme_form_submission', array(
             'labels' => array(
-                'name' => __('Submissions', 'mme-form'),
-                'singular_name' => __('Submission', 'mme-form'),
-                'menu_name' => __('Submissions', 'mme-form'),
+                'name'               => 'Dữ liệu gửi (Submissions)',
+                'singular_name'      => 'Submission',
+                'menu_name'          => 'Dữ liệu gửi',
+                'all_items'          => 'Dữ liệu gửi (Submissions)',
+                'search_items'       => 'Tìm kiếm dữ liệu',
+                'not_found'          => 'Không có dữ liệu gửi nào',
+                'not_found_in_trash' => 'Không có dữ liệu trong thùng rác',
             ),
             'public' => false,
             'show_ui' => true,
@@ -76,7 +109,9 @@ final class MME_Form_Plugin
                 'card' => '',
                 'heading' => '',
                 'bg' => '',
+                'field_bg' => '',
                 'label_color' => '',
+                'placeholder_color' => '',
             ), $attributes, 'mme_form');
 
             $args = array();
@@ -94,8 +129,14 @@ final class MME_Form_Plugin
             if (!empty($attributes['bg'])) {
                 $args['bg'] = sanitize_text_field($attributes['bg']);
             }
+            if (!empty($attributes['field_bg'])) {
+                $args['field_bg'] = sanitize_text_field($attributes['field_bg']);
+            }
             if (!empty($attributes['label_color'])) {
                 $args['label_color'] = sanitize_text_field($attributes['label_color']);
+            }
+            if (!empty($attributes['placeholder_color'])) {
+                $args['placeholder_color'] = sanitize_text_field($attributes['placeholder_color']);
             }
 
             return MME_Form_Renderer::render(absint($attributes['id']), $args);
@@ -107,7 +148,9 @@ final class MME_Form_Plugin
                 'card' => '',
                 'heading' => '',
                 'bg' => '',
+                'field_bg' => '',
                 'label_color' => '',
+                'placeholder_color' => '',
             ), $attributes, 'mme_form_fields');
 
             $args = array(
@@ -122,8 +165,14 @@ final class MME_Form_Plugin
             if (!empty($attributes['bg'])) {
                 $args['bg'] = sanitize_text_field($attributes['bg']);
             }
+            if (!empty($attributes['field_bg'])) {
+                $args['field_bg'] = sanitize_text_field($attributes['field_bg']);
+            }
             if (!empty($attributes['label_color'])) {
                 $args['label_color'] = sanitize_text_field($attributes['label_color']);
+            }
+            if (!empty($attributes['placeholder_color'])) {
+                $args['placeholder_color'] = sanitize_text_field($attributes['placeholder_color']);
             }
 
             return MME_Form_Renderer::render(absint($attributes['id']), $args);
@@ -308,20 +357,25 @@ final class MME_Form_Plugin
 
     public static function default_settings(): array
     {
+        $admin_email = get_option('admin_email');
+        if (!is_string($admin_email) || !is_email($admin_email)) {
+            $admin_email = '';
+        }
+
         return array(
-            'kicker' => 'HỖ TRỢ 24/7',
-            'heading' => 'Sẵn sàng để',
-            'subheading' => 'chuyển đổi số?',
-            'description' => 'Để lại thông tin, chuyên viên của MMe sẽ liên hệ hỗ trợ bạn thiết lập hệ thống Bot AI và tư vấn lộ trình tự động hóa hoàn toàn miễn phí.',
-            'form_heading' => 'Nhận tư vấn giải pháp MMe Suite cho doanh nghiệp bạn',
+            'kicker' => 'LIÊN HỆ',
+            'heading' => 'Liên hệ',
+            'subheading' => 'với chúng tôi',
+            'description' => 'Vui lòng để lại thông tin theo mẫu bên dưới, chúng tôi sẽ liên hệ lại với bạn trong thời gian sớm nhất.',
+            'form_heading' => 'Để lại thông tin liên hệ',
             'form_footer' => 'Thông tin của bạn được bảo mật tuyệt đối.',
-            'hotline' => '0906 220 284',
+            'hotline' => '',
             'hotline_label' => 'Hotline tư vấn',
-            'support_email' => 'admin@mme.vn',
+            'support_email' => $admin_email,
             'email_label' => 'Email hỗ trợ',
             'social_label' => 'Theo dõi',
-            'button_text' => 'Đăng ký nhận tư vấn',
-            'success_message' => 'Đã nhận thông tin. MME sẽ liên hệ với bạn sớm!',
+            'button_text' => 'Gửi thông tin ngay',
+            'success_message' => 'Cảm ơn bạn! Thông tin đã được gửi thành công, chúng tôi sẽ liên hệ lại sớm.',
             'layout_mode' => 'full',
             'image_position' => 'left',
             'fields_card_style' => 'card',
@@ -337,6 +391,7 @@ final class MME_Form_Plugin
             'field_border_color' => '#e2e8f0',
             'field_text_color' => '#1e293b',
             'field_label_color' => '#1e293b',
+            'field_placeholder_color' => '#94a3b8',
             'form_heading_color' => '#0f172a',
             'button_color' => '#0061ff',
             'button_text_color' => '#ffffff',
@@ -345,12 +400,16 @@ final class MME_Form_Plugin
             'background_color' => '#f4f7fb',
             'text_color' => '#0f172a',
             'font_family' => 'system',
-            'trust_items' => array('Phản hồi nhanh', 'Bảo mật thông tin', 'Tư vấn miễn phí'),
+            'trust_items' => array('Phản hồi nhanh chóng', 'Bảo mật thông tin', 'Tư vấn miễn phí'),
             'facebook_url' => '',
             'zalo_url' => '',
             'linkedin_url' => '',
             'tiktok_url' => '',
             'youtube_url' => '',
+            'otp_enabled' => 'no',
+            'otp_email_subject' => '[{site_name}] Mã xác thực đăng ký: {otp}',
+            'otp_expiry_minutes' => 5,
+            'otp_cooldown_seconds' => 60,
             'chatbot_enabled' => 'no',
             'chatbot_base_url' => 'https://chat.mme.vn',
             'chatbot_tenant' => 'mme',
@@ -361,6 +420,10 @@ final class MME_Form_Plugin
             'twenty_enabled' => 'no',
             'twenty_base_url' => '',
             'twenty_api_key' => '',
+            'pancake_enabled' => 'no',
+            'pancake_workspace_id' => '',
+            'pancake_api_key' => '',
+            'pancake_table' => 'contact',
         );
     }
 
@@ -375,7 +438,7 @@ final class MME_Form_Plugin
         $form_id = wp_insert_post(array(
             'post_type' => 'mme_form',
             'post_status' => 'publish',
-            'post_title' => 'Form tư vấn MME',
+            'post_title' => 'Form liên hệ',
         ));
 
         if (!is_wp_error($form_id)) {
@@ -383,6 +446,60 @@ final class MME_Form_Plugin
             update_post_meta($form_id, '_mme_form_settings', self::default_settings());
             update_option('mme_form_default_created', (int) $form_id, false);
         }
+    }
+
+    public static function get_version(): string
+    {
+        return defined('MME_FORM_VERSION') ? MME_FORM_VERSION : '0.5.0';
+    }
+
+    public static function get_build_info(): array
+    {
+        $version = self::get_version();
+        $fallback_time = defined('MME_FORM_BUILD_TIME') ? MME_FORM_BUILD_TIME : '2026-10-16 12:05:00';
+        $commit = '';
+        $date = $fallback_time;
+        $branch = 'main';
+
+        $base_dir = defined('MME_FORM_DIR') ? MME_FORM_DIR : dirname(__DIR__) . '/';
+        $git_dir = rtrim($base_dir, '/\\') . '/.git';
+
+        // Đọc an toàn trực tiếp từ .git/HEAD và ref (không cần shell exec)
+        if (is_dir($git_dir)) {
+            $head_file = $git_dir . '/HEAD';
+            if (file_exists($head_file)) {
+                $head = trim((string) @file_get_contents($head_file));
+                if (substr($head, 0, 5) === 'ref: ') {
+                    $ref = trim(substr($head, 5));
+                    $branch = basename($ref);
+                    $ref_path = $git_dir . '/' . $ref;
+                    if (file_exists($ref_path)) {
+                        $commit = substr(trim((string) @file_get_contents($ref_path)), 0, 7);
+                        $mtime = @filemtime($ref_path);
+                        if ($mtime) {
+                            $date = function_exists('wp_date') ? wp_date('Y-m-d H:i:s', $mtime) : date('Y-m-d H:i:s', $mtime);
+                        }
+                    }
+                } elseif (strlen($head) >= 7) {
+                    $commit = substr($head, 0, 7);
+                }
+            }
+        }
+
+        // Dự phòng nếu không có .git: dùng filemtime của file chính
+        if (!$commit && defined('MME_FORM_FILE')) {
+            $file_mtime = @filemtime(MME_FORM_FILE);
+            if ($file_mtime) {
+                $date = function_exists('wp_date') ? wp_date('Y-m-d H:i:s', $file_mtime) : date('Y-m-d H:i:s', $file_mtime);
+            }
+        }
+
+        return array(
+            'version' => $version,
+            'commit' => $commit,
+            'branch' => $branch,
+            'date' => $date,
+        );
     }
 }
 }

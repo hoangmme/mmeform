@@ -32,9 +32,93 @@ final class MME_Form_Submissions
                 'id' => array('sanitize_callback' => 'absint'),
             ),
         ));
+
+        register_rest_route('mme-form/v1', '/send-otp', array(
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => array($this, 'send_otp'),
+            'permission_callback' => '__return_true',
+        ));
     }
 
-    public function submit(WP_REST_Request $request): WP_REST_Response|WP_Error
+    /**
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+    public function send_otp(WP_REST_Request $request)
+    {
+        $input = $request->get_json_params();
+        if (!is_array($input)) {
+            return new WP_Error('mme_form_invalid_json', 'Dữ liệu không hợp lệ.', array('status' => 400));
+        }
+
+        $form_id = absint($input['form_id'] ?? 0);
+        $form = get_post($form_id);
+        if (!$form || $form->post_type !== 'mme_form' || $form->post_status !== 'publish') {
+            return new WP_Error('mme_form_not_found', 'Form không tồn tại.', array('status' => 404));
+        }
+
+        $settings = wp_parse_args((array) get_post_meta($form_id, '_mme_form_settings', true), MME_Form_Plugin::default_settings());
+        if (($settings['otp_enabled'] ?? 'no') !== 'yes') {
+            return new WP_Error('mme_form_otp_disabled', 'Tính năng xác thực OTP chưa được bật cho form này.', array('status' => 400));
+        }
+
+        $email = sanitize_email($input['email'] ?? '');
+        if (!$email || !is_email($email)) {
+            return new WP_Error('mme_form_invalid_email', 'Vui lòng nhập địa chỉ email hợp lệ.', array('status' => 400));
+        }
+
+        // Cooldown check (default 60 seconds)
+        $cooldown_secs = !empty($settings['otp_cooldown_seconds']) ? absint($settings['otp_cooldown_seconds']) : 60;
+        $cd_key = 'mme_otp_cd_' . md5($form_id . '_' . strtolower($email));
+        $last_sent = get_transient($cd_key);
+        if ($last_sent) {
+            $remaining = $cooldown_secs - (time() - $last_sent);
+            if ($remaining > 0) {
+                return new WP_Error('mme_form_otp_cooldown', sprintf('Vui lòng đợi %d giây trước khi yêu cầu gửi lại mã.', $remaining), array('status' => 429, 'cooldown' => $remaining));
+            }
+        }
+
+        // Generate 6-digit numeric OTP
+        $otp = (string) wp_rand(100000, 999999);
+        $expiry_mins = !empty($settings['otp_expiry_minutes']) ? absint($settings['otp_expiry_minutes']) : 5;
+        $otp_key = 'mme_otp_' . md5($form_id . '_' . strtolower($email));
+
+        set_transient($otp_key, array('code' => $otp, 'created_at' => time()), $expiry_mins * MINUTE_IN_SECONDS);
+        set_transient($cd_key, time(), $cooldown_secs);
+
+        $site_name = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
+        $form_title = get_the_title($form_id);
+
+        $subject_template = !empty($settings['otp_email_subject']) ? $settings['otp_email_subject'] : '[{site_name}] Mã xác thực đăng ký: {otp}';
+        $subject = str_replace(
+            array('{site_name}', '{form_title}', '{otp}'),
+            array($site_name, $form_title, $otp),
+            $subject_template
+        );
+
+        $message = sprintf(
+            "Xin chào,\n\nMã xác thực OTP của bạn cho form \"%s\" là: %s\n\nMã này có hiệu lực trong vòng %d phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.\n\nTrân trọng,\n%s",
+            $form_title,
+            $otp,
+            $expiry_mins,
+            $site_name
+        );
+
+        $headers = array('Content-Type: text/plain; charset=UTF-8');
+        wp_mail($email, $subject, $message, $headers);
+
+        return new WP_REST_Response(array(
+            'success'  => true,
+            'message'  => sprintf('Đã gửi mã OTP 6 chữ số đến %s. Vui lòng kiểm tra hộp thư (kể cả mục Spam).', $email),
+            'cooldown' => $cooldown_secs,
+        ), 200);
+    }
+
+    /**
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+    public function submit(WP_REST_Request $request)
     {
         $form_id = absint($request['id']);
         $form = get_post($form_id);
@@ -110,6 +194,46 @@ final class MME_Form_Submissions
             return new WP_Error('mme_form_validation_failed', $error_msg, array('status' => 400, 'errors' => $errors));
         }
 
+        $settings = wp_parse_args((array) get_post_meta($form_id, '_mme_form_settings', true), MME_Form_Plugin::default_settings());
+        if (($settings['otp_enabled'] ?? 'no') === 'yes') {
+            $user_email = '';
+            $has_email_field = false;
+            foreach ($fields as $f) {
+                if (($f['type'] ?? '') === 'email') {
+                    $has_email_field = true;
+                    $n = trim(preg_replace('/\s+/', '_', $f['name'] ?? ''));
+                    if (!empty($values[$n]) && is_email($values[$n])) {
+                        $user_email = $values[$n];
+                        break;
+                    }
+                }
+            }
+
+            if ($has_email_field && empty($user_email)) {
+                return new WP_Error('mme_form_email_required_for_otp', 'Vui lòng nhập địa chỉ email hợp lệ để nhận mã xác thực OTP.', array('status' => 400));
+            }
+
+            if ($user_email) {
+                $submitted_otp = isset($input['otp_code']) ? trim((string) $input['otp_code']) : '';
+                if ($submitted_otp === '') {
+                    return new WP_Error('mme_form_otp_required', 'Vui lòng nhập mã OTP đã được gửi đến email của bạn.', array('status' => 400));
+                }
+
+                $otp_key = 'mme_otp_' . md5($form_id . '_' . strtolower($user_email));
+                $stored_otp = get_transient($otp_key);
+
+                if (!$stored_otp || empty($stored_otp['code'])) {
+                    return new WP_Error('mme_form_otp_expired', 'Mã OTP đã hết hạn hoặc chưa được tạo. Vui lòng bấm gửi lại mã OTP.', array('status' => 400));
+                }
+
+                if ((string) $stored_otp['code'] !== $submitted_otp) {
+                    return new WP_Error('mme_form_otp_invalid', 'Mã OTP không chính xác. Vui lòng kiểm tra lại.', array('status' => 400));
+                }
+
+                delete_transient($otp_key);
+            }
+        }
+
         $current_url = isset($input['current_url']) && is_scalar($input['current_url'])
             ? esc_url_raw($this->limit_string((string) $input['current_url'], 4096))
             : '';
@@ -168,15 +292,20 @@ final class MME_Form_Submissions
         $integration_results = array(
             'webhook' => $this->send_webhook($settings, $payload),
             'twenty' => $this->send_twenty($form_id, $settings, $payload),
+            'pancake' => $this->send_pancake($settings, $payload),
         );
         update_post_meta($submission_id, '_mme_submission_integrations', $integration_results);
 
         $message = sanitize_text_field($settings['success_message']);
         
         if (current_user_can('manage_options')) {
-            if (isset($integration_results['twenty']) && empty($integration_results['twenty']['success'])) {
+            if (isset($integration_results['twenty']) && empty($integration_results['twenty']['success']) && empty($integration_results['twenty']['skipped'])) {
                 $err = $integration_results['twenty']['error'] ?? json_encode($integration_results['twenty']['response'] ?? 'Unknown error', JSON_UNESCAPED_UNICODE);
                 $message .= '<br><br><b style="color:#d63638">⚠️ Lỗi đồng bộ Twenty CRM (Chỉ Admin mới thấy):</b><br> ' . esc_html($err);
+            }
+            if (isset($integration_results['pancake']) && empty($integration_results['pancake']['success']) && empty($integration_results['pancake']['skipped'])) {
+                $err = $integration_results['pancake']['error'] ?? json_encode($integration_results['pancake']['response'] ?? 'Unknown error', JSON_UNESCAPED_UNICODE);
+                $message .= '<br><br><b style="color:#d63638">⚠️ Lỗi đồng bộ Pancake CRM (Chỉ Admin mới thấy):</b><br> ' . esc_html($err);
             }
         }
 
@@ -200,7 +329,7 @@ final class MME_Form_Submissions
         return true;
     }
 
-    private function sanitize_attribution(mixed $raw): array
+    private function sanitize_attribution($raw): array
     {
         if (!is_array($raw)) {
             return array();
@@ -257,7 +386,7 @@ final class MME_Form_Submissions
     {
         $haystack = strtolower(implode(' ', array_values($values)));
         foreach (array('đặt lịch', 'dat lich', 'booking', 'meeting', 'hẹn', 'hen lich') as $needle) {
-            if (str_contains($haystack, $needle)) {
+            if (strpos($haystack, $needle) !== false) {
                 return true;
             }
         }
@@ -270,13 +399,17 @@ final class MME_Form_Submissions
             return array('success' => false, 'skipped' => true);
         }
 
-        $url = esc_url_raw($settings['webhook_url']);
-        $secret = (string) ($settings['webhook_secret'] ?? '');
+        $url = trim((string) $settings['webhook_url']);
+        if (!preg_match('#^https?://#i', $url)) {
+            $url = 'https://' . $url;
+        }
+        $url = esc_url_raw($url);
+        $secret = trim((string) ($settings['webhook_secret'] ?? ''));
         $query = array();
         parse_str((string) wp_parse_url($url, PHP_URL_QUERY), $query);
         if (!empty($query['secret'])) {
             $payload['secret'] = sanitize_text_field((string) $query['secret']);
-        } elseif ($secret && str_contains((string) wp_parse_url($url, PHP_URL_HOST), 'script.google.com')) {
+        } elseif ($secret && strpos((string) wp_parse_url($url, PHP_URL_HOST), 'script.google.com') !== false) {
             $payload['secret'] = $secret;
         }
 
@@ -291,12 +424,42 @@ final class MME_Form_Submissions
             $headers['X-MME-Signature'] = 'sha256=' . hash_hmac('sha256', $timestamp . '.' . $body, $secret);
         }
 
-        $response = wp_remote_post($url, array('headers' => $headers, 'body' => $body, 'timeout' => 10, 'redirection' => 3));
+        // Force IPv4 if cURL is used, preventing Ubuntu/WordOps IPv6 timeout to script.google.com
+        $force_ipv4 = static function ($handle): void {
+            if (defined('CURL_IPRESOLVE_V4')) {
+                curl_setopt($handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+            }
+        };
+        add_action('http_api_curl', $force_ipv4, 10, 1);
+
+        $response = wp_remote_post($url, array(
+            'headers' => $headers,
+            'body' => $body,
+            'timeout' => 20,
+            'redirection' => 5,
+        ));
+
+        remove_action('http_api_curl', $force_ipv4, 10);
+
         if (is_wp_error($response)) {
             return array('success' => false, 'error' => $response->get_error_message());
         }
-        $status = wp_remote_retrieve_response_code($response);
-        return array('success' => $status >= 200 && $status < 300, 'status_code' => $status);
+
+        $status = (int) wp_remote_retrieve_response_code($response);
+        $resp_body = wp_remote_retrieve_body($response);
+        // Google Apps Script redirects with 302/307 after successfully running doPost()
+        $is_gas = strpos((string) wp_parse_url($url, PHP_URL_HOST), 'script.google.com') !== false;
+        $is_ok = ($status >= 200 && $status < 300) || ($is_gas && ($status === 302 || $status === 307));
+
+        $result = array(
+            'success' => $is_ok,
+            'status_code' => $status,
+        );
+        if (!empty($resp_body)) {
+            $result['body'] = mb_substr(trim($resp_body), 0, 250);
+        }
+
+        return $result;
     }
 
     private function get_twenty_person_fields(array $settings): array
@@ -310,7 +473,7 @@ final class MME_Form_Submissions
             return $cached;
         }
         
-        $url = $base_url . (str_ends_with(strtolower($base_url), '/rest') ? '/metadata/objects' : '/rest/metadata/objects');
+        $url = $base_url . (substr(strtolower($base_url), -5) === '/rest' ? '/metadata/objects' : '/rest/metadata/objects');
         $response = wp_remote_get($url, array(
             'headers' => array(
                 'Authorization' => 'Bearer ' . $api_key,
@@ -377,7 +540,7 @@ final class MME_Form_Submissions
         
         if (!empty($contact['phone'])) {
             $phone = preg_replace('/[^0-9+]/', '', $contact['phone']);
-            if (str_starts_with($phone, '0') && strlen($phone) === 10) {
+            if (strpos($phone, '0') === 0 && strlen($phone) === 10) {
                 $phone = '+84' . substr($phone, 1);
             }
             $person['phones'] = array('primaryPhoneNumber' => $phone);
@@ -487,7 +650,7 @@ final class MME_Form_Submissions
         }
 
         $base_url = untrailingslashit(esc_url_raw($settings['twenty_base_url']));
-        if (str_ends_with(strtolower($base_url), '/rest')) {
+        if (substr(strtolower($base_url), -5) === '/rest') {
             $url = $base_url . '/people';
         } else {
             $url = $base_url . '/rest/people';
@@ -512,6 +675,117 @@ final class MME_Form_Submissions
             error_log('MME Form - Twenty CRM Error HTTP ' . $status . ': ' . $body);
         }
         return array('success' => $status >= 200 && $status < 300, 'status_code' => $status, 'response' => json_decode($body, true));
+    }
+
+    public function send_pancake(array $settings, array $payload): array
+    {
+        if (($settings['pancake_enabled'] ?? 'no') !== 'yes') {
+            return array('success' => false, 'skipped' => true);
+        }
+        if (empty($settings['pancake_workspace_id']) || empty($settings['pancake_api_key'])) {
+            return array('success' => false, 'skipped' => true, 'reason' => 'missing_credentials');
+        }
+
+        $workspace_id = rawurlencode(trim((string) $settings['pancake_workspace_id']));
+        $api_key = rawurlencode(trim((string) $settings['pancake_api_key']));
+        $table = in_array($settings['pancake_table'] ?? '', array('contact', 'lead'), true) ? $settings['pancake_table'] : 'contact';
+
+        $contact = (array) ($payload['contact'] ?? array());
+        $fields = (array) ($payload['fields'] ?? array());
+        $raw_name = !empty($contact['name']) ? $contact['name'] : (!empty($payload['lead']['name']) ? $payload['lead']['name'] : '');
+        $phone = !empty($contact['phone']) ? $contact['phone'] : '';
+        $email = !empty($contact['email']) ? $contact['email'] : '';
+        $source_url = (string) ($payload['source']['url'] ?? '');
+        $form_title = (string) ($payload['form']['title'] ?? 'Form liên hệ');
+
+        $notes = array();
+        $notes[] = 'Loại Form: ' . $form_title;
+        if ($source_url) {
+            $notes[] = 'Nguồn: ' . $source_url;
+        }
+        if (!empty($payload['lead']['need'])) {
+            $notes[] = 'Nhu cầu: ' . $payload['lead']['need'];
+        }
+        foreach ($fields as $k => $v) {
+            if (in_array(strtolower($k), array('full_name', 'name', 'fullname', 'ho_ten', 'phone', 'telephone', 'mobile', 'sdt', 'email'), true)) {
+                continue;
+            }
+            if (is_scalar($v) && trim((string) $v) !== '') {
+                $notes[] = $k . ': ' . trim((string) $v);
+            }
+        }
+        if (!empty($payload['attribution']) && is_array($payload['attribution'])) {
+            $utms = array();
+            foreach ($payload['attribution'] as $uk => $uv) {
+                if ($uv) {
+                    $utms[] = $uk . '=' . $uv;
+                }
+            }
+            if (!empty($utms)) {
+                $notes[] = 'UTM: ' . implode(', ', $utms);
+            }
+        }
+        $note_str = implode("\n", $notes);
+
+        // 1. Try Pancake CRM v2 (crm.pancake.vn)
+        $v2_url = sprintf('https://crm.pancake.vn/api/workspaces/%s/%s/records?api_key=%s', $workspace_id, $table, $api_key);
+        $v2_payload = array(
+            'name' => $raw_name ?: ($phone ?: 'Khách Website'),
+            'phone_number' => $phone,
+            'email' => $email,
+            'note' => $note_str,
+        );
+
+        $response = wp_remote_post($v2_url, array(
+            'headers' => array('Content-Type' => 'application/json'),
+            'body' => wp_json_encode($v2_payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'timeout' => 10,
+        ));
+
+        if (!is_wp_error($response)) {
+            $status = wp_remote_retrieve_response_code($response);
+            if ($status >= 200 && $status < 300) {
+                return array('success' => true, 'status_code' => $status, 'api' => 'crm_v2');
+            }
+        }
+
+        // 2. Fallback to Pancake POS v1 (pos.pages.fm)
+        $v1_table = ucfirst($table);
+        $v1_url = sprintf('https://pos.pages.fm/api/v1/shops/%s/crm/%s/records?api_key=%s', $workspace_id, $v1_table, $api_key);
+        $v1_payload = array(
+            'Name' => $raw_name ?: ($phone ?: 'Khách Website'),
+            'Phone' => $phone,
+            'Email' => $email,
+            'link' => $source_url,
+            'Note' => $note_str,
+        );
+
+        $v1_response = wp_remote_post($v1_url, array(
+            'headers' => array('Content-Type' => 'application/json'),
+            'body' => wp_json_encode($v1_payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'timeout' => 10,
+        ));
+
+        if (is_wp_error($v1_response)) {
+            $err = $v1_response->get_error_message();
+            error_log('MME Form - Pancake CRM Error: ' . $err);
+            return array('success' => false, 'error' => $err);
+        }
+
+        $v1_status = wp_remote_retrieve_response_code($v1_response);
+        $v1_body = wp_remote_retrieve_body($v1_response);
+
+        if ($v1_status >= 200 && $v1_status < 300) {
+            return array('success' => true, 'status_code' => $v1_status, 'api' => 'pos_v1');
+        }
+
+        $v2_err = is_wp_error($response) ? $response->get_error_message() : ('HTTP ' . wp_remote_retrieve_response_code($response) . ': ' . wp_remote_retrieve_body($response));
+        error_log('MME Form - Pancake CRM Failed. v2: ' . $v2_err . ' | v1: HTTP ' . $v1_status . ': ' . $v1_body);
+        return array(
+            'success' => false,
+            'status_code' => $v1_status,
+            'error' => 'Pancake CRM v2 (' . $v2_err . ') | POS v1 (' . $v1_body . ')',
+        );
     }
 }
 }

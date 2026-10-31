@@ -505,4 +505,240 @@
       });
     }
   });
+
+  // Appearance Box Tab Navigation
+  ready(function () {
+    var navTabs = document.querySelectorAll(".mme-tab-nav .nav-tab");
+    if (!navTabs.length) return;
+
+    navTabs.forEach(function (tab) {
+      tab.addEventListener("click", function (e) {
+        e.preventDefault();
+        var targetId = tab.dataset.tab;
+        if (!targetId) return;
+
+        navTabs.forEach(function (t) {
+          t.classList.remove("nav-tab-active");
+        });
+        tab.classList.add("nav-tab-active");
+
+        var wrapper = tab.closest(".mme-admin-tabs-wrapper");
+        if (!wrapper) return;
+        var panes = wrapper.querySelectorAll(".mme-tab-pane");
+        panes.forEach(function (pane) {
+          if (pane.id === targetId) {
+            pane.style.display = "block";
+            pane.classList.add("is-active");
+          } else {
+            pane.style.display = "none";
+            pane.classList.remove("is-active");
+          }
+        });
+      });
+    });
+
+    // Sync Card Style Options (Hide card background/border/shadow when transparent)
+    var cardStyleSelect = document.getElementById("mme-fields-card-style");
+    var cardOptionsGroup = document.getElementById("mme-card-options-group");
+    if (cardStyleSelect && cardOptionsGroup) {
+      function syncCardOptions() {
+        if (cardStyleSelect.value === "transparent") {
+          cardOptionsGroup.style.display = "none";
+        } else {
+          cardOptionsGroup.style.display = "grid";
+        }
+      }
+      cardStyleSelect.addEventListener("change", syncCardOptions);
+      syncCardOptions();
+    }
+
+    // Sync Heading Visibility Options
+    var showHeadingSelect = document.getElementById("mme-fields-show-heading");
+    var headingTextWrapper = document.getElementById("mme-heading-text-wrapper");
+    if (showHeadingSelect && headingTextWrapper) {
+      function syncHeadingInputs() {
+        if (showHeadingSelect.value === "no") {
+          headingTextWrapper.style.opacity = "0.5";
+        } else {
+          headingTextWrapper.style.opacity = "1";
+        }
+      }
+      showHeadingSelect.addEventListener("change", syncHeadingInputs);
+      syncHeadingInputs();
+    }
+  });
+
+  // Quick View for Submissions
+  ready(function () {
+    var modal = document.getElementById("mme-quick-view-modal");
+    if (!modal) return;
+
+    var backdrop = document.getElementById("mme-quick-view-backdrop");
+    var closeBtn = document.getElementById("mme-quick-view-close");
+    var titleEl = document.getElementById("mme-quick-view-title");
+    var contentEl = document.getElementById("mme-quick-view-content");
+
+    function closeModal() {
+      modal.style.display = "none";
+      document.body.classList.remove("mme-modal-open");
+    }
+
+    if (backdrop) backdrop.addEventListener("click", closeModal);
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && modal.style.display !== "none") {
+        closeModal();
+      }
+    });
+
+    var cache = {};
+
+    document.addEventListener("click", function (e) {
+      var trigger = e.target.closest(".mme-open-quick-view");
+      if (!trigger) return;
+
+      e.preventDefault();
+      var id = trigger.dataset.id;
+      if (!id) return;
+
+      modal.style.display = "flex";
+      document.body.classList.add("mme-modal-open");
+
+      if (cache[id]) {
+        if (titleEl) titleEl.textContent = cache[id].title || "Chi tiết Submission";
+        if (contentEl) contentEl.innerHTML = cache[id].html;
+        return;
+      }
+
+      if (titleEl) titleEl.textContent = "Đang tải dữ liệu...";
+      if (contentEl) {
+        contentEl.innerHTML =
+          '<div style="text-align: center; padding: 50px 20px; color: #64748b;">' +
+          '<span class="dashicons dashicons-update" style="animation: mme-spin 1.5s infinite linear; font-size: 32px; width: 32px; height: 32px;"></span>' +
+          '<p style="margin-top: 12px; font-size: 14px; font-weight: 500;">Đang tải thông tin khách hàng...</p>' +
+          '</div>';
+      }
+
+      var ajaxUrl =
+        (window.mme_form_admin_data && window.mme_form_admin_data.ajax_url) ||
+        (typeof ajaxurl !== "undefined" ? ajaxurl : "/wp-admin/admin-ajax.php");
+      var nonce =
+        (window.mme_form_admin_data && window.mme_form_admin_data.nonce) || "";
+
+      var formData = new URLSearchParams();
+      formData.append("action", "mme_submission_quick_view");
+      formData.append("id", id);
+      formData.append("nonce", nonce);
+
+      fetch(ajaxUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        },
+        body: formData.toString(),
+      })
+        .then(function (res) {
+          return res.json();
+        })
+        .then(function (res) {
+          if (res.success && res.data) {
+            cache[id] = res.data;
+            if (titleEl) titleEl.textContent = res.data.title || "Chi tiết Submission";
+            if (contentEl) contentEl.innerHTML = res.data.html;
+          } else {
+            if (contentEl) {
+              contentEl.innerHTML =
+                '<div style="text-align: center; padding: 40px; color: #ef4444;">' +
+                '<span class="dashicons dashicons-warning" style="font-size: 36px; width: 36px; height: 36px;"></span>' +
+                '<p style="margin-top: 10px; font-size: 14px;">' +
+                (res.data || "Không thể tải dữ liệu submission.") +
+                "</p>" +
+                "</div>";
+            }
+          }
+        })
+        .catch(function () {
+          if (contentEl) {
+            contentEl.innerHTML =
+              '<div style="text-align: center; padding: 40px; color: #ef4444;">' +
+              '<p style="font-size: 14px;">Lỗi kết nối máy chủ.</p>' +
+              "</div>";
+          }
+        });
+    });
+  });
+
+  // 1-Click Force Updater from GitHub
+  ready(function () {
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest(".mme-force-update-btn");
+      if (!btn) return;
+
+      e.preventDefault();
+
+      if (
+        !confirm(
+          "Bạn có chắc chắn muốn tải và ghi đè phiên bản mới nhất của MME Form từ GitHub không?"
+        )
+      ) {
+        return;
+      }
+
+      var originalHtml = btn.innerHTML;
+      btn.style.pointerEvents = "none";
+      if (btn.tagName === "BUTTON") {
+        btn.disabled = true;
+      }
+      btn.innerHTML =
+        '<span class="dashicons dashicons-update" style="animation: mme-spin 1.5s infinite linear; margin-top: 2px;"></span> Đang tải & cập nhật...';
+
+      var ajaxUrl =
+        (window.mme_form_admin_data && window.mme_form_admin_data.ajax_url) ||
+        (typeof ajaxurl !== "undefined" ? ajaxurl : "/wp-admin/admin-ajax.php");
+      var nonce =
+        window.mme_form_admin_data && window.mme_form_admin_data.nonce
+          ? window.mme_form_admin_data.nonce
+          : "";
+
+      var formData = new URLSearchParams();
+      formData.append("action", "mme_form_force_update");
+      formData.append("nonce", nonce);
+
+      fetch(ajaxUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        },
+        body: formData.toString(),
+      })
+        .then(function (res) {
+          return res.json();
+        })
+        .then(function (res) {
+          if (res.success) {
+            btn.innerHTML =
+              '<span class="dashicons dashicons-yes-alt" style="color: #10b981; margin-top: 2px;"></span> Cập nhật thành công! Đang tải lại...';
+            setTimeout(function () {
+              location.reload();
+            }, 1200);
+          } else {
+            alert("Cập nhật thất bại: " + (res.data || "Lỗi không xác định"));
+            btn.innerHTML = originalHtml;
+            if (btn.tagName === "BUTTON") {
+              btn.disabled = false;
+            }
+            btn.style.pointerEvents = "";
+          }
+        })
+        .catch(function () {
+          alert("Lỗi kết nối máy chủ trong quá trình cập nhật.");
+          btn.innerHTML = originalHtml;
+          if (btn.tagName === "BUTTON") {
+            btn.disabled = false;
+          }
+          btn.style.pointerEvents = "";
+        });
+    });
+  });
 })();
+
