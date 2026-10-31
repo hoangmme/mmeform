@@ -802,13 +802,40 @@ function doPost(e) {
                             $is_skipped = !empty($res['skipped']);
                             $badge_color = $is_ok ? '#10b981' : ($is_skipped ? '#94a3b8' : '#ef4444');
                             $badge_bg = $is_ok ? '#ecfdf5' : ($is_skipped ? '#f8fafc' : '#fef2f2');
-                            $status_text = $is_ok ? '✅ Thành công' : ($is_skipped ? '⚪ Chưa bật' : '❌ Thất bại');
+                            
+                            $status_text = '❌ Thất bại';
+                            if ($is_ok) {
+                                $status_text = '✅ Thành công' . (!empty($res['status_code']) ? ' (HTTP ' . $res['status_code'] . ')' : '');
+                            } elseif ($is_skipped) {
+                                $status_text = '⚪ Chưa bật/cấu hình';
+                            }
+
+                            $detail_err = '';
+                            if (!$is_ok && !$is_skipped) {
+                                if (!empty($res['error'])) {
+                                    $detail_err = (string) $res['error'];
+                                } elseif (!empty($res['status_code'])) {
+                                    $detail_err = 'Mã phản hồi: HTTP ' . $res['status_code'];
+                                } elseif (!empty($res['response'])) {
+                                    $detail_err = is_scalar($res['response']) ? (string) $res['response'] : wp_json_encode($res['response'], JSON_UNESCAPED_UNICODE);
+                                }
+                            }
                     ?>
-                        <div style="flex: 1; min-width: 170px; padding: 8px 12px; background: <?php echo esc_attr($badge_bg); ?>; border: 1px solid <?php echo esc_attr($badge_color); ?>; border-radius: 6px;">
+                        <div style="flex: 1; min-width: 190px; padding: 8px 12px; background: <?php echo esc_attr($badge_bg); ?>; border: 1px solid <?php echo esc_attr($badge_color); ?>; border-radius: 6px;">
                             <div style="font-size: 11px; color: #64748b; font-weight: 600;"><?php echo esc_html($int_title); ?></div>
                             <div style="font-weight: 700; color: <?php echo esc_attr($badge_color); ?>; margin-top: 2px;">
                                 <?php echo esc_html($status_text); ?>
                             </div>
+                            <?php if ($detail_err !== '') : ?>
+                                <div style="font-size: 11px; color: #b91c1c; margin-top: 4px; word-break: break-word; line-height: 1.3;">
+                                    <?php echo esc_html($detail_err); ?>
+                                </div>
+                            <?php endif; ?>
+                            <?php if (!empty($res['body']) && $is_ok) : ?>
+                                <div style="font-size: 10px; color: #047857; margin-top: 3px; font-family: monospace; word-break: break-all;">
+                                    Phản hồi: <?php echo esc_html($res['body']); ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php 
                         endif;
@@ -829,7 +856,13 @@ function doPost(e) {
                 <?php endif; ?>
                 <details style="font-size: 12px;">
                     <summary style="cursor: pointer; color: #64748b; font-weight: 500;">Xem mã JSON thô (Debug)</summary>
-                    <pre class="mme-json-preview" style="max-height: 250px; margin-top: 8px;"><?php echo esc_html(wp_json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); ?></pre>
+                    <pre class="mme-json-preview" style="max-height: 250px; margin-top: 8px;"><?php 
+                        $debug_data = array(
+                            'payload' => $payload,
+                            'integrations' => $integrations,
+                        );
+                        echo esc_html(wp_json_encode($debug_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); 
+                    ?></pre>
                 </details>
             </div>
         </div>

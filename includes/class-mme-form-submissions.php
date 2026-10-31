@@ -399,8 +399,12 @@ final class MME_Form_Submissions
             return array('success' => false, 'skipped' => true);
         }
 
-        $url = esc_url_raw($settings['webhook_url']);
-        $secret = (string) ($settings['webhook_secret'] ?? '');
+        $url = trim((string) $settings['webhook_url']);
+        if (!preg_match('#^https?://#i', $url)) {
+            $url = 'https://' . $url;
+        }
+        $url = esc_url_raw($url);
+        $secret = trim((string) ($settings['webhook_secret'] ?? ''));
         $query = array();
         parse_str((string) wp_parse_url($url, PHP_URL_QUERY), $query);
         if (!empty($query['secret'])) {
@@ -420,12 +424,42 @@ final class MME_Form_Submissions
             $headers['X-MME-Signature'] = 'sha256=' . hash_hmac('sha256', $timestamp . '.' . $body, $secret);
         }
 
-        $response = wp_remote_post($url, array('headers' => $headers, 'body' => $body, 'timeout' => 10, 'redirection' => 3));
+        // Force IPv4 if cURL is used, preventing Ubuntu/WordOps IPv6 timeout to script.google.com
+        $force_ipv4 = static function ($handle): void {
+            if (defined('CURL_IPRESOLVE_V4')) {
+                curl_setopt($handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+            }
+        };
+        add_action('http_api_curl', $force_ipv4, 10, 1);
+
+        $response = wp_remote_post($url, array(
+            'headers' => $headers,
+            'body' => $body,
+            'timeout' => 20,
+            'redirection' => 5,
+        ));
+
+        remove_action('http_api_curl', $force_ipv4, 10);
+
         if (is_wp_error($response)) {
             return array('success' => false, 'error' => $response->get_error_message());
         }
-        $status = wp_remote_retrieve_response_code($response);
-        return array('success' => $status >= 200 && $status < 300, 'status_code' => $status);
+
+        $status = (int) wp_remote_retrieve_response_code($response);
+        $resp_body = wp_remote_retrieve_body($response);
+        // Google Apps Script redirects with 302/307 after successfully running doPost()
+        $is_gas = strpos((string) wp_parse_url($url, PHP_URL_HOST), 'script.google.com') !== false;
+        $is_ok = ($status >= 200 && $status < 300) || ($is_gas && ($status === 302 || $status === 307));
+
+        $result = array(
+            'success' => $is_ok,
+            'status_code' => $status,
+        );
+        if (!empty($resp_body)) {
+            $result['body'] = mb_substr(trim($resp_body), 0, 250);
+        }
+
+        return $result;
     }
 
     private function get_twenty_person_fields(array $settings): array
