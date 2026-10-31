@@ -486,6 +486,8 @@ final class MME_Form_Submissions
         if (!empty($resp_body)) {
             $result['body'] = mb_substr(trim($resp_body), 0, 250);
         }
+        // Record which endpoint was called (no query string, so ?secret=... is never stored).
+        $result['endpoint'] = (string) wp_parse_url($url, PHP_URL_HOST) . (string) wp_parse_url($url, PHP_URL_PATH);
 
         return $result;
     }

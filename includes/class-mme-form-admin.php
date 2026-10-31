@@ -830,6 +830,11 @@ function doPost(e) {
                                 <div style="font-size: 11px; color: #b91c1c; margin-top: 4px; word-break: break-word; line-height: 1.3;">
                                     <?php echo esc_html($detail_err); ?>
                                 </div>
+                                <?php if (!empty($res['endpoint'])) : ?>
+                                    <div style="font-size: 10px; color: #64748b; margin-top: 3px; font-family: monospace; word-break: break-all;">
+                                        URL: <?php echo esc_html((string) $res['endpoint']); ?>
+                                    </div>
+                                <?php endif; ?>
                             <?php endif; ?>
                             <?php if (!empty($res['body']) && $is_ok) : ?>
                                 <div style="font-size: 10px; color: #047857; margin-top: 3px; font-family: monospace; word-break: break-all;">
