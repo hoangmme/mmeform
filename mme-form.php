@@ -3,7 +3,7 @@
  * Plugin Name: MME Form
  * Plugin URI: https://mme.vn
  * Description: Compact form builder with external embeds, source URL tracking, chatbot, Google Sheets webhooks, and Twenty CRM sync.
- * Version: 0.6.2 (2026-11-09 18:00)
+ * Version: 0.6.3 (2026-11-09 18:30)
  * Author: MME
  * Text Domain: mme-form
  * Requires at least: 6.4
@@ -38,7 +38,7 @@ if (defined('MME_FORM_BOOTSTRAPPED')) {
 define('MME_FORM_BOOTSTRAPPED', true);
 
 if (!defined('MME_FORM_VERSION')) {
-    define('MME_FORM_VERSION', '0.6.2');
+    define('MME_FORM_VERSION', '0.6.3');
 }
 if (!defined('MME_FORM_BUILD_TIME')) {
     define('MME_FORM_BUILD_TIME', '2026-11-09 14:00:00');

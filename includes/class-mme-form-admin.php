@@ -760,6 +760,15 @@ function doPost(e) {
                         <span style="color: #64748b;">Thời gian gửi:</span>
                         <strong><?php echo esc_html(get_the_date('d/m/Y H:i:s', $post_id)); ?></strong>
                     </div>
+                    <?php if (($payload['channel'] ?? '') === 'zalo_miniapp') : ?>
+                        <div style="grid-column: 1 / -1;">
+                            <span style="color: #64748b;">Kênh:</span>
+                            <strong>Zalo Mini App (MMeAuth)</strong>
+                            <?php if (!array_filter($attribution)) : ?>
+                                <span style="color: #94a3b8;">· mở trực tiếp, không có link nguồn (?src=)</span>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
                     <?php if (!empty($source['url'])) : ?>
                         <div style="grid-column: 1 / -1;">
                             <span style="color: #64748b;">URL trang gửi form:</span>
@@ -912,9 +921,15 @@ function doPost(e) {
         $html = $this->get_submission_html($post_id, true);
 
         wp_send_json_success(array(
-            'title' => sprintf('Chi tiết Submission: %s', get_the_title($post_id)),
+            'title' => sprintf('Chi tiết Submission: %s', $this->plain_title($post_id)),
             'html'  => $html,
         ));
+    }
+
+    /** get_the_title() trả về thực thể HTML (vd "-" → &#8211;); admin.js gán bằng textContent nên phải giải mã. */
+    private function plain_title(int $post_id): string
+    {
+        return html_entity_decode(get_the_title($post_id), ENT_QUOTES, 'UTF-8');
     }
 
     public function ajax_submission_retry(): void
@@ -930,7 +945,7 @@ function doPost(e) {
         MME_Form_Submissions::instance()->dispatch_integrations($post_id, true);
 
         wp_send_json_success(array(
-            'title' => sprintf('Chi tiết Submission: %s', get_the_title($post_id)),
+            'title' => sprintf('Chi tiết Submission: %s', $this->plain_title($post_id)),
             'html' => $this->get_submission_html($post_id, !empty($_POST['in_modal'])),
         ));
     }
