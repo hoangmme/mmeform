@@ -30,6 +30,9 @@ final class MME_Form_Admin
         add_filter('post_row_actions', array($this, 'remove_submission_quick_actions'), 10, 2);
         add_action('wp_ajax_mme_twenty_check_fields', array($this, 'ajax_twenty_check_fields'));
         add_action('wp_ajax_mme_submission_quick_view', array($this, 'ajax_submission_quick_view'));
+        add_action('wp_ajax_mme_submission_retry', array($this, 'ajax_submission_retry'));
+        add_action('admin_menu', array($this, 'register_settings_page'));
+        add_action('admin_post_mme_form_save_global', array($this, 'save_global_settings'));
         add_action('admin_footer', array($this, 'render_preview_modal'));
         add_action('admin_footer', array($this, 'render_submission_quick_view_modal'));
         add_filter('plugin_row_meta', array($this, 'plugin_row_meta'), 10, 2);
@@ -147,8 +150,8 @@ final class MME_Form_Admin
                 <a href="#mme-tab-styles" class="nav-tab" data-tab="mme-tab-styles" style="font-weight: 600;">
                     <span class="dashicons dashicons-admin-generic" style="margin-top: 3px;"></span> Phông chữ & Nâng cao
                 </a>
-                <a href="#mme-tab-otp" class="nav-tab" data-tab="mme-tab-otp" style="font-weight: 600; color: #0284c7;">
-                    <span class="dashicons dashicons-shield" style="margin-top: 3px;"></span> Xác thực OTP Email (Chống Spam)
+                <a href="#mme-tab-auth" class="nav-tab" data-tab="mme-tab-auth" style="font-weight: 600; color: #0284c7;">
+                    <span class="dashicons dashicons-shield" style="margin-top: 3px;"></span> Xác minh SĐT (Zalo)
                 </a>
             </nav>
 
@@ -350,31 +353,24 @@ final class MME_Form_Admin
                 </div>
             </div>
 
-            <!-- TAB 4: Xác thực OTP Email (Chống Spam) -->
-            <div id="mme-tab-otp" class="mme-tab-pane" style="display: none;">
-                <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 10px 14px; margin-bottom: 18px; border-radius: 0 4px 4px 0; font-size: 13px; color: #92400e;">
-                    🛡️ <strong>Xác thực OTP Email:</strong> Chống spam triệt để và đảm bảo thu thập đúng email thực của khách hàng. Khi bật tính năng này, người dùng nhập email sẽ bấm nút <em>"Gửi mã xác thực OTP"</em> ➔ hệ thống gửi mã 6 số qua email. Khách hàng bắt buộc phải nhập đúng mã OTP mới gửi được form. <strong>Tương thích 100% với FluentSMTP</strong> hoặc bất kỳ plugin SMTP nào.
+            <!-- TAB 4: Xác thực người gửi bằng MMeAuth (Zalo) -->
+            <div id="mme-tab-auth" class="mme-tab-pane" style="display: none;">
+                <?php $site_key = MME_Form_Plugin::global_settings()['mmeauth_site_key']; ?>
+                <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 10px 14px; margin-bottom: 18px; border-radius: 0 4px 4px 0; font-size: 13px; color: #1e3a8a;">
+                    🛡️ <strong>Xác minh SĐT qua Zalo (MMeAuth):</strong> khách bấm "Xác minh bằng Zalo" → quét QR (máy tính) hoặc mở Zalo (điện thoại) → xác nhận 1 chạm.
+                    Số điện thoại được Zalo xác minh và điền sẵn — chặn lead ảo, không cần SMTP hay mã OTP.
                 </div>
                 <div class="mme-admin-grid">
                     <div class="mme-admin-span-2">
-                        <?php $this->toggle('otp_enabled', 'Bật xác thực mã OTP qua Email (Bảo vệ chống Spam)', $settings['otp_enabled'] ?? 'no'); ?>
+                        <?php $this->toggle('mmeauth_enabled', 'Bắt buộc xác minh SĐT qua Zalo trước khi gửi form', $settings['mmeauth_enabled'] ?? 'no'); ?>
                     </div>
-                    
-                    <label class="mme-admin-field mme-admin-span-2">
-                        <span>Tiêu đề email chứa mã OTP</span>
-                        <input type="text" name="mme_settings[otp_email_subject]" value="<?php echo esc_attr($settings['otp_email_subject'] ?? '[{site_name}] Mã xác thực đăng ký: {otp}'); ?>">
-                        <span class="description" style="font-size: 11px;">Thẻ hỗ trợ: <code>{otp}</code> (Mã 6 chữ số), <code>{site_name}</code> (Tên website), <code>{form_title}</code> (Tên Form)</span>
-                    </label>
-
-                    <label class="mme-admin-field">
-                        <span>Thời gian hiệu lực mã OTP (Phút)</span>
-                        <input type="number" name="mme_settings[otp_expiry_minutes]" value="<?php echo esc_attr($settings['otp_expiry_minutes'] ?? 5); ?>" min="1" max="60">
-                    </label>
-
-                    <label class="mme-admin-field">
-                        <span>Thời gian chờ giữa 2 lần gửi lại OTP (Giây)</span>
-                        <input type="number" name="mme_settings[otp_cooldown_seconds]" value="<?php echo esc_attr($settings['otp_cooldown_seconds'] ?? 60); ?>" min="10" max="300">
-                    </label>
+                    <p class="description mme-admin-span-2" style="margin: 0;">
+                        <?php if ($site_key) : ?>
+                            ✅ Site key MMeAuth: <code><?php echo esc_html($site_key); ?></code> (<a href="<?php echo esc_url(admin_url('edit.php?post_type=mme_form&page=mme-form-settings')); ?>">Tích hợp chung</a>).
+                        <?php else : ?>
+                            ⚠️ Chưa có site key MMeAuth — điền ở <a href="<?php echo esc_url(admin_url('edit.php?post_type=mme_form&page=mme-form-settings')); ?>">Tích hợp chung</a>. Khi chưa có, form vẫn gửi bình thường (không bắt xác minh).
+                        <?php endif; ?>
+                    </p>
                 </div>
             </div>
         </div>
@@ -385,6 +381,9 @@ final class MME_Form_Admin
     {
         $settings = $this->settings($post->ID);
         ?>
+        <p class="description" style="margin: 4px 0 12px;">
+            Ô URL / API key / Workspace để trống sẽ dùng giá trị ở <a href="<?php echo esc_url(admin_url('edit.php?post_type=mme_form&page=mme-form-settings')); ?>">Tích hợp chung</a> — chỉ cần bật tích hợp cho form này.
+        </p>
         <div class="mme-integration-card">
             <h3>MME Chatbot</h3>
             <?php $this->toggle('chatbot_enabled', 'Hiện nút chatbot trong form', $settings['chatbot_enabled']); ?>
@@ -628,7 +627,8 @@ function doPost(e) {
     public function get_submission_html(int $post_id, bool $in_modal = true): string
     {
         $payload = (array) get_post_meta($post_id, '_mme_submission_payload', true);
-        $integrations = (array) get_post_meta($post_id, '_mme_submission_integrations', true);
+        $integrations = array_filter((array) get_post_meta($post_id, '_mme_submission_integrations', true));
+        $dispatch = (array) get_post_meta($post_id, '_mme_submission_dispatch', true);
 
         if (empty($payload)) {
             return '<div style="padding: 24px; text-align: center; color: #64748b;">Không có dữ liệu payload cho submission này.</div>';
@@ -787,10 +787,25 @@ function doPost(e) {
             </div>
 
             <!-- 4. TRẠNG THÁI TÍCH HỢP -->
-            <?php if (!empty($integrations)) : ?>
+            <?php if (!empty($integrations) || !empty($dispatch)) : ?>
+            <?php
+            $dispatch_labels = array(
+                'pending' => '⏳ Đang chờ gửi',
+                'retrying' => '🔁 Có lỗi, sẽ tự thử lại',
+                'failed' => '❌ Đã thử ' . (int) ($dispatch['attempts'] ?? 0) . ' lần, vẫn lỗi',
+                'done' => '✅ Đã xử lý xong',
+            );
+            $dispatch_status = (string) ($dispatch['status'] ?? '');
+            ?>
             <div class="mme-qv-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin-bottom: 16px;">
-                <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                     <span class="dashicons dashicons-networking" style="color: #8b5cf6;"></span> Trạng thái đồng bộ (Integrations)
+                    <?php if (isset($dispatch_labels[$dispatch_status])) : ?>
+                        <span style="text-transform: none; letter-spacing: 0; font-weight: 600; color: #334155;">· <?php echo esc_html($dispatch_labels[$dispatch_status]); ?></span>
+                    <?php endif; ?>
+                    <button type="button" class="button button-small mme-retry-integrations" data-id="<?php echo esc_attr((string) $post_id); ?>" style="margin-left: auto; text-transform: none; letter-spacing: 0;">
+                        Gửi lại tích hợp lỗi
+                    </button>
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px;">
                     <?php 
@@ -895,6 +910,122 @@ function doPost(e) {
             'title' => sprintf('Chi tiết Submission: %s', get_the_title($post_id)),
             'html'  => $html,
         ));
+    }
+
+    public function ajax_submission_retry(): void
+    {
+        check_ajax_referer('mme_form_admin_nonce', 'nonce');
+
+        $post_id = isset($_POST['id']) ? absint($_POST['id']) : 0;
+        $post = $post_id ? get_post($post_id) : null;
+        if (!$post || $post->post_type !== 'mme_form_submission' || !current_user_can('edit_post', $post_id)) {
+            wp_send_json_error('Không có quyền hoặc submission không tồn tại.');
+        }
+
+        MME_Form_Submissions::instance()->dispatch_integrations($post_id, true);
+
+        wp_send_json_success(array(
+            'title' => sprintf('Chi tiết Submission: %s', get_the_title($post_id)),
+            'html' => $this->get_submission_html($post_id, !empty($_POST['in_modal'])),
+        ));
+    }
+
+    public function register_settings_page(): void
+    {
+        add_submenu_page('edit.php?post_type=mme_form', 'Tích hợp chung', 'Tích hợp chung', 'manage_options', 'mme-form-settings', array($this, 'render_settings_page'));
+    }
+
+    public function render_settings_page(): void
+    {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+        $global = MME_Form_Plugin::global_settings();
+        $secret_keys = array('webhook_secret', 'twenty_api_key', 'pancake_api_key');
+        $field = static function (string $key, string $label, string $type, string $help = '') use ($global, $secret_keys): void {
+            $is_secret = in_array($key, $secret_keys, true);
+            $value = $is_secret ? '' : (string) $global[$key];
+            $placeholder = $is_secret && $global[$key] !== '' ? 'Đã lưu — để trống để giữ nguyên' : '';
+            echo '<tr><th scope="row"><label for="mme-g-' . esc_attr($key) . '">' . esc_html($label) . '</label></th><td>';
+            echo '<input class="regular-text" id="mme-g-' . esc_attr($key) . '" type="' . esc_attr($type) . '" name="mme_global[' . esc_attr($key) . ']" value="' . esc_attr($value) . '" placeholder="' . esc_attr($placeholder) . '" autocomplete="off">';
+            if ($is_secret && $global[$key] !== '') {
+                echo ' <label><input type="checkbox" name="mme_global[' . esc_attr($key) . '_clear]" value="1"> Xoá</label>';
+            }
+            if ($help) {
+                echo '<p class="description">' . wp_kses($help, array('code' => array(), 'a' => array('href' => array(), 'target' => array()), 'br' => array(), 'strong' => array())) . '</p>';
+            }
+            echo '</td></tr>';
+        };
+        $site_origin = untrailingslashit((string) wp_parse_url(home_url(), PHP_URL_SCHEME) . '://' . wp_parse_url(home_url(), PHP_URL_HOST) . (wp_parse_url(home_url(), PHP_URL_PORT) ? ':' . wp_parse_url(home_url(), PHP_URL_PORT) : ''));
+        ?>
+        <div class="wrap">
+            <h1>Tích hợp chung — Form liên hệ</h1>
+            <?php if (!empty($_GET['updated'])) : ?>
+                <div class="notice notice-success is-dismissible"><p>Đã lưu cài đặt.</p></div>
+            <?php endif; ?>
+            <p>Giá trị ở đây dùng cho <strong>mọi form</strong>. Form nào điền riêng thì dùng giá trị riêng của form đó.</p>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <input type="hidden" name="action" value="mme_form_save_global">
+                <?php wp_nonce_field('mme_form_save_global'); ?>
+
+                <h2>Xác minh SĐT qua Zalo (MMeAuth)</h2>
+                <table class="form-table" role="presentation">
+                    <?php $field('mmeauth_site_key', 'Site key', 'text', 'Do MMe cấp khi đăng ký website <code>' . esc_html($site_origin) . '</code> với MMeAuth.'); ?>
+                    <?php $field('mmeauth_url', 'Máy chủ MMeAuth', 'url', 'Để trống để dùng <code>' . esc_html(MME_Form_MMeAuth::DEFAULT_URL) . '</code>.'); ?>
+                </table>
+
+                <h2>Google Sheets / Webhook</h2>
+                <table class="form-table" role="presentation">
+                    <?php $field('webhook_url', 'Webhook URL', 'url'); ?>
+                    <?php $field('webhook_secret', 'Signing secret', 'password'); ?>
+                </table>
+
+                <h2>Twenty CRM</h2>
+                <table class="form-table" role="presentation">
+                    <?php $field('twenty_base_url', 'Twenty base URL', 'url'); ?>
+                    <?php $field('twenty_api_key', 'Twenty API key', 'password'); ?>
+                </table>
+
+                <h2>Pancake CRM</h2>
+                <table class="form-table" role="presentation">
+                    <?php $field('pancake_workspace_id', 'Workspace ID (Shop ID)', 'text'); ?>
+                    <?php $field('pancake_api_key', 'Pancake API Key', 'password'); ?>
+                </table>
+
+                <?php submit_button('Lưu cài đặt chung'); ?>
+            </form>
+        </div>
+        <?php
+    }
+
+    public function save_global_settings(): void
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die('Bạn không có quyền.');
+        }
+        check_admin_referer('mme_form_save_global');
+
+        $submitted = isset($_POST['mme_global']) && is_array($_POST['mme_global']) ? wp_unslash($_POST['mme_global']) : array();
+        $current = MME_Form_Plugin::global_settings();
+        $settings = array(
+            'mmeauth_site_key' => sanitize_key($submitted['mmeauth_site_key'] ?? ''),
+            'mmeauth_url' => esc_url_raw($submitted['mmeauth_url'] ?? ''),
+            'webhook_url' => esc_url_raw($submitted['webhook_url'] ?? ''),
+            'twenty_base_url' => esc_url_raw($submitted['twenty_base_url'] ?? ''),
+            'pancake_workspace_id' => sanitize_text_field($submitted['pancake_workspace_id'] ?? ''),
+        );
+        foreach (array('webhook_secret', 'twenty_api_key', 'pancake_api_key') as $key) {
+            $new_value = sanitize_text_field($submitted[$key] ?? '');
+            if (!empty($submitted[$key . '_clear'])) {
+                $settings[$key] = '';
+            } else {
+                $settings[$key] = $new_value !== '' ? $new_value : $current[$key];
+            }
+        }
+        update_option('mme_form_global_settings', $settings, false);
+
+        wp_safe_redirect(add_query_arg('updated', '1', admin_url('edit.php?post_type=mme_form&page=mme-form-settings')));
+        exit;
     }
 
     public function render_submission_quick_view_modal(): void
@@ -1014,15 +1145,17 @@ function doPost(e) {
         $settings['form_shadow'] = in_array(($submitted['form_shadow'] ?? ''), array('default', 'none', 'subtle', 'strong'), true) ? $submitted['form_shadow'] : 'default';
         $settings['font_family'] = in_array(($submitted['font_family'] ?? ''), array('system', 'inter', 'arial', 'georgia'), true) ? $submitted['font_family'] : 'system';
         $settings['trust_items'] = array_slice(array_values(array_filter(array_map('sanitize_text_field', preg_split('/\r\n|\r|\n/', (string) ($submitted['trust_items'] ?? ''))))), 0, 4);
-        foreach (array('chatbot_enabled', 'webhook_enabled', 'twenty_enabled', 'pancake_enabled', 'otp_enabled') as $key) {
+        foreach (array('chatbot_enabled', 'webhook_enabled', 'twenty_enabled', 'pancake_enabled', 'mmeauth_enabled') as $key) {
             $settings[$key] = ($submitted[$key] ?? 'no') === 'yes' ? 'yes' : 'no';
         }
-        $settings['otp_email_subject'] = sanitize_text_field($submitted['otp_email_subject'] ?? ($defaults['otp_email_subject'] ?? '[{site_name}] Mã xác thực đăng ký: {otp}'));
-        $settings['otp_expiry_minutes'] = max(1, min(60, absint($submitted['otp_expiry_minutes'] ?? ($defaults['otp_expiry_minutes'] ?? 5))));
-        $settings['otp_cooldown_seconds'] = max(10, min(300, absint($submitted['otp_cooldown_seconds'] ?? ($defaults['otp_cooldown_seconds'] ?? 60))));
         foreach (array('webhook_secret', 'twenty_api_key', 'pancake_api_key') as $key) {
             $new_value = sanitize_text_field($submitted[$key] ?? '');
-            $settings[$key] = $new_value !== '' ? $new_value : $current[$key];
+            // Tick "xoá" để quay về dùng secret ở Tích hợp chung
+            if (!empty($submitted[$key . '_clear'])) {
+                $settings[$key] = '';
+            } else {
+                $settings[$key] = $new_value !== '' ? $new_value : $current[$key];
+            }
         }
         $settings['pancake_workspace_id'] = sanitize_text_field($submitted['pancake_workspace_id'] ?? '');
         $settings['pancake_table'] = in_array($submitted['pancake_table'] ?? '', array('contact', 'lead'), true) ? $submitted['pancake_table'] : 'contact';
@@ -1101,7 +1234,7 @@ function doPost(e) {
             wp_send_json_error('Permission denied');
         }
         
-        $settings = $this->settings($post_id);
+        $settings = MME_Form_Plugin::form_settings($post_id);
         
         if (empty($settings['twenty_base_url']) || empty($settings['twenty_api_key'])) {
             wp_send_json_error('Vui lòng điền đủ Twenty URL và API Key trước khi kiểm tra.');
@@ -1246,8 +1379,7 @@ function doPost(e) {
             'fields' => $dummy_fields
         );
         
-        $submissions = new MME_Form_Submissions();
-        $settings = $this->settings($post_id);
+        $submissions = MME_Form_Submissions::instance();
         $test_result = $submissions->send_twenty($post_id, $settings, $dummy_payload);
         
         if (!empty($test_result['success']) && !empty($test_result['response']['data']['id'])) {
@@ -1290,7 +1422,11 @@ function doPost(e) {
 
     private function password_input(string $key, string $label, bool $is_set): void
     {
-        echo '<label class="mme-admin-field"><span>' . esc_html($label) . ($is_set ? ' <small>(đã lưu)</small>' : '') . '</span><input type="password" name="mme_settings[' . esc_attr($key) . ']" value="" autocomplete="new-password" placeholder="' . ($is_set ? 'Để trống để giữ secret cũ' : '') . '"></label>';
+        echo '<label class="mme-admin-field"><span>' . esc_html($label) . ($is_set ? ' <small>(đã lưu)</small>' : '') . '</span><input type="password" name="mme_settings[' . esc_attr($key) . ']" value="" autocomplete="new-password" placeholder="' . ($is_set ? 'Để trống để giữ secret cũ' : 'Để trống để dùng Tích hợp chung') . '">';
+        if ($is_set) {
+            echo '<small><label><input type="checkbox" name="mme_settings[' . esc_attr($key) . '_clear]" value="1"> Xoá, dùng Tích hợp chung</label></small>';
+        }
+        echo '</label>';
     }
 
     private function select_input(string $key, string $label, string $value, array $options): void

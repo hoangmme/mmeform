@@ -23,6 +23,7 @@ final class MME_Form_Plugin
         add_action('init', array($this, 'register_post_types'));
         add_action('init', array($this, 'register_shortcode'));
         add_action('init', array($this, 'maybe_rename_legacy_form'));
+        add_action('admin_init', array($this, 'maybe_upgrade'));
         add_filter('query_vars', array($this, 'register_query_vars'));
         add_action('template_redirect', array($this, 'serve_embed'), 0);
 
@@ -49,6 +50,35 @@ final class MME_Form_Plugin
             ));
         }
         update_option('mme_form_renamed_default_v2', 1, false);
+    }
+
+    /**
+     * Chạy 1 lần sau mỗi lần cập nhật phiên bản: copy_dir() của bộ cập nhật không xoá file cũ,
+     * nên các script debug/test từng nằm trong repo phải được dọn thủ công trên site khách.
+     */
+    public function maybe_upgrade(): void
+    {
+        if (get_option('mme_form_installed_version') === MME_FORM_VERSION) {
+            return;
+        }
+        update_option('mme_form_installed_version', MME_FORM_VERSION, false);
+        // Bản cài bằng git (máy dev, site git clone) để git tự quản lý file
+        if (is_dir(MME_FORM_DIR . '.git')) {
+            return;
+        }
+        $legacy_files = array(
+            'check_fields.php', 'check_latest.php', 'debug_integrations.php', 'debug_submission.php', 'fetch_html.php',
+            'test-twenty-custom.php', 'test-twenty-full.php', 'test-twenty-get.php', 'test-twenty-meta.php',
+            'test-twenty-note-content.php', 'test-twenty-note.php', 'test-twenty-noteTarget.php',
+            'test_crm.php', 'test_crm_v2.php', 'test_local.php', 'test_metadata.php', 'test_options.php',
+            '.env', 'form.html', 'deploy-git.sh',
+        );
+        foreach ($legacy_files as $file) {
+            $path = MME_FORM_DIR . $file;
+            if (is_file($path)) {
+                @unlink($path);
+            }
+        }
     }
 
     public function register_post_types(): void
@@ -102,81 +132,53 @@ final class MME_Form_Plugin
 
     public function register_shortcode(): void
     {
-        add_shortcode('mme_form', static function (array $attributes = array()): string {
-            $attributes = shortcode_atts(array(
-                'id' => 0,
-                'mode' => '',
-                'card' => '',
-                'heading' => '',
-                'bg' => '',
-                'field_bg' => '',
-                'label_color' => '',
-                'placeholder_color' => '',
-            ), $attributes, 'mme_form');
-
-            $args = array();
+        add_shortcode('mme_form', static function ($attributes = array()): string {
+            $attributes = shortcode_atts(self::shortcode_defaults() + array('mode' => ''), (array) $attributes, 'mme_form');
+            $args = self::shortcode_args($attributes);
             if ($attributes['mode'] === 'fields_only') {
                 $args['fields_only'] = true;
             } elseif ($attributes['mode'] === 'form_only') {
                 $args['form_only'] = true;
             }
-            if (!empty($attributes['card'])) {
-                $args['card'] = in_array(strtolower($attributes['card']), array('yes', '1', 'true', 'card'), true) ? 'card' : 'transparent';
-            }
-            if (!empty($attributes['heading'])) {
-                $args['heading'] = in_array(strtolower($attributes['heading']), array('yes', '1', 'true'), true) ? 'yes' : 'no';
-            }
-            if (!empty($attributes['bg'])) {
-                $args['bg'] = sanitize_text_field($attributes['bg']);
-            }
-            if (!empty($attributes['field_bg'])) {
-                $args['field_bg'] = sanitize_text_field($attributes['field_bg']);
-            }
-            if (!empty($attributes['label_color'])) {
-                $args['label_color'] = sanitize_text_field($attributes['label_color']);
-            }
-            if (!empty($attributes['placeholder_color'])) {
-                $args['placeholder_color'] = sanitize_text_field($attributes['placeholder_color']);
-            }
-
             return MME_Form_Renderer::render(absint($attributes['id']), $args);
         });
 
-        add_shortcode('mme_form_fields', static function (array $attributes = array()): string {
-            $attributes = shortcode_atts(array(
-                'id' => 0,
-                'card' => '',
-                'heading' => '',
-                'bg' => '',
-                'field_bg' => '',
-                'label_color' => '',
-                'placeholder_color' => '',
-            ), $attributes, 'mme_form_fields');
-
-            $args = array(
-                'fields_only' => true,
-            );
-            if (!empty($attributes['card'])) {
-                $args['card'] = in_array(strtolower($attributes['card']), array('yes', '1', 'true', 'card'), true) ? 'card' : 'transparent';
-            }
-            if (!empty($attributes['heading'])) {
-                $args['heading'] = in_array(strtolower($attributes['heading']), array('yes', '1', 'true'), true) ? 'yes' : 'no';
-            }
-            if (!empty($attributes['bg'])) {
-                $args['bg'] = sanitize_text_field($attributes['bg']);
-            }
-            if (!empty($attributes['field_bg'])) {
-                $args['field_bg'] = sanitize_text_field($attributes['field_bg']);
-            }
-            if (!empty($attributes['label_color'])) {
-                $args['label_color'] = sanitize_text_field($attributes['label_color']);
-            }
-            if (!empty($attributes['placeholder_color'])) {
-                $args['placeholder_color'] = sanitize_text_field($attributes['placeholder_color']);
-            }
-
+        add_shortcode('mme_form_fields', static function ($attributes = array()): string {
+            $attributes = shortcode_atts(self::shortcode_defaults(), (array) $attributes, 'mme_form_fields');
+            $args = self::shortcode_args($attributes);
+            $args['fields_only'] = true;
             return MME_Form_Renderer::render(absint($attributes['id']), $args);
         });
+    }
+
+    private static function shortcode_defaults(): array
+    {
+        return array(
+            'id' => 0,
+            'card' => '',
+            'heading' => '',
+            'bg' => '',
+            'field_bg' => '',
+            'label_color' => '',
+            'placeholder_color' => '',
+        );
+    }
+
+    private static function shortcode_args(array $attributes): array
+    {
+        $args = array();
+        if (!empty($attributes['card'])) {
+            $args['card'] = in_array(strtolower($attributes['card']), array('yes', '1', 'true', 'card'), true) ? 'card' : 'transparent';
+        }
+        if (!empty($attributes['heading'])) {
+            $args['heading'] = in_array(strtolower($attributes['heading']), array('yes', '1', 'true'), true) ? 'yes' : 'no';
+        }
+        foreach (array('bg', 'field_bg', 'label_color', 'placeholder_color') as $key) {
+            if (!empty($attributes[$key])) {
+                $args[$key] = sanitize_text_field($attributes[$key]);
+            }
+        }
+        return $args;
     }
 
     public function register_query_vars(array $query_vars): array
@@ -406,10 +408,7 @@ final class MME_Form_Plugin
             'linkedin_url' => '',
             'tiktok_url' => '',
             'youtube_url' => '',
-            'otp_enabled' => 'no',
-            'otp_email_subject' => '[{site_name}] Mã xác thực đăng ký: {otp}',
-            'otp_expiry_minutes' => 5,
-            'otp_cooldown_seconds' => 60,
+            'mmeauth_enabled' => 'no',
             'chatbot_enabled' => 'no',
             'chatbot_base_url' => 'https://chat.mme.vn',
             'chatbot_tenant' => 'mme',
@@ -425,6 +424,30 @@ final class MME_Form_Plugin
             'pancake_api_key' => '',
             'pancake_table' => 'contact',
         );
+    }
+
+    /** Khoá tích hợp dùng chung cho mọi form: form để trống thì lấy giá trị ở trang Tích hợp chung. */
+    public static function global_setting_keys(): array
+    {
+        return array('mmeauth_url', 'mmeauth_site_key', 'webhook_url', 'webhook_secret', 'twenty_base_url', 'twenty_api_key', 'pancake_workspace_id', 'pancake_api_key');
+    }
+
+    public static function global_settings(): array
+    {
+        $saved = get_option('mme_form_global_settings', array());
+        return wp_parse_args(is_array($saved) ? $saved : array(), array_fill_keys(self::global_setting_keys(), ''));
+    }
+
+    /** Cài đặt đã gộp của 1 form: mặc định ← cài đặt chung (khi form để trống) ← cài đặt riêng của form. */
+    public static function form_settings(int $form_id): array
+    {
+        $settings = wp_parse_args((array) get_post_meta($form_id, '_mme_form_settings', true), self::default_settings());
+        foreach (self::global_settings() as $key => $value) {
+            if (($settings[$key] ?? '') === '' && $value !== '') {
+                $settings[$key] = $value;
+            }
+        }
+        return $settings;
     }
 
     public static function activate(): void

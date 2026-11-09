@@ -3,3 +3,7 @@ Thumbs.db
 node_modules/
 vendor/
 *.log
+.env
+.env.*
+dev/
+.claude/

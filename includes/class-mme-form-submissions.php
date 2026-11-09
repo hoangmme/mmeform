@@ -17,9 +17,16 @@ final class MME_Form_Submissions
         return self::$instance;
     }
 
+    private const MAX_DISPATCH_ATTEMPTS = 3;
+
+    /** @var int[] Submission chờ gửi tích hợp sau khi đã trả phản hồi cho khách. */
+    private array $pending_dispatch = array();
+
     public function boot(): void
     {
         add_action('rest_api_init', array($this, 'register_routes'));
+        add_action('mme_form_dispatch_integrations', array($this, 'dispatch_integrations'));
+        add_action('shutdown', array($this, 'flush_pending_dispatch'), 0);
     }
 
     public function register_routes(): void
@@ -32,86 +39,6 @@ final class MME_Form_Submissions
                 'id' => array('sanitize_callback' => 'absint'),
             ),
         ));
-
-        register_rest_route('mme-form/v1', '/send-otp', array(
-            'methods' => WP_REST_Server::CREATABLE,
-            'callback' => array($this, 'send_otp'),
-            'permission_callback' => '__return_true',
-        ));
-    }
-
-    /**
-     * @param WP_REST_Request $request
-     * @return WP_REST_Response|WP_Error
-     */
-    public function send_otp(WP_REST_Request $request)
-    {
-        $input = $request->get_json_params();
-        if (!is_array($input)) {
-            return new WP_Error('mme_form_invalid_json', 'Dữ liệu không hợp lệ.', array('status' => 400));
-        }
-
-        $form_id = absint($input['form_id'] ?? 0);
-        $form = get_post($form_id);
-        if (!$form || $form->post_type !== 'mme_form' || $form->post_status !== 'publish') {
-            return new WP_Error('mme_form_not_found', 'Form không tồn tại.', array('status' => 404));
-        }
-
-        $settings = wp_parse_args((array) get_post_meta($form_id, '_mme_form_settings', true), MME_Form_Plugin::default_settings());
-        if (($settings['otp_enabled'] ?? 'no') !== 'yes') {
-            return new WP_Error('mme_form_otp_disabled', 'Tính năng xác thực OTP chưa được bật cho form này.', array('status' => 400));
-        }
-
-        $email = sanitize_email($input['email'] ?? '');
-        if (!$email || !is_email($email)) {
-            return new WP_Error('mme_form_invalid_email', 'Vui lòng nhập địa chỉ email hợp lệ.', array('status' => 400));
-        }
-
-        // Cooldown check (default 60 seconds)
-        $cooldown_secs = !empty($settings['otp_cooldown_seconds']) ? absint($settings['otp_cooldown_seconds']) : 60;
-        $cd_key = 'mme_otp_cd_' . md5($form_id . '_' . strtolower($email));
-        $last_sent = get_transient($cd_key);
-        if ($last_sent) {
-            $remaining = $cooldown_secs - (time() - $last_sent);
-            if ($remaining > 0) {
-                return new WP_Error('mme_form_otp_cooldown', sprintf('Vui lòng đợi %d giây trước khi yêu cầu gửi lại mã.', $remaining), array('status' => 429, 'cooldown' => $remaining));
-            }
-        }
-
-        // Generate 6-digit numeric OTP
-        $otp = (string) wp_rand(100000, 999999);
-        $expiry_mins = !empty($settings['otp_expiry_minutes']) ? absint($settings['otp_expiry_minutes']) : 5;
-        $otp_key = 'mme_otp_' . md5($form_id . '_' . strtolower($email));
-
-        set_transient($otp_key, array('code' => $otp, 'created_at' => time()), $expiry_mins * MINUTE_IN_SECONDS);
-        set_transient($cd_key, time(), $cooldown_secs);
-
-        $site_name = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
-        $form_title = get_the_title($form_id);
-
-        $subject_template = !empty($settings['otp_email_subject']) ? $settings['otp_email_subject'] : '[{site_name}] Mã xác thực đăng ký: {otp}';
-        $subject = str_replace(
-            array('{site_name}', '{form_title}', '{otp}'),
-            array($site_name, $form_title, $otp),
-            $subject_template
-        );
-
-        $message = sprintf(
-            "Xin chào,\n\nMã xác thực OTP của bạn cho form \"%s\" là: %s\n\nMã này có hiệu lực trong vòng %d phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.\n\nTrân trọng,\n%s",
-            $form_title,
-            $otp,
-            $expiry_mins,
-            $site_name
-        );
-
-        $headers = array('Content-Type: text/plain; charset=UTF-8');
-        wp_mail($email, $subject, $message, $headers);
-
-        return new WP_REST_Response(array(
-            'success'  => true,
-            'message'  => sprintf('Đã gửi mã OTP 6 chữ số đến %s. Vui lòng kiểm tra hộp thư (kể cả mục Spam).', $email),
-            'cooldown' => $cooldown_secs,
-        ), 200);
     }
 
     /**
@@ -194,44 +121,36 @@ final class MME_Form_Submissions
             return new WP_Error('mme_form_validation_failed', $error_msg, array('status' => 400, 'errors' => $errors));
         }
 
-        $settings = wp_parse_args((array) get_post_meta($form_id, '_mme_form_settings', true), MME_Form_Plugin::default_settings());
-        if (($settings['otp_enabled'] ?? 'no') === 'yes') {
-            $user_email = '';
-            $has_email_field = false;
+        $settings = MME_Form_Plugin::form_settings($form_id);
+        $identity = null;
+        if (MME_Form_MMeAuth::is_enabled($settings)) {
+            $token = isset($input['mmeauth_token']) && is_string($input['mmeauth_token']) ? trim($input['mmeauth_token']) : '';
+            if ($token === '') {
+                return new WP_Error('mme_form_auth_required', 'Vui lòng xác minh số điện thoại qua Zalo trước khi gửi.', array('status' => 400, 'auth_required' => true));
+            }
+            $identity = MME_Form_MMeAuth::verify($token, $settings);
+            if (is_wp_error($identity)) {
+                return new WP_Error($identity->get_error_code(), $identity->get_error_message(), array('status' => 400, 'auth_required' => true));
+            }
+            if (MME_Form_MMeAuth::is_used($identity)) {
+                return new WP_Error('mme_form_auth_reused', 'Phiên xác minh này đã được dùng, vui lòng xác minh lại.', array('status' => 400, 'auth_required' => true));
+            }
+            // SĐT đã xác minh luôn thắng giá trị khách tự gõ
             foreach ($fields as $f) {
-                if (($f['type'] ?? '') === 'email') {
-                    $has_email_field = true;
-                    $n = trim(preg_replace('/\s+/', '_', $f['name'] ?? ''));
-                    if (!empty($values[$n]) && is_email($values[$n])) {
-                        $user_email = $values[$n];
-                        break;
-                    }
+                if (($f['type'] ?? '') === 'tel') {
+                    $values[sanitize_text_field($f['name'] ?? '')] = $identity['phone'];
                 }
             }
+        }
 
-            if ($has_email_field && empty($user_email)) {
-                return new WP_Error('mme_form_email_required_for_otp', 'Vui lòng nhập địa chỉ email hợp lệ để nhận mã xác thực OTP.', array('status' => 400));
-            }
-
-            if ($user_email) {
-                $submitted_otp = isset($input['otp_code']) ? trim((string) $input['otp_code']) : '';
-                if ($submitted_otp === '') {
-                    return new WP_Error('mme_form_otp_required', 'Vui lòng nhập mã OTP đã được gửi đến email của bạn.', array('status' => 400));
-                }
-
-                $otp_key = 'mme_otp_' . md5($form_id . '_' . strtolower($user_email));
-                $stored_otp = get_transient($otp_key);
-
-                if (!$stored_otp || empty($stored_otp['code'])) {
-                    return new WP_Error('mme_form_otp_expired', 'Mã OTP đã hết hạn hoặc chưa được tạo. Vui lòng bấm gửi lại mã OTP.', array('status' => 400));
-                }
-
-                if ((string) $stored_otp['code'] !== $submitted_otp) {
-                    return new WP_Error('mme_form_otp_invalid', 'Mã OTP không chính xác. Vui lòng kiểm tra lại.', array('status' => 400));
-                }
-
-                delete_transient($otp_key);
-            }
+        $duplicate_key = 'mme_form_dup_' . md5($form_id . '|' . wp_json_encode($values));
+        $duplicate_event = get_transient($duplicate_key);
+        if ($duplicate_event) {
+            return new WP_REST_Response(array(
+                'success' => true,
+                'event_id' => $duplicate_event,
+                'message' => sanitize_text_field($settings['success_message']),
+            ), 200);
         }
 
         $current_url = isset($input['current_url']) && is_scalar($input['current_url'])
@@ -242,6 +161,17 @@ final class MME_Form_Submissions
             : '';
         $attribution = $this->sanitize_attribution($input['attribution'] ?? array());
         $contact = $this->extract_contact($fields, $values);
+        if ($identity) {
+            $contact['phone'] = $identity['phone'];
+            if ($contact['name'] === '' && $identity['name'] !== '') {
+                $contact['name'] = $identity['name'];
+            }
+            $contact['verified'] = array(
+                'provider' => 'mmeauth',
+                'phone' => $identity['phone'],
+                'subject' => $identity['sub'],
+            );
+        }
         $need = $this->first_value($values, array('need', 'message', 'note', 'nhu_cau', 'content'));
         $event_id = wp_generate_uuid4();
         $timestamp = gmdate('c');
@@ -288,38 +218,104 @@ final class MME_Form_Submissions
         update_post_meta($submission_id, '_mme_submission_payload', $payload);
         update_post_meta($submission_id, '_mme_submission_form_id', $form_id);
 
-        $settings = wp_parse_args((array) get_post_meta($form_id, '_mme_form_settings', true), MME_Form_Plugin::default_settings());
-        $integration_results = array(
-            'webhook' => $this->send_webhook($settings, $payload),
-            'twenty' => $this->send_twenty($form_id, $settings, $payload),
-            'pancake' => $this->send_pancake($settings, $payload),
-        );
-        update_post_meta($submission_id, '_mme_submission_integrations', $integration_results);
-
-        $message = sanitize_text_field($settings['success_message']);
-        
-        if (current_user_can('manage_options')) {
-            if (isset($integration_results['twenty']) && empty($integration_results['twenty']['success']) && empty($integration_results['twenty']['skipped'])) {
-                $err = $integration_results['twenty']['error'] ?? json_encode($integration_results['twenty']['response'] ?? 'Unknown error', JSON_UNESCAPED_UNICODE);
-                $message .= '<br><br><b style="color:#d63638">⚠️ Lỗi đồng bộ Twenty CRM (Chỉ Admin mới thấy):</b><br> ' . esc_html($err);
-            }
-            if (isset($integration_results['pancake']) && empty($integration_results['pancake']['success']) && empty($integration_results['pancake']['skipped'])) {
-                $err = $integration_results['pancake']['error'] ?? json_encode($integration_results['pancake']['response'] ?? 'Unknown error', JSON_UNESCAPED_UNICODE);
-                $message .= '<br><br><b style="color:#d63638">⚠️ Lỗi đồng bộ Pancake CRM (Chỉ Admin mới thấy):</b><br> ' . esc_html($err);
-            }
+        if ($identity) {
+            MME_Form_MMeAuth::mark_used($identity);
         }
+        set_transient($duplicate_key, $event_id, 2 * MINUTE_IN_SECONDS);
+
+        // Trả phản hồi cho khách ngay; tích hợp chạy sau (shutdown + WP-Cron dự phòng/thử lại)
+        update_post_meta($submission_id, '_mme_submission_dispatch', array('status' => 'pending', 'attempts' => 0));
+        $runs_after_response = function_exists('fastcgi_finish_request');
+        wp_schedule_single_event($runs_after_response ? time() + MINUTE_IN_SECONDS : time(), 'mme_form_dispatch_integrations', array($submission_id));
+        $this->pending_dispatch[] = (int) $submission_id;
 
         return new WP_REST_Response(array(
             'success' => true,
             'event_id' => $event_id,
-            'message' => $message,
+            'message' => sanitize_text_field($settings['success_message']),
         ), 201);
+    }
+
+    /** Chạy sau khi phản hồi đã được gửi đi (PHP-FPM); không có FPM thì để WP-Cron xử lý. */
+    public function flush_pending_dispatch(): void
+    {
+        if (!$this->pending_dispatch || !function_exists('fastcgi_finish_request')) {
+            return;
+        }
+        fastcgi_finish_request();
+        ignore_user_abort(true);
+        foreach ($this->pending_dispatch as $submission_id) {
+            $this->dispatch_integrations($submission_id);
+        }
+        $this->pending_dispatch = array();
+    }
+
+    /**
+     * Gửi submission tới webhook / Twenty / Pancake. Tích hợp nào đã thành công thì bỏ qua, lỗi thì hẹn thử lại.
+     * @param bool $force Admin bấm "Gửi lại": chạy lại cả khi đã hết lượt thử.
+     */
+    public function dispatch_integrations($submission_id, bool $force = false): array
+    {
+        $submission_id = absint($submission_id);
+        $payload = get_post_meta($submission_id, '_mme_submission_payload', true);
+        if (!is_array($payload)) {
+            return array();
+        }
+        $state = get_post_meta($submission_id, '_mme_submission_dispatch', true);
+        $state = wp_parse_args(is_array($state) ? $state : array(), array('status' => 'pending', 'attempts' => 0));
+        $results = get_post_meta($submission_id, '_mme_submission_integrations', true);
+        $results = is_array($results) ? $results : array();
+        if (!$force && in_array($state['status'], array('done', 'failed'), true)) {
+            return $results;
+        }
+
+        // add_option là thao tác nguyên tử: chặn shutdown và WP-Cron cùng gửi 1 submission
+        $lock = 'mme_form_dispatch_lock_' . $submission_id;
+        if (!add_option($lock, time(), '', 'no')) {
+            if (time() - (int) get_option($lock) < 2 * MINUTE_IN_SECONDS) {
+                return $results;
+            }
+            update_option($lock, time(), false);
+        }
+
+        $form_id = absint($payload['form']['id'] ?? 0);
+        $settings = MME_Form_Plugin::form_settings($form_id);
+        $senders = array(
+            'webhook' => function () use ($settings, $payload) { return $this->send_webhook($settings, $payload); },
+            'twenty' => function () use ($form_id, $settings, $payload) { return $this->send_twenty($form_id, $settings, $payload); },
+            'pancake' => function () use ($settings, $payload) { return $this->send_pancake($settings, $payload); },
+        );
+        $has_failure = false;
+        foreach ($senders as $key => $send) {
+            if (!empty($results[$key]['success'])) {
+                continue;
+            }
+            $results[$key] = $send();
+            if (empty($results[$key]['success']) && empty($results[$key]['skipped'])) {
+                $has_failure = true;
+            }
+        }
+
+        $attempts = (int) $state['attempts'] + 1;
+        $status = 'done';
+        if ($has_failure) {
+            $status = $attempts >= self::MAX_DISPATCH_ATTEMPTS ? 'failed' : 'retrying';
+        }
+        update_post_meta($submission_id, '_mme_submission_integrations', $results);
+        update_post_meta($submission_id, '_mme_submission_dispatch', array('status' => $status, 'attempts' => $attempts, 'last_run' => time()));
+
+        wp_clear_scheduled_hook('mme_form_dispatch_integrations', array($submission_id));
+        if ($status === 'retrying') {
+            wp_schedule_single_event(time() + $attempts * 5 * MINUTE_IN_SECONDS, 'mme_form_dispatch_integrations', array($submission_id));
+        }
+        delete_option($lock);
+
+        return $results;
     }
 
     private function allow_request(): bool
     {
-        $candidate_ip = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
-        $ip = filter_var($candidate_ip, FILTER_VALIDATE_IP) ? (string) $candidate_ip : 'unknown';
+        $ip = $this->client_ip();
         $key = 'mme_form_rate_' . md5(wp_salt('nonce') . '|' . $ip);
         $count = absint(get_transient($key));
         if ($count >= 15) {
@@ -327,6 +323,57 @@ final class MME_Form_Submissions
         }
         set_transient($key, $count + 1, 10 * MINUTE_IN_SECONDS);
         return true;
+    }
+
+    /** Chỉ tin header CF-Connecting-IP khi request thật sự đi qua Cloudflare, tránh bị giả header để vượt rate limit. */
+    private function client_ip(): string
+    {
+        $remote = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+        if (!filter_var($remote, FILTER_VALIDATE_IP)) {
+            return 'unknown';
+        }
+        $cf_ip = (string) ($_SERVER['HTTP_CF_CONNECTING_IP'] ?? '');
+        if ($cf_ip !== '' && filter_var($cf_ip, FILTER_VALIDATE_IP) && $this->is_cloudflare_ip($remote)) {
+            return $cf_ip;
+        }
+        return $remote;
+    }
+
+    private function is_cloudflare_ip(string $ip): bool
+    {
+        // https://www.cloudflare.com/ips/
+        $ranges = array(
+            '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18',
+            '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22', '198.41.128.0/17',
+            '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+            '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32', '2405:8100::/32',
+            '2a06:98c0::/29', '2c0f:f248::/32',
+        );
+        $packed = inet_pton($ip);
+        if ($packed === false) {
+            return false;
+        }
+        foreach ($ranges as $range) {
+            list($subnet, $bits) = explode('/', $range);
+            $subnet = inet_pton($subnet);
+            if ($subnet === false || strlen($subnet) !== strlen($packed)) {
+                continue;
+            }
+            $bits = (int) $bits;
+            $bytes = intdiv($bits, 8);
+            if (substr($packed, 0, $bytes) !== substr($subnet, 0, $bytes)) {
+                continue;
+            }
+            $rest = $bits % 8;
+            if ($rest === 0) {
+                return true;
+            }
+            $mask = chr((0xFF << (8 - $rest)) & 0xFF);
+            if ((($packed[$bytes] & $mask) === ($subnet[$bytes] & $mask))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private function sanitize_attribution($raw): array

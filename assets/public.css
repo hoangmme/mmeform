@@ -470,76 +470,181 @@
   color: var(--mme-button);
 }
 
-/* Email OTP Verification */
-.mme-otp-wrap {
-  margin-top: 10px;
-  width: 100%;
+/* Xác minh SĐT qua Zalo (MMeAuth) */
+.mme-auth-box {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px dashed var(--mme-field-border, #e2e8f0);
+  border-radius: 12px;
+  background: var(--mme-field-bg, #f8fafc);
 }
 
-.mme-otp-actions {
-  display: flex;
-  gap: 10px;
+.mme-auth-box[data-state="signed-in"] {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--mme-secondary, #10b981) 55%, transparent);
+}
+
+.mme-auth-title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mme-field-label-color, #1e293b);
+}
+
+.mme-auth-hint {
+  margin: -6px 0 10px;
+  font-size: 12px;
+  opacity: 0.7;
+  color: var(--mme-field-label-color, #1e293b);
+}
+
+.mme-auth-start {
+  display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
+  gap: 10px;
+  height: 44px;
+  padding: 0 18px 0 6px;
+  border: 0;
+  border-radius: 999px;
+  background: #0068ff;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.mme-btn-send-otp {
+.mme-auth-start:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.mme-auth-zalo-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: 44px;
-  padding: 0 16px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0068ff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mme-auth-pending {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.mme-auth-qr img {
+  display: block;
+  width: 148px;
+  height: 148px;
+  background: #ffffff;
+  border-radius: 8px;
+}
+
+.mme-auth-pending-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   font-size: 13px;
+  color: var(--mme-field-text, #1e293b);
+}
+
+.mme-auth-open {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: #0068ff;
+  color: #ffffff !important;
   font-weight: 600;
-  border-radius: 10px;
-  border: 1px solid var(--mme-button);
-  background: color-mix(in srgb, var(--mme-button) 10%, transparent);
-  color: var(--mme-button);
+  text-decoration: none;
+}
+
+.mme-auth-waiting {
+  opacity: 0.7;
+}
+
+.mme-auth-cancel {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 12px;
+  color: inherit;
+  opacity: 0.6;
   cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
 }
 
-.mme-btn-send-otp:hover:not(:disabled) {
-  background: var(--mme-button);
-  color: var(--mme-btn-text, #ffffff);
+.mme-auth-pending[hidden],
+.mme-auth-start[hidden],
+.mme-auth-qr[hidden],
+.mme-auth-qr-note[hidden],
+.mme-auth-open[hidden] {
+  display: none;
 }
 
-.mme-btn-send-otp:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-.mme-otp-input-box {
-  flex: 1;
-  min-width: 140px;
-}
-
-.mme-otp-input-box input.mme-otp-input {
-  height: 44px;
-  text-align: center;
-  letter-spacing: 4px;
-  font-size: 16px;
-  font-weight: 700;
-  border-radius: 10px;
-  background: #ffffff !important;
-  border: 2px solid var(--mme-secondary, #10b981) !important;
-}
-
-.mme-otp-status {
+.mme-auth-error {
+  margin: 8px 0 0;
   font-size: 12px;
   line-height: 1.4;
-  margin-top: 6px;
-  font-weight: 500;
-}
-
-.mme-otp-status.is-success {
-  color: #059669;
-}
-
-.mme-otp-status.is-error {
   color: #dc2626;
+}
+
+.mme-auth-signed-in {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mme-auth-signed-in[hidden],
+.mme-auth-signed-out[hidden],
+.mme-auth-error[hidden],
+.mme-auth-avatar[hidden] {
+  display: none;
+}
+
+.mme-auth-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.mme-auth-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  font-size: 13px;
+  color: var(--mme-field-text, #1e293b);
+}
+
+.mme-auth-who span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.75;
+}
+
+.mme-auth-switch {
+  border: 0;
+  background: transparent;
+  color: var(--mme-button);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 4px;
+}
+
+.mme-form input[readonly] {
+  cursor: default;
+  opacity: 0.85;
 }
 
 /* intl-tel-input: Xóa hoàn toàn viền và nền của cờ / mã vùng quốc gia */

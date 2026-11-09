@@ -51,7 +51,16 @@ final class MME_Form_Updater
             return array('success' => false, 'error' => 'Không thể khởi tạo WP_Filesystem.');
         }
 
-        $zip_url = 'https://github.com/hoangmme/mmeform/archive/refs/heads/main.zip';
+        $release = $this->latest_release();
+        if ($release && version_compare($release['version'], MME_FORM_VERSION, '<=')) {
+            return array(
+                'success' => true,
+                'up_to_date' => true,
+                'message' => sprintf('Bạn đang dùng bản mới nhất (%s).', MME_FORM_VERSION),
+            );
+        }
+        // Có GitHub Release thì chỉ cài bản đã phát hành; chưa có release nào mới dùng nhánh main như trước
+        $zip_url = $release ? $release['zip_url'] : 'https://github.com/hoangmme/mmeform/archive/refs/heads/main.zip';
         $temp_file = download_url($zip_url, 60);
 
         if (is_wp_error($temp_file)) {
@@ -101,7 +110,33 @@ final class MME_Form_Updater
             return array('success' => false, 'error' => 'Không có quyền ghi đè thư mục plugin (kiểm tra phân quyền thư mục wp-content/plugins/mmeform).');
         }
 
-        return array('success' => true, 'message' => 'Cập nhật MME Form thành công!');
+        // Để bản mới tự dọn file cũ (copy_dir không xoá file đã bị gỡ khỏi repo) ở lần tải admin kế tiếp
+        delete_option('mme_form_installed_version');
+
+        return array(
+            'success' => true,
+            'message' => $release ? sprintf('Đã cập nhật lên bản %s.', $release['version']) : 'Cập nhật MME Form thành công!',
+        );
+    }
+
+    /** @return array{version: string, zip_url: string}|null */
+    private function latest_release(): ?array
+    {
+        $response = wp_remote_get('https://api.github.com/repos/hoangmme/mmeform/releases/latest', array(
+            'timeout' => 15,
+            'headers' => array('Accept' => 'application/vnd.github+json', 'User-Agent' => 'mme-form-updater'),
+        ));
+        if (is_wp_error($response) || (int) wp_remote_retrieve_response_code($response) !== 200) {
+            return null;
+        }
+        $data = json_decode(wp_remote_retrieve_body($response), true);
+        if (empty($data['tag_name']) || empty($data['zipball_url'])) {
+            return null;
+        }
+        return array(
+            'version' => ltrim((string) $data['tag_name'], 'vV'),
+            'zip_url' => esc_url_raw((string) $data['zipball_url']),
+        );
     }
 }
 }

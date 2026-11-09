@@ -1,0 +1,9 @@
+# Không đưa file phát triển vào ZIP mà bộ cập nhật 1-click tải về site khách
+.gitattributes export-ignore
+.gitignore export-ignore
+CONTINUITY.md export-ignore
+deploy-git.sh export-ignore
+form.html export-ignore
+docs/ export-ignore
+demogmailauth/ export-ignore
+demopancake/ export-ignore

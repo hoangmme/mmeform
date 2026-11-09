@@ -41,10 +41,8 @@ final class MME_Form_Renderer
             }
         }
         $defaults = MME_Form_Plugin::default_settings();
-        $settings = wp_parse_args(
-            (array) get_post_meta($form_id, '_mme_form_settings', true),
-            $defaults
-        );
+        $settings = MME_Form_Plugin::form_settings($form_id);
+        $mmeauth = MME_Form_MMeAuth::is_enabled($settings);
         foreach (array('chatbot_base_url', 'chatbot_tenant', 'chatbot_button_text', 'button_text', 'success_message') as $k) {
             if (empty($settings[$k])) {
                 $settings[$k] = $defaults[$k];
@@ -257,8 +255,7 @@ final class MME_Form_Renderer
                         <form
                             class="mme-form"
                             data-endpoint="<?php echo esc_url(rest_url('mme-form/v1/submit/' . $form_id)); ?>"
-                            data-otp-endpoint="<?php echo esc_url(rest_url('mme-form/v1/send-otp')); ?>"
-                            data-otp-enabled="<?php echo esc_attr($settings['otp_enabled'] ?? 'no'); ?>"
+                            <?php if ($mmeauth) : ?>data-mmeauth-url="<?php echo esc_url(MME_Form_MMeAuth::gateway_url($settings)); ?>" data-mmeauth-site="<?php echo esc_attr($settings['mmeauth_site_key']); ?>"<?php endif; ?>
                             novalidate
                         >
                             <input type="hidden" name="form_id" value="<?php echo esc_attr((string) $form_id); ?>">
@@ -266,6 +263,38 @@ final class MME_Form_Renderer
                             <input type="hidden" name="referrer_url" value="">
                             <input type="hidden" name="started_at" value="">
                             <input type="text" class="mme-form-honeypot" name="website" value="" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+                            <?php if ($mmeauth) : ?>
+                                <div class="mme-auth-box" data-state="signed-out">
+                                    <input type="hidden" name="mmeauth_token" value="">
+                                    <div class="mme-auth-signed-out">
+                                        <p class="mme-auth-title">Xác minh số điện thoại qua Zalo</p>
+                                        <p class="mme-auth-hint">Không cần mã OTP — bấm nút, xác nhận trong Zalo là xong.</p>
+                                        <button type="button" class="mme-auth-start">
+                                            <span class="mme-auth-zalo-mark" aria-hidden="true">Zalo</span>
+                                            <span>Xác minh bằng Zalo</span>
+                                        </button>
+                                        <div class="mme-auth-pending" hidden>
+                                            <div class="mme-auth-qr" aria-label="Mã QR mở Zalo"></div>
+                                            <div class="mme-auth-pending-text">
+                                                <strong class="mme-auth-qr-note">Quét mã bằng ứng dụng Zalo trên điện thoại</strong>
+                                                <a class="mme-auth-open" href="#" target="_blank" rel="noopener">Mở Zalo để xác minh</a>
+                                                <span class="mme-auth-waiting">Đang chờ bạn xác nhận trong Zalo…</span>
+                                                <button type="button" class="mme-auth-cancel">Huỷ</button>
+                                            </div>
+                                        </div>
+                                        <p class="mme-auth-error" hidden></p>
+                                    </div>
+                                    <div class="mme-auth-signed-in" hidden>
+                                        <img class="mme-auth-avatar" alt="" referrerpolicy="no-referrer">
+                                        <div class="mme-auth-who">
+                                            <strong class="mme-auth-name"></strong>
+                                            <span class="mme-auth-phone"></span>
+                                        </div>
+                                        <button type="button" class="mme-auth-switch">Xác minh số khác</button>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
 
                             <div class="mme-form-grid">
                                 <?php foreach ($fields as $field) : ?>
@@ -388,19 +417,6 @@ final class MME_Form_Renderer
                     <input id="<?php echo esc_attr($id); ?>" type="<?php echo esc_attr($type); ?>" name="fields[<?php echo esc_attr($name); ?>]" placeholder="<?php echo esc_attr($placeholder); ?>" <?php echo $required ? 'required' : ''; ?>>
                 </div>
 
-                <?php if ($type === 'email' && ($settings['otp_enabled'] ?? 'no') === 'yes') : ?>
-                    <div class="mme-otp-wrap" data-otp-for="<?php echo esc_attr($name); ?>">
-                        <div class="mme-otp-actions">
-                            <button type="button" class="mme-btn-send-otp">
-                                <span>Gửi mã xác thực OTP</span>
-                            </button>
-                            <div class="mme-otp-input-box" style="display: none;">
-                                <input type="text" name="otp_code" class="mme-otp-input" placeholder="Nhập mã 6 chữ số" maxlength="6" autocomplete="one-time-code">
-                            </div>
-                        </div>
-                        <div class="mme-otp-status" style="display: none;"></div>
-                    </div>
-                <?php endif; ?>
             <?php endif; ?>
         </div>
         <?php

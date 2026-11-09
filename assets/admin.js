@@ -592,6 +592,9 @@
     });
 
     var cache = {};
+    document.addEventListener("mme:submission-updated", function (e) {
+      delete cache[e.detail.id];
+    });
 
     document.addEventListener("click", function (e) {
       var trigger = e.target.closest(".mme-open-quick-view");
@@ -668,6 +671,45 @@
     });
   });
 
+  // Gửi lại các tích hợp lỗi của 1 submission (Quick View + trang chi tiết)
+  ready(function () {
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest(".mme-retry-integrations");
+      if (!btn) return;
+      e.preventDefault();
+
+      var wrap = btn.closest(".mme-qv-wrap");
+      var id = btn.dataset.id;
+      var formData = new URLSearchParams();
+      formData.append("action", "mme_submission_retry");
+      formData.append("id", id);
+      formData.append("nonce", (window.mme_form_admin_data && window.mme_form_admin_data.nonce) || "");
+      if (btn.closest("#mme-quick-view-content")) formData.append("in_modal", "1");
+
+      btn.disabled = true;
+      btn.textContent = "Đang gửi lại...";
+
+      fetch((window.mme_form_admin_data && window.mme_form_admin_data.ajax_url) || "/wp-admin/admin-ajax.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+        body: formData.toString(),
+      })
+        .then(function (res) {
+          return res.json();
+        })
+        .then(function (res) {
+          if (!res.success || !res.data) throw new Error(res.data || "Gửi lại thất bại.");
+          document.dispatchEvent(new CustomEvent("mme:submission-updated", { detail: { id: id } }));
+          if (wrap) wrap.outerHTML = res.data.html;
+        })
+        .catch(function (err) {
+          alert(err.message || "Lỗi kết nối máy chủ.");
+          btn.disabled = false;
+          btn.textContent = "Gửi lại tích hợp lỗi";
+        });
+    });
+  });
+
   // 1-Click Force Updater from GitHub
   ready(function () {
     document.addEventListener("click", function (e) {
@@ -715,7 +757,14 @@
           return res.json();
         })
         .then(function (res) {
-          if (res.success) {
+          if (res.success && res.data && res.data.up_to_date) {
+            alert(res.data.message);
+            btn.innerHTML = originalHtml;
+            if (btn.tagName === "BUTTON") {
+              btn.disabled = false;
+            }
+            btn.style.pointerEvents = "";
+          } else if (res.success) {
             btn.innerHTML =
               '<span class="dashicons dashicons-yes-alt" style="color: #10b981; margin-top: 2px;"></span> Cập nhật thành công! Đang tải lại...';
             setTimeout(function () {
