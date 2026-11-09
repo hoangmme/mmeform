@@ -152,6 +152,13 @@ final class MME_Form_Renderer
         $show_heading = empty($args['fields_only'])
             || (($args['heading'] ?? ($settings['fields_show_heading'] ?? 'yes')) === 'yes');
 
+        // Form thường nằm dưới H1 của trang, nên tiêu đề mặc định là h2.
+        // Trang chỉ có form (vd. /lien-he/) có thể đổi sang h1 qua filter mme_form_heading_tag.
+        $heading_tag = (string) apply_filters('mme_form_heading_tag', 'h2', $form_id, $args);
+        if (!in_array($heading_tag, array('h1', 'h2', 'h3'), true)) {
+            $heading_tag = 'h2';
+        }
+
         ob_start();
         echo $inline_assets;
         ?>
@@ -182,12 +189,12 @@ final class MME_Form_Renderer
                         <?php endif; ?>
                         
                         <?php if (!empty($settings['heading'])) : ?>
-                            <h1 class="mme-form-main-heading">
+                            <<?php echo $heading_tag; ?> class="mme-form-main-heading">
                                 <?php echo wp_kses_post(str_replace(array('[', ']'), array('<span class="mme-highlight">', '</span>'), $settings['heading'])); ?>
                                 <?php if (!empty($settings['subheading'])) : ?>
                                     <br><span class="mme-gradient-text"><?php echo wp_kses_post($settings['subheading']); ?></span>
                                 <?php endif; ?>
-                            </h1>
+                            </<?php echo $heading_tag; ?>>
                         <?php endif; ?>
                         
                         <?php if (!empty($settings['description'])) : ?>
