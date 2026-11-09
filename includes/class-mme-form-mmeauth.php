@@ -28,7 +28,7 @@ final class MME_Form_MMeAuth
     }
 
     /**
-     * @return array|WP_Error Claims đã xác minh: sub, phone, name, jti, exp.
+     * @return array|WP_Error Claims đã xác minh: sub, phone, name, purpose, jti, exp.
      */
     public static function verify(string $jwt, array $settings)
     {
@@ -70,6 +70,7 @@ final class MME_Form_MMeAuth
             'sub' => (string) ($claims['sub'] ?? ''),
             'phone' => preg_replace('/[^0-9+]/', '', (string) $claims['phone']),
             'name' => sanitize_text_field((string) ($claims['name'] ?? '')),
+            'purpose' => (string) ($claims['purpose'] ?? ''),
             'jti' => (string) ($claims['jti'] ?? ''),
             'exp' => (int) ($claims['exp'] ?? 0),
         );

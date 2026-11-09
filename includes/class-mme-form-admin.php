@@ -371,6 +371,11 @@ final class MME_Form_Admin
                             ⚠️ Chưa có site key MMeAuth — điền ở <a href="<?php echo esc_url(admin_url('edit.php?post_type=mme_form&page=mme-form-settings')); ?>">Tích hợp chung</a>. Khi chưa có, form vẫn gửi bình thường (không bắt xác minh).
                         <?php endif; ?>
                     </p>
+                    <p class="description mme-admin-span-2" style="margin: 8px 0 0;">
+                        📥 <strong>Nhận lead "Nhận tư vấn" từ Mini App vào form này:</strong> đặt URL dưới đây làm <code>LEAD_WEBHOOK_URL</code> của gateway MMeAuth.
+                        Lead sẽ hiện trong Submissions và chạy webhook/Twenty/Pancake của form này.<br>
+                        <code style="user-select: all;"><?php echo esc_html(rest_url('mme-form/v1/mmeauth-lead/' . $post->ID)); ?></code>
+                    </p>
                 </div>
             </div>
         </div>

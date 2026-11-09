@@ -39,6 +39,14 @@ final class MME_Form_Submissions
                 'id' => array('sanitize_callback' => 'absint'),
             ),
         ));
+        register_rest_route('mme-form/v1', '/mmeauth-lead/(?P<id>\d+)', array(
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => array($this, 'mmeauth_lead'),
+            'permission_callback' => '__return_true',
+            'args' => array(
+                'id' => array('sanitize_callback' => 'absint'),
+            ),
+        ));
     }
 
     /**
@@ -205,6 +213,87 @@ final class MME_Form_Submissions
             'started_at' => $input['started_at'] ?? '',
         );
 
+        return $this->store_submission($form_id, $settings, $payload, $identity, $duplicate_key);
+    }
+
+    /**
+     * Lead "Nhận tư vấn" khách gửi từ MMeAuth Mini App, được gateway chuyển tới (LEAD_WEBHOOK_URL).
+     * Không có secret dùng chung: id_token (purpose = lead) do gateway ký cho đúng site key là bằng chứng.
+     */
+    public function mmeauth_lead(WP_REST_Request $request)
+    {
+        $form_id = absint($request['id']);
+        $form = get_post($form_id);
+        if (!$form || $form->post_type !== 'mme_form' || $form->post_status !== 'publish') {
+            return new WP_Error('mme_form_not_found', 'Form không tồn tại.', array('status' => 404));
+        }
+        $input = $request->get_json_params();
+        $token = is_array($input) && isset($input['mmeauth_token']) && is_string($input['mmeauth_token']) ? trim($input['mmeauth_token']) : '';
+        $settings = MME_Form_Plugin::form_settings($form_id);
+        if (trim((string) $settings['mmeauth_site_key']) === '') {
+            return new WP_Error('mme_auth_not_configured', 'Website chưa cấu hình Site key MMeAuth.', array('status' => 400));
+        }
+        $identity = MME_Form_MMeAuth::verify($token, $settings);
+        if (is_wp_error($identity)) {
+            return new WP_Error($identity->get_error_code(), $identity->get_error_message(), array('status' => 401));
+        }
+        if ($identity['purpose'] !== 'lead') {
+            return new WP_Error('mme_auth_bad_purpose', 'Token không dùng để gửi lead.', array('status' => 401));
+        }
+        if (MME_Form_MMeAuth::is_used($identity)) {
+            return new WP_Error('mme_form_auth_reused', 'Lead này đã được nhận.', array('status' => 409));
+        }
+
+        $solution = sanitize_text_field($this->limit_string((string) ($input['solution'] ?? ''), 200));
+        $note = sanitize_textarea_field($this->limit_string((string) ($input['note'] ?? ''), 2000));
+        $values = array_filter(array(
+            'name' => $identity['name'],
+            'phone' => $identity['phone'],
+            'need' => $solution ?: 'Tư vấn chung',
+            'note' => $note,
+        ), 'strlen');
+        $payload = array(
+            'event_id' => wp_generate_uuid4(),
+            'event' => 'lead_collected',
+            'tenant' => (string) wp_parse_url(home_url('/'), PHP_URL_HOST),
+            'channel' => 'zalo_miniapp',
+            'conversation_id' => null,
+            'form' => array(
+                'id' => $form_id,
+                'title' => get_the_title($form_id),
+            ),
+            'contact' => array(
+                'name' => $identity['name'],
+                'phone' => $identity['phone'],
+                'email' => '',
+                'verified' => array('provider' => 'mmeauth', 'phone' => $identity['phone'], 'subject' => $identity['sub']),
+            ),
+            'lead' => array(
+                'need' => $values['need'],
+                'booking_requested' => false,
+                'note' => $note,
+            ),
+            'fields' => $values,
+            'source' => array(
+                'provider' => 'mmeauth',
+                'url' => '',
+                'origin' => 'zalo_miniapp',
+                'referrer' => '',
+                'form_id' => $form_id,
+            ),
+            'attribution' => array(),
+            'timestamp' => gmdate('c'),
+            'started_at' => '',
+        );
+
+        return $this->store_submission($form_id, $settings, $payload, $identity, 'mme_form_dup_' . md5($form_id . '|' . wp_json_encode($values)));
+    }
+
+    /** Lưu submission, trả phản hồi ngay; webhook/Twenty/Pancake chạy sau (shutdown + WP-Cron dự phòng/thử lại). */
+    private function store_submission(int $form_id, array $settings, array $payload, ?array $identity, string $duplicate_key)
+    {
+        $contact = $payload['contact'];
+        $event_id = $payload['event_id'];
         $submission_id = wp_insert_post(array(
             'post_type' => 'mme_form_submission',
             'post_status' => 'publish',
@@ -223,7 +312,6 @@ final class MME_Form_Submissions
         }
         set_transient($duplicate_key, $event_id, 2 * MINUTE_IN_SECONDS);
 
-        // Trả phản hồi cho khách ngay; tích hợp chạy sau (shutdown + WP-Cron dự phòng/thử lại)
         update_post_meta($submission_id, '_mme_submission_dispatch', array('status' => 'pending', 'attempts' => 0));
         $runs_after_response = function_exists('fastcgi_finish_request');
         wp_schedule_single_event($runs_after_response ? time() + MINUTE_IN_SECONDS : time(), 'mme_form_dispatch_integrations', array($submission_id));
