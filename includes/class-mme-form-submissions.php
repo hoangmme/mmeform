@@ -281,7 +281,8 @@ final class MME_Form_Submissions
                 'referrer' => '',
                 'form_id' => $form_id,
             ),
-            'attribution' => array(),
+            // Nguồn mở Mini App: link ?src=/utm_* hoặc website đã gửi khách sang xác minh (utm_medium = mmeauth_verify)
+            'attribution' => $this->sanitize_attribution(is_array($input) ? ($input['attribution'] ?? array()) : array()),
             'timestamp' => gmdate('c'),
             'started_at' => '',
         );
