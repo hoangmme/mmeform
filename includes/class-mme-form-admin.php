@@ -1522,7 +1522,9 @@ function doPost(e) {
                 esc_html($info['date']),
                 !empty($info['commit']) ? ' (<code>' . esc_html($info['commit']) . '</code>)' : ''
             );
-            $meta[] = '<a href="#" class="mme-force-update-btn" style="color: #0284c7; font-weight: 600;">Cập nhật từ GitHub</a>';
+            if (current_user_can('update_plugins')) {
+                $meta[] = '<a href="#" class="mme-force-update-btn" style="color: #0284c7; font-weight: 600;">Kiểm tra cập nhật</a>';
+            }
         }
         return $meta;
     }
@@ -1556,8 +1558,11 @@ function doPost(e) {
             return;
         }
         $info = MME_Form_Plugin::get_build_info();
+        $updater = MME_Form_Updater::instance();
+        $remote = get_site_transient(MME_Form_Updater::CACHE);
+        $has_update = $updater->has_update(false);
         ?>
-        <div class="notice notice-info" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: #f8fafc; border-left: 4px solid #0284c7; margin: 15px 0 10px;">
+        <div class="notice notice-info" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: #f8fafc; border-left: 4px solid <?php echo $has_update ? '#d97706' : '#0284c7'; ?>; margin: 15px 0 10px;">
             <span style="font-size: 13px; color: #0f172a;">
                 <strong>MME Form v<?php echo esc_html($info['version']); ?></strong> &bull; 
                 Bản cập nhật lúc: <strong><?php echo esc_html($info['date']); ?></strong>
@@ -1566,9 +1571,15 @@ function doPost(e) {
                 <?php endif; ?>
             </span>
             <div style="display: flex; align-items: center; gap: 8px;">
-                <button type="button" class="button button-secondary mme-force-update-btn" style="display: inline-flex; align-items: center; gap: 4px; font-weight: 500;">
-                    <span class="dashicons dashicons-update" style="margin-top: 2px;"></span> Cập nhật từ GitHub
-                </button>
+                <?php if ($has_update && current_user_can('update_plugins')) : ?>
+                    <button type="button" class="button button-primary mme-force-update-btn" style="display: inline-flex; align-items: center; gap: 4px; font-weight: 500;">
+                        <span class="dashicons dashicons-download" style="margin-top: 2px;"></span> Cập nhật lên <?php echo esc_html($remote['version']); ?>
+                    </button>
+                <?php elseif (current_user_can('update_plugins')) : ?>
+                    <button type="button" class="button button-secondary mme-force-update-btn" style="display: inline-flex; align-items: center; gap: 4px; font-weight: 500;">
+                        <span class="dashicons dashicons-update" style="margin-top: 2px;"></span> Kiểm tra cập nhật
+                    </button>
+                <?php endif; ?>
             </div>
         </div>
         <?php

@@ -720,7 +720,7 @@
 
       if (
         !confirm(
-          "Bạn có chắc chắn muốn tải và ghi đè phiên bản mới nhất của MME Form từ GitHub không?"
+          "Kiểm tra GitHub và cài bản MME Form mới nhất (nếu có)?"
         )
       ) {
         return;
@@ -732,7 +732,7 @@
         btn.disabled = true;
       }
       btn.innerHTML =
-        '<span class="dashicons dashicons-update" style="animation: mme-spin 1.5s infinite linear; margin-top: 2px;"></span> Đang tải & cập nhật...';
+        '<span class="dashicons dashicons-update" style="animation: mme-spin 1.5s infinite linear; margin-top: 2px;"></span> Đang kiểm tra & cập nhật...';
 
       var ajaxUrl =
         (window.mme_form_admin_data && window.mme_form_admin_data.ajax_url) ||
@@ -766,7 +766,8 @@
             btn.style.pointerEvents = "";
           } else if (res.success) {
             btn.innerHTML =
-              '<span class="dashicons dashicons-yes-alt" style="color: #10b981; margin-top: 2px;"></span> Cập nhật thành công! Đang tải lại...';
+              '<span class="dashicons dashicons-yes-alt" style="color: #10b981; margin-top: 2px;"></span> ' +
+              (res.data.message || "Cập nhật thành công!") + " Đang tải lại...";
             setTimeout(function () {
               location.reload();
             }, 1200);

@@ -3,7 +3,7 @@
  * Plugin Name: MME Form
  * Plugin URI: https://mme.vn
  * Description: Compact form builder with external embeds, source URL tracking, chatbot, Google Sheets webhooks, and Twenty CRM sync.
- * Version: 0.6.4 (2026-11-09 19:30)
+ * Version: 0.6.5
  * Author: MME
  * Text Domain: mme-form
  * Requires at least: 6.4
@@ -38,10 +38,10 @@ if (defined('MME_FORM_BOOTSTRAPPED')) {
 define('MME_FORM_BOOTSTRAPPED', true);
 
 if (!defined('MME_FORM_VERSION')) {
-    define('MME_FORM_VERSION', '0.6.4');
+    define('MME_FORM_VERSION', '0.6.5');
 }
 if (!defined('MME_FORM_BUILD_TIME')) {
-    define('MME_FORM_BUILD_TIME', '2026-11-09 14:00:00');
+    define('MME_FORM_BUILD_TIME', '2026-11-14 10:00:00');
 }
 if (!defined('MME_FORM_FILE')) {
     define('MME_FORM_FILE', __FILE__);
@@ -59,6 +59,7 @@ require_once MME_FORM_DIR . 'includes/class-mme-form-submissions.php';
 require_once MME_FORM_DIR . 'includes/class-mme-form-admin.php';
 require_once MME_FORM_DIR . 'includes/class-mme-form-plugin.php';
 require_once MME_FORM_DIR . 'includes/class-mme-form-updater.php';
+require_once MME_FORM_DIR . 'includes/class-mme-form-abilities.php';
 require_once MME_FORM_DIR . 'includes/mme-chatbot.php';
 
 register_activation_hook(__FILE__, array('MME_Form_Plugin', 'activate'));

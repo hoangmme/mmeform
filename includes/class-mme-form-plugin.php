@@ -30,6 +30,7 @@ final class MME_Form_Plugin
         MME_Form_Admin::instance()->boot();
         MME_Form_Submissions::instance()->boot();
         MME_Form_Updater::instance()->boot();
+        MME_Form_Abilities::instance()->boot();
     }
 
     public function maybe_rename_legacy_form(): void
