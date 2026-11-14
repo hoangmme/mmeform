@@ -1223,3 +1223,104 @@
   border: none !important;
   border-radius: 0 !important;
 }
+/* ------------------------------------------------------------------
+ * v0.7 UX: nhãn dễ đọc, lỗi ngay dưới ô, form lên trước trên mobile
+ * ------------------------------------------------------------------ */
+
+/* Nhãn chữ thường: chữ HOA cỡ nhỏ làm dấu tiếng Việt khó đọc */
+.mme-form-field > label {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Lỗi nhập liệu ngay dưới ô */
+.mme-form-field.has-error input:not([type="radio"]),
+.mme-form-field.has-error textarea,
+.mme-form-field.has-error select,
+.mme-form-field.has-error .iti input {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.mme-form-field.has-error .mme-radio-option {
+  border-color: #fca5a5;
+}
+
+.mme-field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 6px 0 0;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.mme-field-error::before {
+  content: "!";
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: #fff;
+  background: #ef4444;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.mme-field-error[hidden] {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  /* Bố cục 2 cột trên mobile/tablet: tiêu đề → form → lợi ích → liên hệ,
+     để khách thấy ô nhập ngay thay vì phải cuộn qua cả khối giới thiệu */
+  .mme-layout-grid .mme-area-left {
+    display: contents;
+  }
+
+  .mme-layout-grid {
+    row-gap: 28px;
+  }
+
+  .mme-layout-grid .mme-area-heading {
+    order: 1;
+  }
+
+  .mme-layout-grid .mme-area-form,
+  .mme-layout-right .mme-area-form {
+    order: 2;
+  }
+
+  .mme-layout-grid .mme-area-trust {
+    order: 3;
+    margin-top: 0;
+  }
+
+  .mme-layout-grid .mme-area-contact {
+    order: 4;
+    margin-top: 0;
+  }
+
+  .mme-layout-grid .mme-area-trust:empty,
+  .mme-layout-grid .mme-area-trust:not(:has(li)) {
+    display: none;
+  }
+}
+
+@media (max-width: 639px) {
+  /* Dưới 16px iPhone tự phóng to trang khi chạm vào ô nhập */
+  .mme-form-field input:not([type="radio"]),
+  .mme-form-field textarea,
+  .mme-form-field select {
+    font-size: 16px;
+  }
+}

@@ -22,6 +22,8 @@
   - White-Label Client Deployment & Form Naming: Renamed WordPress Admin menu labels and default post title from "MME Form" / "Form tư vấn MME" to neutral Vietnamese "Form liên hệ" (with sub-menus: "Tất cả Form", "Thêm Form mới", "Dữ liệu gửi"). Initialized default form copy and email to clean generic contact text and `get_option('admin_email')`. Added auto-migration `maybe_rename_legacy_form()` to seamlessly rename legacy default forms on existing client sites.
   - Borderless Phone Country Code (intl-tel-input): Completely reset borders, outlines, box-shadows, and background on `.iti__selected-country` and `.iti__country-container` to remove the inner grey border around the flag.
   - Fixed settings persistence: Ensured `field_placeholder_color` and OTP settings are properly sanitized and persisted in `save_form()`.
+  - (v0.6.5) Updater đồng bộ với MMe Elementor Kit: luồng cập nhật chuẩn của WordPress (header Version trên nhánh main, inject vào update_plugins, popup changelog từ readme.txt, đổi tên thư mục zip về thư mục đang cài, Plugin_Upgrader thay cả thư mục). Ability MCP `mme-form/check-update`, `mme-form/update-plugin` (meta.mcp.public). Phát hành = tăng Version + MME_FORM_VERSION + changelog readme.txt rồi push main.
+  - (v0.7.0) Trình sửa form một khung nhiều tab + xem trước trực tiếp (POST trường/cài đặt chưa lưu tới `?mme_form_embed=ID` với nonce `mme_form_preview_{ID}`; renderer nhận `preview_fields` / `preview_settings`, form có `data-preview` không gửi). `save_form()` dùng chung `sanitize_fields_input()` / `sanitize_settings_input()` với xem trước. Thẻ trường, bộ màu nhanh, tab Nhúng. Form ngoài site: lỗi dưới từng ô, form lên trước trên mobile, nhãn chữ thường. Dữ liệu gửi: lọc theo form + xuất CSV.
 
 - **Operational Constraints:**
   - Seamless backward compatibility with existing shortcodes `[mme_form id="..."]` and `[mme_form_fields id="..."]`.
@@ -44,7 +46,7 @@
   - Done: White-labeling CPT menu and default post title to "Form liên hệ" and submissions menu to "Dữ liệu gửi" for client installations.
   - Done: Fix Google Apps Script Webhook reporting false failure on HTTP 302, force IPv4 cURL to fix VPS IPv6 timeouts, and display detailed integration error diagnostics in Quick View.
   - Done (v0.6.0): MMeAuth (Zalo) verification replaces email OTP, async integrations + retry, global settings, release-based updater, legacy file cleanup, removed leaked debug/test scripts and `.env` from the repo.
-  - Current Focus: Review & push v0.6.0, then publish GitHub Release `v0.6.0`.
+  - Done (v0.6.5–0.7.0): updater theo chuẩn WordPress + MCP, làm lại UX/UI admin và form ngoài site.
   - Next: Deploy MMeAuth gateway (`/Users/hoji/Documents/code/mmeauth/server`) at auth.mme.vn, register client sites, then enable per form.
 
 - **Flags (Drift/Critical/Entropy):** None.

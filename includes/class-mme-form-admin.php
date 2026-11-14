@@ -31,9 +31,11 @@ final class MME_Form_Admin
         add_action('wp_ajax_mme_twenty_check_fields', array($this, 'ajax_twenty_check_fields'));
         add_action('wp_ajax_mme_submission_quick_view', array($this, 'ajax_submission_quick_view'));
         add_action('wp_ajax_mme_submission_retry', array($this, 'ajax_submission_retry'));
+        add_action('restrict_manage_posts', array($this, 'render_submission_filters'), 10, 2);
+        add_action('pre_get_posts', array($this, 'filter_submissions_query'));
+        add_action('load-edit.php', array($this, 'maybe_export_submissions'));
         add_action('admin_menu', array($this, 'register_settings_page'));
         add_action('admin_post_mme_form_save_global', array($this, 'save_global_settings'));
-        add_action('admin_footer', array($this, 'render_preview_modal'));
         add_action('admin_footer', array($this, 'render_submission_quick_view_modal'));
         add_filter('plugin_row_meta', array($this, 'plugin_row_meta'), 10, 2);
         add_filter('admin_footer_text', array($this, 'admin_footer_text'), 11);
@@ -74,10 +76,8 @@ final class MME_Form_Admin
 
     public function register_meta_boxes(): void
     {
-        add_meta_box('mme-form-fields', __('Form fields', 'mme-form'), array($this, 'render_fields_box'), 'mme_form', 'normal', 'high');
-        add_meta_box('mme-form-appearance', 'Giao diện & Cài đặt Form (Tách biệt Form Thường và Chỉ Form)', array($this, 'render_appearance_box'), 'mme_form', 'normal', 'default');
-        add_meta_box('mme-form-integrations', __('Integrations', 'mme-form'), array($this, 'render_integrations_box'), 'mme_form', 'normal', 'default');
-        add_meta_box('mme-form-embed', __('Publish & embed', 'mme-form'), array($this, 'render_embed_box'), 'mme_form', 'side', 'high');
+        add_meta_box('mme-form-editor', 'Trình sửa form', array($this, 'render_editor_box'), 'mme_form', 'normal', 'high');
+        add_meta_box('mme-form-embed', 'Xem trước & nhúng', array($this, 'render_embed_box'), 'mme_form', 'side', 'high');
         add_meta_box('mme-form-submission-data', __('Submission data', 'mme-form'), array($this, 'render_submission_box'), 'mme_form_submission', 'normal', 'high');
     }
 
@@ -87,19 +87,12 @@ final class MME_Form_Admin
         $fields = is_array($fields) && $fields ? $fields : MME_Form_Plugin::default_fields();
         wp_nonce_field('mme_form_save', 'mme_form_nonce');
         ?>
-        <p class="description">Text, email, phone, textarea, dropdown và radio. Kéo thả bằng nút ⋮⋮ để đổi thứ tự.</p>
+        <p class="mme-pane-intro">Các ô khách sẽ điền. Kéo <span aria-hidden="true">⋮⋮</span> để đổi thứ tự; "Tên biến" là khoá gửi sang Google Sheets / CRM.</p>
         <div id="mme-form-builder" data-fields="<?php echo esc_attr(wp_json_encode($fields)); ?>">
             <input type="hidden" id="mme-form-fields-json" name="mme_form_fields_json" value="<?php echo esc_attr(wp_json_encode($fields)); ?>">
-            <table class="widefat striped mme-fields-table">
-                <thead>
-                    <tr>
-                        <th></th><th>Nhãn</th><th>Tên field</th><th>Độ rộng</th><th>Loại</th><th>Placeholder / options</th><th>Bắt buộc</th><th></th>
-                    </tr>
-                </thead>
-                <tbody id="mme-fields-body"></tbody>
-            </table>
-            <div style="margin-top: 15px; display: flex; gap: 10px; align-items: center;">
-                <button type="button" class="button button-secondary" id="mme-add-field">+ Thêm field</button>
+            <div id="mme-fields-body" class="mme-fcards"></div>
+            <div class="mme-fields-actions">
+                <button type="button" class="button button-primary" id="mme-add-field"><span class="dashicons dashicons-plus-alt2"></span> Thêm trường</button>
                 <button type="button" class="button button-link" id="mme-import-json-btn">Import JSON (Nâng cao)</button>
                 <button type="button" class="button button-link" id="mme-copy-ai-prompt-builder-btn" style="color: #007cba; font-weight: 600;">✨ Copy Prompt cho AI code web</button>
                 <span id="mme-copy-ai-prompt-builder-status" style="color: #10b981; font-weight: 600; display: none;">✔ Đã copy Prompt!</span>
@@ -135,249 +128,336 @@ final class MME_Form_Admin
         <?php
     }
 
-    public function render_appearance_box(WP_Post $post): void
+    /**
+     * Trình sửa form: một khung có tab (Trường · Giao diện · Bố cục 2 cột · Chống spam · Tích hợp · Nhúng)
+     * và khung xem trước trực tiếp bên phải, cập nhật theo thay đổi chưa lưu.
+     */
+    public function render_editor_box(WP_Post $post): void
+    {
+        $tabs = array(
+            'fields' => array('Trường', 'dashicons-feedback'),
+            'design' => array('Giao diện', 'dashicons-art'),
+            'layout' => array('Bố cục 2 cột', 'dashicons-columns'),
+            'protect' => array('Chống spam', 'dashicons-shield'),
+            'integrations' => array('Tích hợp', 'dashicons-randomize'),
+            'embed' => array('Nhúng', 'dashicons-editor-code'),
+        );
+        $preview_url = add_query_arg(array('mme_form_embed' => $post->ID, 'in_modal' => '1'), home_url('/'));
+        ?>
+        <div class="mme-editor" data-preview-url="<?php echo esc_url($preview_url); ?>" data-preview-nonce="<?php echo esc_attr(wp_create_nonce('mme_form_preview_' . $post->ID)); ?>">
+            <div class="mme-editor__main">
+                <div class="mme-editor__bar">
+                    <nav class="mme-editor__tabs" role="tablist" aria-label="Phần cài đặt form">
+                        <?php foreach ($tabs as $key => $tab) : ?>
+                            <button type="button" role="tab" class="mme-editor__tab<?php echo $key === 'fields' ? ' is-active' : ''; ?>" data-pane="<?php echo esc_attr($key); ?>" aria-selected="<?php echo $key === 'fields' ? 'true' : 'false'; ?>">
+                                <span class="dashicons <?php echo esc_attr($tab[1]); ?>" aria-hidden="true"></span><?php echo esc_html($tab[0]); ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </nav>
+                    <div class="mme-editor__actions">
+                        <button type="button" class="button mme-preview-toggle" data-mme-preview-toggle aria-pressed="false">
+                            <span class="dashicons dashicons-visibility" aria-hidden="true"></span><span class="mme-preview-toggle__label">Xem trước</span>
+                        </button>
+                        <button type="button" class="button button-primary mme-editor-save" data-mme-save>Lưu</button>
+                    </div>
+                </div>
+
+                <section class="mme-editor__pane is-active" data-pane="fields" role="tabpanel"><?php $this->render_fields_box($post); ?></section>
+                <section class="mme-editor__pane" data-pane="design" role="tabpanel" hidden><?php $this->render_design_pane($post); ?></section>
+                <section class="mme-editor__pane" data-pane="layout" role="tabpanel" hidden><?php $this->render_layout_pane($post); ?></section>
+                <section class="mme-editor__pane" data-pane="protect" role="tabpanel" hidden><?php $this->render_protect_pane($post); ?></section>
+                <section class="mme-editor__pane" data-pane="integrations" role="tabpanel" hidden><?php $this->render_integrations_box($post); ?></section>
+                <section class="mme-editor__pane" data-pane="embed" role="tabpanel" hidden><?php $this->render_embed_pane($post); ?></section>
+            </div>
+
+            <aside class="mme-editor__preview" aria-label="Xem trước trực tiếp" hidden>
+                <div class="mme-preview-bar">
+                    <div class="mme-seg" data-mme-preview-opt="mode">
+                        <button type="button" class="is-active" data-value="full">Đầy đủ</button>
+                        <button type="button" data-value="fields_only">Chỉ form</button>
+                    </div>
+                    <div class="mme-seg" data-mme-preview-opt="device">
+                        <button type="button" class="is-active" data-value="desktop" title="Máy tính"><span class="dashicons dashicons-desktop"></span></button>
+                        <button type="button" data-value="mobile" title="Điện thoại"><span class="dashicons dashicons-smartphone"></span></button>
+                    </div>
+                    <div class="mme-seg" data-mme-preview-opt="bg">
+                        <button type="button" class="is-active" data-value="white" title="Nền trắng"><i style="background:#fff"></i></button>
+                        <button type="button" data-value="gray" title="Nền xám"><i style="background:#e2e8f0"></i></button>
+                        <button type="button" data-value="dark" title="Nền tối"><i style="background:#0f172a"></i></button>
+                    </div>
+                </div>
+                <div class="mme-preview-stage">
+                    <iframe name="mme-live-preview" class="mme-preview-frame" title="Xem trước form" src="about:blank"></iframe>
+                    <span class="mme-preview-loading" aria-hidden="true"></span>
+                </div>
+                <p class="mme-preview-note">Theo thay đổi chưa lưu. Form trong khung này không gửi đi.</p>
+            </aside>
+        </div>
+        <?php
+    }
+
+    /** Bộ màu nhanh: giá trị điền vào các ô màu của tab Giao diện. */
+    private function color_presets(): array
+    {
+        return array(
+            'light' => array('label' => 'Sáng', 'swatch' => array('#ffffff', '#f8fafc'), 'values' => array(
+                'fields_card_style' => 'card', 'form_card_bg' => '#ffffff', 'form_card_border' => '#e2e8f0',
+                'field_bg_color' => '#f8fafc', 'field_border_color' => '#e2e8f0', 'field_label_color' => '#1e293b',
+                'field_placeholder_color' => '#94a3b8', 'field_text_color' => '#1e293b', 'form_heading_color' => '#0f172a',
+            )),
+            'soft' => array('label' => 'Xám nhạt', 'swatch' => array('#f1f5f9', '#ffffff'), 'values' => array(
+                'fields_card_style' => 'card', 'form_card_bg' => '#f1f5f9', 'form_card_border' => '#e2e8f0',
+                'field_bg_color' => '#ffffff', 'field_border_color' => '#dbe3ec', 'field_label_color' => '#1e293b',
+                'field_placeholder_color' => '#94a3b8', 'field_text_color' => '#0f172a', 'form_heading_color' => '#0f172a',
+            )),
+            'dark' => array('label' => 'Tối', 'swatch' => array('#0f172a', '#1e293b'), 'values' => array(
+                'fields_card_style' => 'card', 'form_card_bg' => '#0f172a', 'form_card_border' => '#1e293b',
+                'field_bg_color' => '#1e293b', 'field_border_color' => '#334155', 'field_label_color' => '#e2e8f0',
+                'field_placeholder_color' => '#64748b', 'field_text_color' => '#f8fafc', 'form_heading_color' => '#f8fafc',
+            )),
+            'transparent' => array('label' => 'Hoà vào nền', 'swatch' => array('transparent', '#ffffff'), 'values' => array(
+                'fields_card_style' => 'transparent', 'field_bg_color' => '#ffffff', 'field_border_color' => '#dbe3ec',
+                'field_label_color' => '#1e293b', 'field_placeholder_color' => '#94a3b8', 'field_text_color' => '#0f172a',
+                'form_heading_color' => '#0f172a',
+            )),
+        );
+    }
+
+    private function select_options(string $key, string $label, string $value, array $options, string $id = '', string $class = ''): void
+    {
+        echo '<label class="mme-admin-field' . ($class ? ' ' . esc_attr($class) : '') . '"><span>' . esc_html($label) . '</span><select name="mme_settings[' . esc_attr($key) . ']"' . ($id ? ' id="' . esc_attr($id) . '"' : '') . '>';
+        foreach ($options as $opt_val => $opt_label) {
+            echo '<option value="' . esc_attr($opt_val) . '" ' . selected($value, $opt_val, false) . '>' . esc_html($opt_label) . '</option>';
+        }
+        echo '</select></label>';
+    }
+
+    public function render_design_pane(WP_Post $post): void
     {
         $settings = $this->settings($post->ID);
         ?>
-        <div class="mme-admin-tabs-wrapper">
-            <nav class="nav-tab-wrapper mme-tab-nav" style="margin-bottom: 20px; border-bottom: 1px solid #c3c4c7; background: #f8fafc; padding: 4px 6px 0; border-radius: 4px 4px 0 0;">
-                <a href="#mme-tab-fields-only" class="nav-tab nav-tab-active" data-tab="mme-tab-fields-only" style="font-weight: 600;">
-                    <span class="dashicons dashicons-forms" style="margin-top: 3px;"></span> Shortcode Chỉ Form ([mme_form_fields])
-                </a>
-                <a href="#mme-tab-full" class="nav-tab" data-tab="mme-tab-full" style="font-weight: 600;">
-                    <span class="dashicons dashicons-layout" style="margin-top: 3px;"></span> Form Thường (Đầy đủ 2 Cột)
-                </a>
-                <a href="#mme-tab-styles" class="nav-tab" data-tab="mme-tab-styles" style="font-weight: 600;">
-                    <span class="dashicons dashicons-admin-generic" style="margin-top: 3px;"></span> Phông chữ & Nâng cao
-                </a>
-                <a href="#mme-tab-auth" class="nav-tab" data-tab="mme-tab-auth" style="font-weight: 600; color: #0284c7;">
-                    <span class="dashicons dashicons-shield" style="margin-top: 3px;"></span> Xác minh SĐT (Zalo)
-                </a>
-            </nav>
+        <p class="mme-pane-intro">Áp dụng cho cả shortcode đầy đủ <code>[mme_form id="<?php echo esc_attr((string) $post->ID); ?>"]</code> và chỉ form <code>[mme_form_fields id="<?php echo esc_attr((string) $post->ID); ?>"]</code>.</p>
 
-            <!-- TAB 1: Shortcode Chỉ Form -->
-            <div id="mme-tab-fields-only" class="mme-tab-pane is-active">
-                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 10px 14px; margin-bottom: 18px; border-radius: 0 4px 4px 0; font-size: 13px; color: #1e3a8a;">
-                    🎯 <strong>Cài đặt cho Shortcode Chỉ Form:</strong> Tùy biến toàn bộ phần Form (tiêu đề, khung card, màu nền ô nhập liệu, màu chữ nhãn và nút gửi) khi nhúng qua mã <code>[mme_form_fields id="<?php echo esc_attr($post->ID); ?>"]</code>.
-                </div>
-                
-                <div class="mme-admin-grid">
-                    <!-- 1. TIÊU ĐỀ FORM -->
-                    <h4 class="mme-admin-span-2" style="margin: 5px 0 0; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; font-size: 14px; color: #0f172a; display: flex; align-items: center; gap: 6px;">
-                        <span class="dashicons dashicons-heading" style="color: #3b82f6;"></span> 1. Tiêu đề Form
-                    </h4>
+        <div class="mme-section">
+            <h3 class="mme-section__title">Bộ màu nhanh</h3>
+            <div class="mme-presets" role="group" aria-label="Bộ màu nhanh">
+                <?php foreach ($this->color_presets() as $key => $preset) : ?>
+                    <button type="button" class="mme-preset" data-mme-preset="<?php echo esc_attr(wp_json_encode($preset['values'])); ?>">
+                        <span class="mme-preset__swatch" style="--a:<?php echo esc_attr($preset['swatch'][0]); ?>;--b:<?php echo esc_attr($preset['swatch'][1]); ?>"></span>
+                        <?php echo esc_html($preset['label']); ?>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+            <div class="mme-admin-grid">
+                <?php $this->color_input('button_color', 'Màu chính (nút gửi)', $settings['button_color']); ?>
+                <?php $this->color_input('button_text_color', 'Màu chữ trên nút', $settings['button_text_color']); ?>
+            </div>
+        </div>
 
-                    <label class="mme-admin-field">
-                        <span>Hiện Tiêu đề Form</span>
-                        <select name="mme_settings[fields_show_heading]" id="mme-fields-show-heading">
-                            <option value="yes" <?php selected($settings['fields_show_heading'] ?? 'yes', 'yes'); ?>>Hiện tiêu đề Form</option>
-                            <option value="no" <?php selected($settings['fields_show_heading'] ?? 'yes', 'no'); ?>>Ẩn tiêu đề Form</option>
-                        </select>
-                    </label>
-
-                    <?php $this->color_input('form_heading_color', 'Màu chữ tiêu đề Form', $settings['form_heading_color'] ?? '#0f172a'); ?>
-
-                    <div class="mme-admin-span-2" id="mme-heading-text-wrapper">
-                        <?php $this->text_input('form_heading', 'Nội dung tiêu đề Form (Ví dụ: Đăng ký tư vấn ngay)', $settings['form_heading']); ?>
-                    </div>
-
-                    <!-- 2. KIỂU DÁNG KHUNG FORM CARD -->
-                    <h4 class="mme-admin-span-2" style="margin: 18px 0 0; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; font-size: 14px; color: #0f172a; display: flex; align-items: center; gap: 6px;">
-                        <span class="dashicons dashicons-layout" style="color: #3b82f6;"></span> 2. Kiểu dáng khung Form Card
-                    </h4>
-
-                    <label class="mme-admin-field mme-admin-span-2">
-                        <span>Kiểu dáng khung Form</span>
-                        <select name="mme_settings[fields_card_style]" id="mme-fields-card-style">
-                            <option value="card" <?php selected($settings['fields_card_style'] ?? 'card', 'card'); ?>>Thẻ Form Card (Khung riêng biệt - Có màu nền, bo góc, bóng & padding)</option>
-                            <option value="transparent" <?php selected($settings['fields_card_style'] ?? 'card', 'transparent'); ?>>Trong suốt phẳng (Không nền, không viền thẻ - Tự hoà vào màu nền Section)</option>
-                        </select>
-                    </label>
-
-                    <!-- Khối cài đặt Thẻ Card (chỉ áp dụng khi chọn Có khung Card) -->
-                    <div id="mme-card-options-group" class="mme-admin-span-2 mme-admin-grid" style="padding: 14px 16px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; margin: 0 0 10px;">
-                        <div class="mme-admin-span-2" style="font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px;">
-                            ⚙️ Tùy biến khung Form Card (Chỉ có hiệu lực khi chọn Kiểu dáng Thẻ Form Card):
-                        </div>
-                        <?php $this->color_input('form_card_bg', 'Màu nền Form Card (Ví dụ: Nền trắng #ffffff)', $settings['form_card_bg']); ?>
-                        <?php $this->color_input('form_card_border', 'Màu viền Form Card', $settings['form_card_border']); ?>
-
-                        <label class="mme-admin-field">
-                            <span>Độ rộng tối đa Form Card (Max Width)</span>
-                            <select name="mme_settings[form_max_width]">
-                                <option value="680px" <?php selected($settings['form_max_width'] ?? '680px', '680px'); ?>>Tiêu chuẩn (680px)</option>
-                                <option value="540px" <?php selected($settings['form_max_width'] ?? '680px', '540px'); ?>>Gọn gàng (540px)</option>
-                                <option value="800px" <?php selected($settings['form_max_width'] ?? '680px', '800px'); ?>>Rộng rãi (800px)</option>
-                                <option value="100%" <?php selected($settings['form_max_width'] ?? '680px', '100%'); ?>>100% (Tự co giãn theo khung chứa)</option>
-                            </select>
-                        </label>
-
-                        <label class="mme-admin-field">
-                            <span>Bo góc Form Card (Border Radius)</span>
-                            <select name="mme_settings[form_border_radius]">
-                                <option value="default" <?php selected($settings['form_border_radius'] ?? 'default', 'default'); ?>>Bo tròn nhiều (28px)</option>
-                                <option value="medium" <?php selected($settings['form_border_radius'] ?? 'default', 'medium'); ?>>Bo tròn vừa (16px)</option>
-                                <option value="small" <?php selected($settings['form_border_radius'] ?? 'default', 'small'); ?>>Bo nhẹ (8px)</option>
-                                <option value="none" <?php selected($settings['form_border_radius'] ?? 'default', 'none'); ?>>Vuông vức (0px)</option>
-                                <option value="full" <?php selected($settings['form_border_radius'] ?? 'default', 'full'); ?>>Siêu bo tròn (36px)</option>
-                            </select>
-                        </label>
-
-                        <label class="mme-admin-field">
-                            <span>Đổ bóng Form Card (Shadow)</span>
-                            <select name="mme_settings[form_shadow]">
-                                <option value="default" <?php selected($settings['form_shadow'] ?? 'default', 'default'); ?>>Đổ bóng mềm (Mặc định)</option>
-                                <option value="none" <?php selected($settings['form_shadow'] ?? 'default', 'none'); ?>>Không đổ bóng (Phẳng)</option>
-                                <option value="subtle" <?php selected($settings['form_shadow'] ?? 'default', 'subtle'); ?>>Đổ bóng nhẹ</option>
-                                <option value="strong" <?php selected($settings['form_shadow'] ?? 'default', 'strong'); ?>>Đổ bóng nổi bật</option>
-                            </select>
-                        </label>
-
-                        <label class="mme-admin-field">
-                            <span>Khoảng cách viền bên trong (Padding)</span>
-                            <select name="mme_settings[form_padding]">
-                                <option value="default" <?php selected($settings['form_padding'] ?? 'default', 'default'); ?>>Tiêu chuẩn (40px / Mobile 24px)</option>
-                                <option value="spacious" <?php selected($settings['form_padding'] ?? 'default', 'spacious'); ?>>Rộng rãi (56px / Mobile 32px)</option>
-                                <option value="compact" <?php selected($settings['form_padding'] ?? 'default', 'compact'); ?>>Vừa phải (28px / Mobile 20px)</option>
-                                <option value="small" <?php selected($settings['form_padding'] ?? 'default', 'small'); ?>>Nhỏ gọn (16px / Mobile 14px)</option>
-                                <option value="none" <?php selected($settings['form_padding'] ?? 'default', 'none'); ?>>Không padding (0px - Phẳng)</option>
-                            </select>
-                        </label>
-                    </div>
-
-                    <!-- 3. MÀU SẮC CÁC Ô NHẬP LIỆU (FIELD INPUTS) -->
-                    <h4 class="mme-admin-span-2" style="margin: 18px 0 0; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; font-size: 14px; color: #0f172a; display: flex; align-items: center; gap: 6px;">
-                        <span class="dashicons dashicons-edit" style="color: #3b82f6;"></span> 3. Màu sắc các ô nhập liệu (Field Inputs)
-                    </h4>
-
-                    <?php $this->color_input('field_bg_color', 'Màu nền ô nhập liệu (Field Background)', $settings['field_bg_color']); ?>
-                    <?php $this->color_input('field_border_color', 'Màu viền ô nhập liệu', $settings['field_border_color']); ?>
-                    <?php $this->color_input('field_label_color', 'Màu chữ nhãn trường (Field Title / Label)', $settings['field_label_color'] ?? '#1e293b'); ?>
-                    <?php $this->color_input('field_placeholder_color', 'Màu chữ gợi ý ô nhập (Placeholder)', $settings['field_placeholder_color'] ?? '#94a3b8'); ?>
-                    <?php $this->color_input('field_text_color', 'Màu chữ khi nhập nội dung', $settings['field_text_color']); ?>
-
-                    <!-- 4. NÚT GỬI FORM (SUBMIT BUTTON) -->
-                    <h4 class="mme-admin-span-2" style="margin: 18px 0 0; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; font-size: 14px; color: #0f172a; display: flex; align-items: center; gap: 6px;">
-                        <span class="dashicons dashicons-button" style="color: #3b82f6;"></span> 4. Nút bấm gửi Form (Submit Button)
-                    </h4>
-
-                    <div class="mme-admin-span-2">
-                        <?php $this->text_input('button_text', 'Chữ trên nút gửi (Submit)', $settings['button_text']); ?>
-                    </div>
-                    <?php $this->color_input('button_color', 'Màu nút bấm chính (Primary)', $settings['button_color']); ?>
-                    <?php $this->color_input('button_text_color', 'Màu chữ trên nút bấm', $settings['button_text_color']); ?>
-
-                    <!-- 5. THÔNG BÁO THÀNH CÔNG & CHÂN FORM -->
-                    <h4 class="mme-admin-span-2" style="margin: 18px 0 0; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; font-size: 14px; color: #0f172a; display: flex; align-items: center; gap: 6px;">
-                        <span class="dashicons dashicons-yes-alt" style="color: #10b981;"></span> 5. Thông báo khi gửi thành công & Chân Form
-                    </h4>
-
-                    <div class="mme-admin-span-2">
-                        <?php $this->text_input('success_message', 'Thông báo khi gửi thành công (Success Message)', $settings['success_message']); ?>
-                    </div>
-
-                    <div class="mme-admin-span-2">
-                        <?php $this->text_input('form_footer', 'Dòng chữ bảo mật dưới cùng Form (Footer)', $settings['form_footer']); ?>
-                    </div>
+        <div class="mme-section">
+            <h3 class="mme-section__title">Tiêu đề form</h3>
+            <div class="mme-admin-grid">
+                <?php $this->select_options('fields_show_heading', 'Hiển thị', $settings['fields_show_heading'] ?? 'yes', array('yes' => 'Hiện tiêu đề', 'no' => 'Ẩn tiêu đề'), 'mme-fields-show-heading'); ?>
+                <?php $this->color_input('form_heading_color', 'Màu tiêu đề', $settings['form_heading_color'] ?? '#0f172a'); ?>
+                <div class="mme-admin-span-2" id="mme-heading-text-wrapper">
+                    <?php $this->text_input('form_heading', 'Nội dung tiêu đề', $settings['form_heading']); ?>
                 </div>
             </div>
+        </div>
 
-            <!-- TAB 2: Form Thường (Đầy đủ 2 Cột / Landing Page) -->
-            <div id="mme-tab-full" class="mme-tab-pane" style="display: none;">
-                <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 10px 14px; margin-bottom: 18px; border-radius: 0 4px 4px 0; font-size: 13px; color: #166534;">
-                    📄 <strong>Cài đặt cho Form Thường (Giao diện Đầy đủ 2 Cột):</strong> Cấu hình cột thông tin giới thiệu và màu nền trang khi dùng shortcode đầy đủ <code>[mme_form id="<?php echo esc_attr($post->ID); ?>"]</code> hoặc trang Landing Page.<br>
-                    <span style="font-size: 12px; color: #15803d; display: inline-block; margin-top: 4px;">💡 <em>Khung Form (tiêu đề form, màu nền ô nhập field, nút bấm, thông báo thành công...) dùng chung và được tùy chỉnh tại Tab <strong>Shortcode Chỉ Form</strong>.</em></span>
-                </div>
-                <div class="mme-admin-grid">
-                    <label class="mme-admin-field mme-admin-span-2">
-                        <span>Vị trí cột thông tin giới thiệu</span>
-                        <select name="mme_settings[image_position]">
-                            <?php foreach (array('left' => 'Bên trái (Mặc định)', 'right' => 'Bên phải', 'top' => 'Bên trên', 'hidden' => 'Ẩn cột thông tin') as $value => $label) : ?>
-                                <option value="<?php echo esc_attr($value); ?>" <?php selected($settings['image_position'], $value); ?>><?php echo esc_html($label); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </label>
+        <div class="mme-section">
+            <h3 class="mme-section__title">Khung form</h3>
+            <div class="mme-admin-grid">
+                <?php $this->select_options('fields_card_style', 'Kiểu khung', $settings['fields_card_style'] ?? 'card', array('card' => 'Thẻ riêng (nền, viền, bo góc, bóng)', 'transparent' => 'Trong suốt (hoà vào nền section)'), 'mme-fields-card-style', 'mme-admin-span-2'); ?>
+            </div>
+            <div id="mme-card-options-group" class="mme-admin-grid mme-subgroup">
+                <?php $this->color_input('form_card_bg', 'Màu nền khung', $settings['form_card_bg']); ?>
+                <?php $this->color_input('form_card_border', 'Màu viền khung', $settings['form_card_border']); ?>
+                <?php $this->select_options('form_max_width', 'Độ rộng tối đa', $settings['form_max_width'] ?? '680px', array('540px' => 'Gọn (540px)', '680px' => 'Tiêu chuẩn (680px)', '800px' => 'Rộng (800px)', '100%' => 'Theo khung chứa (100%)')); ?>
+                <?php $this->select_options('form_border_radius', 'Bo góc', $settings['form_border_radius'] ?? 'default', array('none' => 'Vuông (0)', 'small' => 'Nhẹ (8px)', 'medium' => 'Vừa (16px)', 'default' => 'Nhiều (28px)', 'full' => 'Rất nhiều (36px)')); ?>
+                <?php $this->select_options('form_shadow', 'Đổ bóng', $settings['form_shadow'] ?? 'default', array('none' => 'Không', 'subtle' => 'Nhẹ', 'default' => 'Mềm (mặc định)', 'strong' => 'Nổi bật')); ?>
+                <?php $this->select_options('form_padding', 'Khoảng đệm trong', $settings['form_padding'] ?? 'default', array('none' => 'Không (0)', 'small' => 'Nhỏ (16 / 14px)', 'compact' => 'Vừa (28 / 20px)', 'default' => 'Tiêu chuẩn (40 / 24px)', 'spacious' => 'Rộng (56 / 32px)')); ?>
+            </div>
+        </div>
 
-                    <?php $this->text_input('kicker', 'Chữ nhỏ trên đầu (Badge Kicker)', $settings['kicker']); ?>
-                    <?php $this->text_input('heading', 'Tiêu đề chính cột trái', $settings['heading']); ?>
-                    <?php $this->text_input('subheading', 'Tiêu đề phụ cột trái (chữ gradient)', $settings['subheading']); ?>
-                    <?php $this->text_input('description', 'Mô tả ngắn cột trái', $settings['description']); ?>
-                    <?php $this->text_input('hotline_label', 'Nhãn Hotline', $settings['hotline_label']); ?>
-                    <?php $this->text_input('hotline', 'Số điện thoại Hotline', $settings['hotline']); ?>
-                    <?php $this->text_input('email_label', 'Nhãn Email hỗ trợ', $settings['email_label']); ?>
-                    <?php $this->text_input('support_email', 'Địa chỉ Email hỗ trợ', $settings['support_email']); ?>
-                    <?php $this->text_input('social_label', 'Nhãn Mạng xã hội', $settings['social_label']); ?>
-                    
-                    <label class="mme-admin-field mme-admin-span-2">
-                        <span>Điểm nổi bật / Cam kết (mỗi dòng một mục, tối đa 4)</span>
-                        <textarea name="mme_settings[trust_items]" rows="4"><?php echo esc_textarea(implode("\n", (array) $settings['trust_items'])); ?></textarea>
-                    </label>
-
-                    <?php $this->url_input('facebook_url', 'Facebook URL', $settings['facebook_url']); ?>
-                    <?php $this->url_input('zalo_url', 'Zalo URL', $settings['zalo_url']); ?>
-                    <?php $this->url_input('linkedin_url', 'LinkedIn URL', $settings['linkedin_url']); ?>
-                    <?php $this->url_input('tiktok_url', 'TikTok URL', $settings['tiktok_url']); ?>
-                    <?php $this->url_input('youtube_url', 'YouTube URL', $settings['youtube_url']); ?>
-                    <?php $this->color_input('background_color', 'Màu nền ngoài cùng toàn trang (Wrapper)', $settings['background_color']); ?>
-                    <?php $this->color_input('text_color', 'Màu chữ ngoài cùng cột giới thiệu', $settings['text_color']); ?>
+        <div class="mme-section">
+            <h3 class="mme-section__title">Nút gửi &amp; thông báo</h3>
+            <div class="mme-admin-grid">
+                <?php $this->text_input('button_text', 'Chữ trên nút gửi', $settings['button_text']); ?>
+                <?php $this->text_input('form_footer', 'Dòng chữ dưới nút (bảo mật)', $settings['form_footer']); ?>
+                <div class="mme-admin-span-2">
+                    <?php $this->text_input('success_message', 'Thông báo khi gửi thành công', $settings['success_message']); ?>
                 </div>
             </div>
+        </div>
 
-            <!-- TAB 3: Phông chữ & Nâng cao -->
-            <div id="mme-tab-styles" class="mme-tab-pane" style="display: none;">
-                <div style="background: #faf5ff; border-left: 4px solid #a855f7; padding: 10px 14px; margin-bottom: 18px; border-radius: 0 4px 4px 0; font-size: 13px; color: #581c87;">
-                    ⚙️ <strong>Phông chữ & Cài đặt bổ sung:</strong> Tùy chỉnh font chữ, khoảng cách giữa các ô nhập và màu sắc bổ trợ.
-                </div>
-                <div class="mme-admin-grid">
-                    <label class="mme-admin-field">
-                        <span>Font chữ Form</span>
-                        <select name="mme_settings[font_family]">
-                            <?php foreach (array('system' => 'System / Inter', 'inter' => 'Inter', 'arial' => 'Arial', 'georgia' => 'Georgia') as $value => $label) : ?>
-                                <option value="<?php echo esc_attr($value); ?>" <?php selected($settings['font_family'], $value); ?>><?php echo esc_html($label); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </label>
-
-                    <label class="mme-admin-field">
-                        <span>Khoảng cách giữa các ô nhập (Field Gap)</span>
-                        <select name="mme_settings[form_field_gap]">
-                            <option value="default" <?php selected($settings['form_field_gap'] ?? 'default', 'default'); ?>>Tiêu chuẩn (20px)</option>
-                            <option value="compact" <?php selected($settings['form_field_gap'] ?? 'default', 'compact'); ?>>Gọn gàng (14px)</option>
-                            <option value="small" <?php selected($settings['form_field_gap'] ?? 'default', 'small'); ?>>Nhỏ gọn (10px)</option>
-                            <option value="relaxed" <?php selected($settings['form_field_gap'] ?? 'default', 'relaxed'); ?>>Rộng rãi (28px)</option>
-                        </select>
-                    </label>
-
-                    <?php $this->color_input('secondary_color', 'Màu phụ (Secondary / Badge)', $settings['secondary_color']); ?>
-                    <?php $this->color_input('accent_color', 'Màu nhấn (Accent)', $settings['accent_color']); ?>
-                </div>
+        <div class="mme-section">
+            <h3 class="mme-section__title">Chữ &amp; khoảng cách</h3>
+            <div class="mme-admin-grid">
+                <?php $this->select_options('font_family', 'Font chữ', $settings['font_family'], array('system' => 'Theo hệ thống', 'inter' => 'Inter', 'arial' => 'Arial', 'georgia' => 'Georgia')); ?>
+                <?php $this->select_options('form_field_gap', 'Khoảng cách giữa các ô', $settings['form_field_gap'] ?? 'default', array('small' => 'Nhỏ (10px)', 'compact' => 'Gọn (14px)', 'default' => 'Tiêu chuẩn (20px)', 'relaxed' => 'Rộng (28px)')); ?>
             </div>
+        </div>
 
-            <!-- TAB 4: Xác thực người gửi bằng MMeAuth (Zalo) -->
-            <div id="mme-tab-auth" class="mme-tab-pane" style="display: none;">
-                <?php $site_key = MME_Form_Plugin::global_settings()['mmeauth_site_key']; ?>
-                <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 10px 14px; margin-bottom: 18px; border-radius: 0 4px 4px 0; font-size: 13px; color: #1e3a8a;">
-                    🛡️ <strong>Xác minh SĐT qua Zalo (MMeAuth):</strong> khách bấm "Xác minh bằng Zalo" → quét QR (máy tính) hoặc mở Zalo (điện thoại) → xác nhận 1 chạm.
-                    Số điện thoại được Zalo xác minh và điền sẵn — chặn lead ảo, không cần SMTP hay mã OTP.
-                </div>
-                <div class="mme-admin-grid">
-                    <div class="mme-admin-span-2">
-                        <?php $this->toggle('mmeauth_enabled', 'Bắt buộc xác minh SĐT qua Zalo trước khi gửi form', $settings['mmeauth_enabled'] ?? 'no'); ?>
-                    </div>
-                    <p class="description mme-admin-span-2" style="margin: 0;">
-                        <?php if ($site_key) : ?>
-                            ✅ Site key MMeAuth: <code><?php echo esc_html($site_key); ?></code> (<a href="<?php echo esc_url(admin_url('edit.php?post_type=mme_form&page=mme-form-settings')); ?>">Tích hợp chung</a>).
-                        <?php else : ?>
-                            ⚠️ Chưa có site key MMeAuth — điền ở <a href="<?php echo esc_url(admin_url('edit.php?post_type=mme_form&page=mme-form-settings')); ?>">Tích hợp chung</a>. Khi chưa có, form vẫn gửi bình thường (không bắt xác minh).
-                        <?php endif; ?>
-                    </p>
-                    <p class="description mme-admin-span-2" style="margin: 8px 0 0;">
-                        📥 <strong>Nhận lead "Nhận tư vấn" từ Mini App vào form này:</strong> đặt URL dưới đây làm <code>LEAD_WEBHOOK_URL</code> của gateway MMeAuth.
-                        Lead sẽ hiện trong Submissions và chạy webhook/Twenty/Pancake của form này.<br>
-                        <code style="user-select: all;"><?php echo esc_html(rest_url('mme-form/v1/mmeauth-lead/' . $post->ID)); ?></code>
-                    </p>
-                </div>
+        <details class="mme-section mme-details">
+            <summary class="mme-section__title">Tuỳ chỉnh màu chi tiết</summary>
+            <div class="mme-admin-grid mme-admin-grid--3">
+                <?php $this->color_input('field_bg_color', 'Nền ô nhập', $settings['field_bg_color']); ?>
+                <?php $this->color_input('field_border_color', 'Viền ô nhập', $settings['field_border_color']); ?>
+                <?php $this->color_input('field_text_color', 'Chữ khi nhập', $settings['field_text_color']); ?>
+                <?php $this->color_input('field_label_color', 'Nhãn ô nhập', $settings['field_label_color'] ?? '#1e293b'); ?>
+                <?php $this->color_input('field_placeholder_color', 'Chữ gợi ý (placeholder)', $settings['field_placeholder_color'] ?? '#94a3b8'); ?>
+                <?php $this->color_input('accent_color', 'Màu nhấn', $settings['accent_color']); ?>
+                <?php $this->color_input('secondary_color', 'Màu phụ (dấu tích, nhãn nhỏ)', $settings['secondary_color']); ?>
             </div>
+        </details>
+        <?php
+    }
+
+    public function render_layout_pane(WP_Post $post): void
+    {
+        $settings = $this->settings($post->ID);
+        ?>
+        <p class="mme-pane-intro">Chỉ dùng cho shortcode đầy đủ <code>[mme_form id="<?php echo esc_attr((string) $post->ID); ?>"]</code>: cột giới thiệu đặt cạnh form. Trên điện thoại form luôn hiện ngay dưới tiêu đề.</p>
+
+        <div class="mme-section">
+            <h3 class="mme-section__title">Vị trí</h3>
+            <div class="mme-admin-grid">
+                <?php $this->select_options('image_position', 'Cột giới thiệu', $settings['image_position'], array('left' => 'Bên trái form', 'right' => 'Bên phải form', 'top' => 'Phía trên form', 'hidden' => 'Ẩn (chỉ còn form)')); ?>
+            </div>
+        </div>
+
+        <div class="mme-section">
+            <h3 class="mme-section__title">Tiêu đề &amp; mô tả</h3>
+            <div class="mme-admin-grid">
+                <?php $this->text_input('kicker', 'Nhãn nhỏ phía trên', $settings['kicker']); ?>
+                <?php $this->text_input('heading', 'Tiêu đề', $settings['heading']); ?>
+                <?php $this->text_input('subheading', 'Tiêu đề phụ (chữ màu)', $settings['subheading']); ?>
+                <?php $this->text_input('description', 'Mô tả ngắn', $settings['description']); ?>
+                <label class="mme-admin-field mme-admin-span-2">
+                    <span>Điểm nổi bật (mỗi dòng một ý, tối đa 4)</span>
+                    <textarea name="mme_settings[trust_items]" rows="4"><?php echo esc_textarea(implode("\n", (array) $settings['trust_items'])); ?></textarea>
+                </label>
+            </div>
+        </div>
+
+        <div class="mme-section">
+            <h3 class="mme-section__title">Liên hệ trực tiếp</h3>
+            <div class="mme-admin-grid">
+                <?php $this->text_input('hotline_label', 'Nhãn hotline', $settings['hotline_label']); ?>
+                <?php $this->text_input('hotline', 'Số hotline', $settings['hotline']); ?>
+                <?php $this->text_input('email_label', 'Nhãn email', $settings['email_label']); ?>
+                <?php $this->text_input('support_email', 'Email hỗ trợ', $settings['support_email']); ?>
+            </div>
+        </div>
+
+        <details class="mme-section mme-details">
+            <summary class="mme-section__title">Mạng xã hội &amp; màu nền</summary>
+            <div class="mme-admin-grid">
+                <?php $this->text_input('social_label', 'Nhãn mạng xã hội', $settings['social_label']); ?>
+                <?php $this->url_input('facebook_url', 'Facebook', $settings['facebook_url']); ?>
+                <?php $this->url_input('zalo_url', 'Zalo', $settings['zalo_url']); ?>
+                <?php $this->url_input('linkedin_url', 'LinkedIn', $settings['linkedin_url']); ?>
+                <?php $this->url_input('tiktok_url', 'TikTok', $settings['tiktok_url']); ?>
+                <?php $this->url_input('youtube_url', 'YouTube', $settings['youtube_url']); ?>
+                <?php $this->color_input('background_color', 'Màu nền toàn khối', $settings['background_color']); ?>
+                <?php $this->color_input('text_color', 'Màu chữ cột giới thiệu', $settings['text_color']); ?>
+            </div>
+        </details>
+        <?php
+    }
+
+    public function render_protect_pane(WP_Post $post): void
+    {
+        $settings = $this->settings($post->ID);
+        $site_key = MME_Form_Plugin::global_settings()['mmeauth_site_key'];
+        $settings_url = admin_url('edit.php?post_type=mme_form&page=mme-form-settings');
+        ?>
+        <p class="mme-pane-intro">Chặn lead ảo: khách bấm "Xác minh bằng Zalo", quét QR (máy tính) hoặc mở Zalo (điện thoại) rồi xác nhận một chạm. Số điện thoại do Zalo xác minh được điền sẵn, không cần OTP.</p>
+
+        <div class="mme-section">
+            <?php $this->toggle('mmeauth_enabled', 'Bắt buộc xác minh số điện thoại qua Zalo trước khi gửi', $settings['mmeauth_enabled'] ?? 'no'); ?>
+            <div class="mme-callout <?php echo $site_key ? 'is-ok' : 'is-warn'; ?>">
+                <?php if ($site_key) : ?>
+                    Site key MMeAuth: <code><?php echo esc_html($site_key); ?></code> · <a href="<?php echo esc_url($settings_url); ?>">Tích hợp chung</a>
+                <?php else : ?>
+                    Chưa có site key MMeAuth. Điền ở <a href="<?php echo esc_url($settings_url); ?>">Tích hợp chung</a>; khi chưa có, form vẫn gửi bình thường.
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <div class="mme-section">
+            <h3 class="mme-section__title">Nhận lead từ Mini App</h3>
+            <p class="description">Đặt URL này làm <code>LEAD_WEBHOOK_URL</code> của gateway MMeAuth. Lead "Nhận tư vấn" sẽ vào Dữ liệu gửi và chạy tích hợp của form này.</p>
+            <div class="mme-copy-row">
+                <input type="text" class="widefat code" id="mme-mmeauth-lead-url" value="<?php echo esc_attr(rest_url('mme-form/v1/mmeauth-lead/' . $post->ID)); ?>" readonly>
+                <button type="button" class="button mme-copy-btn" data-target="mme-mmeauth-lead-url">Copy</button>
+            </div>
+        </div>
+
+        <div class="mme-section">
+            <h3 class="mme-section__title">Luôn bật sẵn</h3>
+            <ul class="mme-checklist">
+                <li>Ô bẫy ẩn (honeypot) chặn bot tự điền</li>
+                <li>Chặn gửi quá nhanh và gửi trùng trong 2 phút</li>
+                <li>Kiểm tra số điện thoại theo quốc gia</li>
+            </ul>
+        </div>
+        <?php
+    }
+
+    public function render_embed_pane(WP_Post $post): void
+    {
+        $endpoint = add_query_arg('mme_form_embed', $post->ID, home_url('/'));
+        $script = sprintf(
+            '<script src="%s" data-mme-form="%d" data-endpoint="%s"></script>',
+            MME_FORM_URL . 'assets/embed.js?ver=' . MME_FORM_VERSION,
+            $post->ID,
+            $endpoint
+        );
+        $codes = array(
+            'mme-embed-fields' => array('Chỉ form (dùng nhiều nhất)', '[mme_form_fields id="' . $post->ID . '"]', 'Chèn vào bất kỳ section nào của trang, Elementor, Gutenberg…'),
+            'mme-embed-full' => array('Đầy đủ (cột giới thiệu + form)', '[mme_form id="' . $post->ID . '"]', 'Dùng cho trang liên hệ hoặc landing page.'),
+        );
+        $attributes = array(
+            'card="no"' => 'Bỏ khung thẻ, form hoà vào nền section',
+            'heading="no"' => 'Ẩn tiêu đề form',
+            'bg="#ffffff"' => 'Màu nền khung form',
+            'field_bg="#f8fafc"' => 'Màu nền ô nhập',
+            'label_color="#1e293b"' => 'Màu nhãn ô nhập',
+            'placeholder_color="#94a3b8"' => 'Màu chữ gợi ý',
+        );
+        ?>
+        <p class="mme-pane-intro">Copy mã phù hợp rồi dán vào nơi muốn hiện form.</p>
+
+        <?php foreach ($codes as $id => $code) : ?>
+            <div class="mme-section">
+                <h3 class="mme-section__title"><?php echo esc_html($code[0]); ?></h3>
+                <div class="mme-copy-row">
+                    <input type="text" class="widefat code" id="<?php echo esc_attr($id); ?>" value="<?php echo esc_attr($code[1]); ?>" readonly>
+                    <button type="button" class="button mme-copy-btn" data-target="<?php echo esc_attr($id); ?>">Copy</button>
+                </div>
+                <p class="description"><?php echo esc_html($code[2]); ?></p>
+            </div>
+        <?php endforeach; ?>
+
+        <div class="mme-section">
+            <h3 class="mme-section__title">Tuỳ chọn thêm cho shortcode</h3>
+            <table class="mme-attr-table">
+                <?php foreach ($attributes as $attr => $help) : ?>
+                    <tr><td><code><?php echo esc_html($attr); ?></code></td><td><?php echo esc_html($help); ?></td></tr>
+                <?php endforeach; ?>
+            </table>
+            <p class="description">Ví dụ: <code>[mme_form_fields id="<?php echo esc_attr((string) $post->ID); ?>" card="no" heading="no"]</code></p>
+        </div>
+
+        <div class="mme-section">
+            <h3 class="mme-section__title">Nhúng vào website khác</h3>
+            <textarea class="widefat code" id="mme-embed-script" rows="3" readonly><?php echo esc_textarea($script); ?></textarea>
+            <div class="mme-copy-row mme-copy-row--end">
+                <button type="button" class="button mme-copy-btn" data-target="mme-embed-script">Copy mã nhúng</button>
+            </div>
+            <p class="description">Form tự co giãn chiều cao, giữ URL trang gốc và UTM, gửi sự kiện về GTM / Meta Pixel của website đó.</p>
         </div>
         <?php
     }
@@ -539,87 +619,29 @@ function doPost(e) {
 
     public function render_embed_box(WP_Post $post): void
     {
-        $shortcode_full = '[mme_form id="' . $post->ID . '"]';
         $shortcode_fields = '[mme_form_fields id="' . $post->ID . '"]';
-        $endpoint = add_query_arg('mme_form_embed', $post->ID, home_url('/'));
         $preview_full_url = add_query_arg(array('mme_form_embed' => $post->ID, 'mode' => 'full'), home_url('/'));
-        $preview_fields_url = add_query_arg(array('mme_form_embed' => $post->ID, 'mode' => 'fields_only'), home_url('/'));
-        $script = sprintf(
-            '<script src="%s" data-mme-form="%d" data-endpoint="%s"></script>',
-            MME_FORM_URL . 'assets/embed.js?ver=' . MME_FORM_VERSION,
-            $post->ID,
-            $endpoint
-        );
-        ?>
-        <div style="margin-bottom: 14px;">
-            <button type="button" id="mme-open-preview-modal-btn" class="button button-primary button-large" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; padding: 6px 12px; margin-bottom: 8px;">
-                <span class="dashicons dashicons-visibility" style="margin-top: 2px;"></span> Xem trước Form (Live Preview)
-            </button>
-            <div style="display: flex; gap: 6px;">
-                <a href="<?php echo esc_url($preview_full_url); ?>" target="_blank" class="button button-secondary" style="flex: 1; text-align: center; font-size: 11px; padding: 0 4px;" title="Mở preview bản đầy đủ trong tab mới">Xem Full tab mới ↗</a>
-                <a href="<?php echo esc_url($preview_fields_url); ?>" target="_blank" class="button button-secondary" style="flex: 1; text-align: center; font-size: 11px; padding: 0 4px;" title="Mở preview chỉ form trong tab mới">Xem Chỉ Form ↗</a>
-            </div>
-        </div>
-
-        <div class="mme-shortcode-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <strong>Shortcode (Đầy đủ)</strong>
-                <span class="mme-copy-feedback" id="mme-copied-full">Đã chép!</span>
-            </div>
-            <div style="display: flex; gap: 6px;">
-                <input type="text" class="widefat code" id="mme-shortcode-full-input" value="<?php echo esc_attr($shortcode_full); ?>" readonly>
-                <button type="button" class="button mme-copy-btn" data-target="mme-shortcode-full-input" data-feedback="mme-copied-full">Copy</button>
-            </div>
-            <p class="description" style="margin: 4px 0 0; font-size: 11px;">Hiển thị trọn vẹn cả cột giới thiệu & form.</p>
-        </div>
-
-        <div class="mme-shortcode-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <strong>Shortcode (Chỉ Form)</strong>
-                <span class="mme-copy-feedback" id="mme-copied-fields">Đã chép!</span>
-            </div>
-            <div style="display: flex; gap: 6px;">
-                <input type="text" class="widefat code" id="mme-shortcode-fields-input" value="<?php echo esc_attr($shortcode_fields); ?>" readonly>
-                <button type="button" class="button mme-copy-btn" data-target="mme-shortcode-fields-input" data-feedback="mme-copied-fields">Copy</button>
-            </div>
-            <p class="description" style="margin: 4px 0 0; font-size: 11px; color: #475569;">
-                Chỉ hiện khung Form (thích hợp chèn vào mọi Section).<br>
-                <strong>Tùy chọn thêm vào shortcode:</strong><br>
-                • <code>card="yes|no"</code> : Giữ nền Form Card (mặc định "yes") hoặc trong suốt ("no")<br>
-                • <code>bg="#ffffff"</code> : Màu nền của cả khung Form Card<br>
-                • <code>field_bg="#f8fafc"</code> : Màu nền các ô nhập liệu (Field Input)<br>
-                • <code>label_color="#1e293b"</code> : Màu chữ nhãn trường (Field Title / Label)<br>
-                • <code>placeholder_color="#94a3b8"</code> : Màu chữ gợi ý trong ô nhập (Placeholder)<br>
-                • <code>heading="yes|no"</code> : Ẩn hoặc hiện tiêu đề Form
-            </p>
-        </div>
-
-        <div class="mme-shortcode-card" style="margin-bottom: 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <strong>Embed website khác</strong>
-                <span class="mme-copy-feedback" id="mme-copied-embed">Đã chép!</span>
-            </div>
-            <textarea class="widefat code" id="mme-embed-script-input" rows="4" readonly><?php echo esc_textarea($script); ?></textarea>
-            <div style="margin-top: 6px; text-align: right;">
-                <button type="button" class="button mme-copy-btn" data-target="mme-embed-script-input" data-feedback="mme-copied-embed">Copy mã Embed</button>
-            </div>
-        </div>
-
-        <?php
         $build_info = MME_Form_Plugin::get_build_info();
         ?>
-        <div class="mme-shortcode-card" style="margin-top: 14px; margin-bottom: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; font-size: 11px; color: #475569; line-height: 1.5;">
-            <div style="font-weight: 600; color: #0f172a; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
-                <span>📦 Phiên bản MME Form</span>
-                <span style="background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px; font-weight: 600;">v<?php echo esc_html($build_info['version']); ?></span>
+        <button type="button" class="button button-primary button-large mme-side-preview" data-mme-preview-toggle aria-pressed="false">
+            <span class="dashicons dashicons-visibility" aria-hidden="true"></span> Xem trước trực tiếp
+        </button>
+        <a class="mme-side-link" href="<?php echo esc_url($preview_full_url); ?>" target="_blank" rel="noopener">Mở bản đã lưu trong tab mới ↗</a>
+
+        <div class="mme-side-block">
+            <strong>Shortcode chỉ form</strong>
+            <div class="mme-copy-row">
+                <input type="text" class="widefat code" id="mme-side-shortcode" value="<?php echo esc_attr($shortcode_fields); ?>" readonly>
+                <button type="button" class="button mme-copy-btn" data-target="mme-side-shortcode">Copy</button>
             </div>
-            <div>🕒 Cập nhật: <strong><?php echo esc_html($build_info['date']); ?></strong></div>
-            <?php if (!empty($build_info['commit'])) : ?>
-                <div>🔖 Git Commit: <code><?php echo esc_html($build_info['commit']); ?></code> (<?php echo esc_html($build_info['branch']); ?>)</div>
+            <a href="#" class="mme-side-link" data-mme-open-pane="embed">Mã khác &amp; tuỳ chọn →</a>
+        </div>
+
+        <div class="mme-side-version">
+            <span>MME Form <strong>v<?php echo esc_html($build_info['version']); ?></strong></span>
+            <?php if (current_user_can('update_plugins')) : ?>
+                <a href="#" class="mme-force-update-btn">Kiểm tra cập nhật</a>
             <?php endif; ?>
-            <button type="button" class="button button-secondary button-small mme-force-update-btn" style="width: 100%; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                <span class="dashicons dashicons-update" style="margin-top: 2px;"></span> Cập nhật bản mới từ GitHub
-            </button>
         </div>
         <?php
     }
@@ -978,12 +1000,12 @@ function doPost(e) {
         };
         $site_origin = untrailingslashit((string) wp_parse_url(home_url(), PHP_URL_SCHEME) . '://' . wp_parse_url(home_url(), PHP_URL_HOST) . (wp_parse_url(home_url(), PHP_URL_PORT) ? ':' . wp_parse_url(home_url(), PHP_URL_PORT) : ''));
         ?>
-        <div class="wrap">
-            <h1>Tích hợp chung — Form liên hệ</h1>
+        <div class="wrap mme-settings-page">
+            <h1>Tích hợp chung</h1>
             <?php if (!empty($_GET['updated'])) : ?>
                 <div class="notice notice-success is-dismissible"><p>Đã lưu cài đặt.</p></div>
             <?php endif; ?>
-            <p>Giá trị ở đây dùng cho <strong>mọi form</strong>. Form nào điền riêng thì dùng giá trị riêng của form đó.</p>
+            <p class="mme-settings-intro">Giá trị ở đây dùng cho <strong>mọi form</strong>. Form nào điền riêng trong tab Tích hợp thì dùng giá trị riêng của form đó.</p>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="mme_form_save_global">
                 <?php wp_nonce_field('mme_form_save_global'); ?>
@@ -1088,7 +1110,27 @@ function doPost(e) {
             return;
         }
 
-        $raw_fields = isset($_POST['mme_form_fields_json']) ? wp_unslash($_POST['mme_form_fields_json']) : '[]';
+        $fields = $this->sanitize_fields_input(isset($_POST['mme_form_fields_json']) ? wp_unslash($_POST['mme_form_fields_json']) : '[]');
+        update_post_meta($post_id, '_mme_form_fields', $fields ?: MME_Form_Plugin::default_fields());
+
+        $submitted = isset($_POST['mme_settings']) && is_array($_POST['mme_settings'])
+            ? wp_unslash($_POST['mme_settings'])
+            : array();
+        update_post_meta($post_id, '_mme_form_settings', $this->sanitize_settings_input($submitted, $this->settings($post_id)));
+    }
+
+    /** Cài đặt đã lưu của form (chưa gộp Tích hợp chung). */
+    public function stored_settings(int $post_id): array
+    {
+        return $this->settings($post_id);
+    }
+
+    /**
+     * JSON các trường từ trình sửa form → mảng trường đã làm sạch.
+     * Dùng khi lưu form và khi xem trước trực tiếp.
+     */
+    public function sanitize_fields_input(string $raw_fields): array
+    {
         $decoded_fields = json_decode($raw_fields, true);
         $fields = array();
         if (is_array($decoded_fields)) {
@@ -1121,15 +1163,18 @@ function doPost(e) {
                 );
             }
         }
-        update_post_meta($post_id, '_mme_form_fields', $fields ?: MME_Form_Plugin::default_fields());
+        return $fields;
+    }
 
-        $submitted = isset($_POST['mme_settings']) && is_array($_POST['mme_settings'])
-            ? wp_unslash($_POST['mme_settings'])
-            : array();
-        $current = $this->settings($post_id);
+    /**
+     * mme_settings[] từ trình sửa form → cài đặt đã làm sạch.
+     * $current giữ secret và giá trị không có trong lần gửi này.
+     */
+    public function sanitize_settings_input(array $submitted, array $current): array
+    {
         $settings = MME_Form_Plugin::default_settings();
 
-        foreach (array('kicker', 'heading', 'subheading', 'description', 'form_heading', 'form_footer', 'hotline', 'support_email', 'social_label', 'button_text', 'success_message', 'chatbot_tenant', 'chatbot_button_text') as $key) {
+        foreach (array('kicker', 'heading', 'subheading', 'description', 'form_heading', 'form_footer', 'hotline_label', 'hotline', 'email_label', 'support_email', 'social_label', 'button_text', 'success_message', 'chatbot_tenant', 'chatbot_button_text') as $key) {
             $settings[$key] = sanitize_text_field($submitted[$key] ?? $current[$key] ?? '');
         }
         foreach (array('facebook_url', 'zalo_url', 'linkedin_url', 'tiktok_url', 'youtube_url', 'chatbot_base_url', 'webhook_url', 'twenty_base_url') as $key) {
@@ -1180,7 +1225,7 @@ function doPost(e) {
         $settings['pancake_workspace_id'] = sanitize_text_field($submitted['pancake_workspace_id'] ?? '');
         $settings['pancake_table'] = in_array($submitted['pancake_table'] ?? '', array('contact', 'lead'), true) ? $submitted['pancake_table'] : 'contact';
 
-        update_post_meta($post_id, '_mme_form_settings', $settings);
+        return $settings;
     }
 
     public function form_columns(array $columns): array
@@ -1234,6 +1279,168 @@ function doPost(e) {
             $url = esc_url($payload['source']['url'] ?? '');
             echo $url ? '<a href="' . $url . '" target="_blank" rel="noopener noreferrer">' . esc_html(wp_parse_url($url, PHP_URL_HOST) ?: $url) . '</a>' : '—';
         }
+    }
+
+    /** Lọc dữ liệu gửi theo form + nút xuất CSV (theo đúng bộ lọc đang chọn). */
+    public function render_submission_filters($post_type, $which = 'top'): void
+    {
+        if ($post_type !== 'mme_form_submission' || $which !== 'top') {
+            return;
+        }
+        $current = isset($_GET['mme_form_filter']) ? absint($_GET['mme_form_filter']) : 0;
+        $forms = get_posts(array('post_type' => 'mme_form', 'post_status' => 'any', 'posts_per_page' => 100, 'orderby' => 'title', 'order' => 'ASC'));
+        echo '<label class="screen-reader-text" for="mme-form-filter">Lọc theo form</label>';
+        echo '<select name="mme_form_filter" id="mme-form-filter"><option value="0">Tất cả form</option>';
+        foreach ($forms as $form) {
+            echo '<option value="' . esc_attr((string) $form->ID) . '" ' . selected($current, $form->ID, false) . '>' . esc_html($form->post_title ?: '#' . $form->ID) . '</option>';
+        }
+        echo '</select>';
+        if (current_user_can('edit_posts')) {
+            wp_nonce_field('mme_export_csv', 'mme_csv_nonce', false);
+            echo ' <button type="submit" name="mme_export_csv" value="1" class="button mme-export-btn"><span class="dashicons dashicons-download" aria-hidden="true"></span> Xuất CSV</button>';
+        }
+    }
+
+    public function filter_submissions_query(WP_Query $query): void
+    {
+        if (!is_admin() || !$query->is_main_query() || $query->get('post_type') !== 'mme_form_submission') {
+            return;
+        }
+        $form_id = isset($_GET['mme_form_filter']) ? absint($_GET['mme_form_filter']) : 0;
+        if ($form_id) {
+            $query->set('meta_query', array(array('key' => '_mme_submission_form_id', 'value' => $form_id)));
+        }
+    }
+
+    /**
+     * Xuất dữ liệu gửi ra CSV (UTF-8 có BOM để Excel đọc đúng tiếng Việt), theo bộ lọc form / tháng / tìm kiếm.
+     */
+    public function maybe_export_submissions(): void
+    {
+        if (empty($_GET['mme_export_csv']) || ($_GET['post_type'] ?? '') !== 'mme_form_submission') {
+            return;
+        }
+        if (!current_user_can('edit_posts') || !isset($_GET['mme_csv_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['mme_csv_nonce'])), 'mme_export_csv')) {
+            wp_die('Bạn không có quyền xuất dữ liệu.');
+        }
+
+        $args = array(
+            'post_type' => 'mme_form_submission',
+            'post_status' => 'publish',
+            'posts_per_page' => 500,
+            'orderby' => 'date',
+            'order' => 'DESC',
+            'fields' => 'ids',
+            'no_found_rows' => true,
+        );
+        $form_id = isset($_GET['mme_form_filter']) ? absint($_GET['mme_form_filter']) : 0;
+        if ($form_id) {
+            $args['meta_query'] = array(array('key' => '_mme_submission_form_id', 'value' => $form_id));
+        }
+        if (!empty($_GET['m'])) {
+            $args['m'] = absint($_GET['m']);
+        }
+        if (!empty($_GET['s'])) {
+            $args['s'] = sanitize_text_field(wp_unslash($_GET['s']));
+        }
+
+        // Gom tất cả submission + nhãn của từng trường (theo cấu hình form) để làm cột
+        $rows = array();
+        $field_labels = array();
+        $form_labels = array();
+        for ($page = 1; ; $page++) {
+            $ids = get_posts($args + array('paged' => $page));
+            foreach ($ids as $id) {
+                $payload = (array) get_post_meta($id, '_mme_submission_payload', true);
+                $fid = absint($payload['form']['id'] ?? get_post_meta($id, '_mme_submission_form_id', true));
+                if ($fid && !isset($form_labels[$fid])) {
+                    $form_labels[$fid] = array();
+                    foreach ((array) get_post_meta($fid, '_mme_form_fields', true) as $field) {
+                        if (!empty($field['name'])) {
+                            $form_labels[$fid][$field['name']] = $field['label'] ?? $field['name'];
+                        }
+                    }
+                }
+                foreach ((array) ($payload['fields'] ?? array()) as $key => $value) {
+                    if (!isset($field_labels[$key])) {
+                        $field_labels[$key] = $form_labels[$fid][$key] ?? $key;
+                    }
+                }
+                $dispatch = (array) get_post_meta($id, '_mme_submission_dispatch', true);
+                $rows[] = array('id' => $id, 'payload' => $payload, 'status' => $dispatch['status'] ?? '');
+            }
+            if (count($ids) < $args['posts_per_page']) {
+                break;
+            }
+        }
+
+        // Bỏ cột trường trùng với Họ tên / SĐT / Email (đã có cột riêng)
+        foreach (array_keys($field_labels) as $key) {
+            $duplicate = true;
+            foreach ($rows as $row) {
+                $value = (string) ($row['payload']['fields'][$key] ?? '');
+                $contact = array_map('strval', (array) ($row['payload']['contact'] ?? array()));
+                if ($value !== '' && !in_array($value, array($contact['name'] ?? '', $contact['phone'] ?? '', $contact['email'] ?? ''), true)) {
+                    $duplicate = false;
+                    break;
+                }
+            }
+            if ($duplicate) {
+                unset($field_labels[$key]);
+            }
+        }
+
+        $channels = array('mme_form' => 'Website', 'zalo_miniapp' => 'Zalo Mini App');
+        $utm_keys = array('utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid');
+        $header = array_merge(
+            array('Thời gian', 'Form', 'Kênh', 'Họ tên', 'Số điện thoại', 'Email'),
+            array_values($field_labels),
+            array('Trang gửi', 'Trang trước đó'),
+            $utm_keys,
+            array('Tích hợp')
+        );
+
+        $filename = 'du-lieu-gui-' . ($form_id ? $form_id . '-' : '') . wp_date('Y-m-d-His') . '.csv';
+        nocache_headers();
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+        fputcsv($out, $header);
+        foreach ($rows as $row) {
+            $p = $row['payload'];
+            $contact = (array) ($p['contact'] ?? array());
+            $fields = (array) ($p['fields'] ?? array());
+            $line = array(
+                get_the_date('Y-m-d H:i:s', $row['id']),
+                $p['form']['title'] ?? '',
+                $channels[$p['channel'] ?? ''] ?? ($p['channel'] ?? ''),
+                $contact['name'] ?? '',
+                $contact['phone'] ?? '',
+                $contact['email'] ?? '',
+            );
+            foreach (array_keys($field_labels) as $key) {
+                $value = $fields[$key] ?? '';
+                $line[] = is_array($value) ? implode(', ', $value) : (string) $value;
+            }
+            $line[] = $p['source']['url'] ?? '';
+            $line[] = $p['source']['referrer'] ?? '';
+            foreach ($utm_keys as $key) {
+                $line[] = $p['attribution'][$key] ?? '';
+            }
+            $line[] = $row['status'];
+            // Chặn công thức Excel trong dữ liệu khách nhập; số điện thoại dạng +84… vẫn giữ nguyên
+            $line = array_map(static function ($cell) {
+                $cell = (string) $cell;
+                $formula = preg_match('/^[=@\t\r]/', $cell)
+                    || (preg_match('/^[+\-]/', $cell) && !preg_match('/^[+\-][\d\s().]*$/', $cell));
+                return $formula ? "'" . $cell : $cell;
+            }, $line);
+            fputcsv($out, $line);
+        }
+        fclose($out);
+        exit;
     }
 
     public function remove_submission_quick_actions(array $actions, WP_Post $post): array
@@ -1461,55 +1668,6 @@ function doPost(e) {
     private function toggle(string $key, string $label, string $value): void
     {
         echo '<label class="mme-admin-toggle"><input type="hidden" name="mme_settings[' . esc_attr($key) . ']" value="no"><input type="checkbox" name="mme_settings[' . esc_attr($key) . ']" value="yes" ' . checked($value, 'yes', false) . '><span>' . esc_html($label) . '</span></label>';
-    }
-
-    public function render_preview_modal(): void
-    {
-        if (!function_exists('get_current_screen')) {
-            return;
-        }
-
-        $screen = get_current_screen();
-        if (!$screen || $screen->post_type !== 'mme_form' || $screen->base !== 'post') {
-            return;
-        }
-
-        global $post;
-        if (!$post || $post->post_type !== 'mme_form') {
-            return;
-        }
-
-        $form_id = $post->ID;
-        $endpoint = add_query_arg(array('mme_form_embed' => $form_id, 'in_modal' => '1'), home_url('/'));
-        ?>
-        <div id="mme-preview-modal" class="mme-modal" style="display: none;" aria-hidden="true" role="dialog" aria-modal="true" data-base-url="<?php echo esc_url($endpoint); ?>">
-            <div class="mme-modal-backdrop"></div>
-            <div class="mme-modal-container">
-                <div class="mme-modal-header">
-                    <div class="mme-modal-title">
-                        <span class="dashicons dashicons-visibility" style="margin-top: 2px;"></span>
-                        <span>Xem trước giao diện Form (Live Preview)</span>
-                    </div>
-                    <div class="mme-modal-toolbar">
-                        <div class="mme-modal-toggle-group mme-mode-toggles">
-                            <button type="button" class="button mme-btn-mode is-active" data-mode="full">Giao diện Đầy đủ</button>
-                            <button type="button" class="button mme-btn-mode" data-mode="fields_only">Chỉ Form ([mme_form_fields])</button>
-                        </div>
-                        <div class="mme-modal-toggle-group mme-bg-toggles">
-                            <span class="mme-bg-label">Thử nền:</span>
-                            <button type="button" class="button mme-btn-bg is-active" data-bg="white" title="Nền trắng">Trắng</button>
-                            <button type="button" class="button mme-btn-bg" data-bg="gray" title="Nền xám">Xám</button>
-                            <button type="button" class="button mme-btn-bg" data-bg="dark" title="Nền tối (Dark)">Tối</button>
-                        </div>
-                    </div>
-                    <button type="button" class="mme-modal-close" aria-label="Đóng">&times;</button>
-                </div>
-                <div class="mme-modal-body" id="mme-modal-body-wrapper">
-                    <iframe id="mme-preview-iframe" src="about:blank" title="MME Form Preview" frameborder="0"></iframe>
-                </div>
-            </div>
-        </div>
-        <?php
     }
 
     public function plugin_row_meta($meta = array(), $file = '')

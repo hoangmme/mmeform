@@ -3,7 +3,7 @@ Contributors: mme
 Tags: forms, crm, chatbot, webhook, google sheets, twenty
 Requires at least: 6.4
 Requires PHP: 7.4
-Stable tag: 0.6.5
+Stable tag: 0.7.0
 License: GPLv2 or later
 
 Compact WordPress form builder with external embeds, URL attribution, MME Chatbot, Google Sheets webhooks, Twenty CRM and Pancake CRM sync, and Zalo phone verification (MMeAuth).
@@ -20,6 +20,18 @@ Compact WordPress form builder with external embeds, URL attribution, MME Chatbo
 Updates come from github.com/hoangmme/mmeform (branch main) through the normal WordPress update screen. To release: raise "Version" and MME_FORM_VERSION in mme-form.php, add a changelog entry below, push to main.
 
 == Changelog ==
+
+= 0.7.0 =
+* Form ngoài site: lỗi nhập liệu hiện ngay dưới từng ô (có aria-invalid, tự cuộn tới ô sai đầu tiên) thay cho bong bóng của trình duyệt; nhãn chữ thường dễ đọc; ô nhập cỡ chữ 16px trên điện thoại để iPhone không tự phóng to.
+* Form ngoài site: trên điện thoại / tablet form hiện ngay dưới tiêu đề, phần lợi ích và liên hệ chuyển xuống dưới form.
+* Trình sửa form: gom thành một khung có tab Trường · Giao diện · Bố cục 2 cột · Chống spam · Tích hợp · Nhúng; nhớ tab đang mở.
+* Trình sửa form: xem trước trực tiếp cạnh bên theo thay đổi chưa lưu (đầy đủ / chỉ form, máy tính / điện thoại, nền trắng / xám / tối); form trong khung xem trước không gửi đi.
+* Trình sửa form: mỗi trường là một thẻ (nhãn, loại, độ rộng, bắt buộc, chữ gợi ý, lựa chọn, tên biến); hỏi lại trước khi xoá.
+* Giao diện: bộ màu nhanh Sáng / Xám nhạt / Tối / Hoà vào nền; màu chi tiết gom vào mục thu gọn; nhãn cài đặt chỉ còn tiếng Việt.
+* Nhúng: tab riêng với shortcode, bảng tuỳ chọn shortcode và mã nhúng website khác; hộp bên phải gọn lại.
+* Dữ liệu gửi: lọc theo form và Xuất CSV (UTF-8 cho Excel, theo bộ lọc form / tháng / tìm kiếm, chặn công thức Excel).
+* Đổi tên menu "Cài đặt chung" thành "Chatbot & nội dung"; trang Tích hợp chung và Chatbot & nội dung trình bày dạng thẻ.
+* Sửa: "Nhãn hotline" và "Nhãn email" không lưu được.
 
 = 0.6.5 =
 * Cập nhật theo luồng chuẩn của WordPress (giống MMe Elementor Kit): trang Plugins hiện "Có bản cập nhật", bật được tự động cập nhật, popup "Xem chi tiết" có changelog. Bản mới nhất là header Version trên nhánh main.

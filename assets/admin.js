@@ -42,94 +42,110 @@
       return input;
     }
 
+    var TYPES = [
+      ["text", "Chữ ngắn"],
+      ["tel", "Số điện thoại"],
+      ["email", "Email"],
+      ["textarea", "Đoạn văn"],
+      ["select", "Danh sách chọn"],
+      ["radio", "Chọn một (nút)"],
+      ["date", "Ngày"],
+      ["time", "Giờ"],
+    ];
+
+    function makeSelect(className, options, value, label) {
+      var select = document.createElement("select");
+      select.className = className;
+      if (label) select.setAttribute("aria-label", label);
+      options.forEach(function (option) {
+        var node = document.createElement("option");
+        node.value = option[0];
+        node.textContent = option[1];
+        node.selected = value === option[0];
+        select.appendChild(node);
+      });
+      return select;
+    }
+
+    function makeLabelled(text, control, className) {
+      var wrap = document.createElement("label");
+      wrap.className = "mme-fcard__field" + (className ? " " + className : "");
+      var span = document.createElement("span");
+      span.textContent = text;
+      wrap.appendChild(span);
+      wrap.appendChild(control);
+      return wrap;
+    }
+
+    // Mỗi trường là một thẻ: dòng trên (nhãn, loại, độ rộng, bắt buộc), dòng dưới (gợi ý / lựa chọn, tên biến)
     function createRow(field) {
-      var row = document.createElement("tr");
-      row.className = "mme-field-row";
-      row.draggable = true;
+      var row = document.createElement("div");
+      row.className = "mme-field-row mme-fcard";
 
-      var handleCell = document.createElement("td");
-      handleCell.className = "mme-drag-handle";
-      handleCell.textContent = "⋮⋮";
-      handleCell.title = "Kéo để đổi thứ tự";
+      var handle = document.createElement("span");
+      handle.className = "mme-drag-handle";
+      handle.textContent = "⋮⋮";
+      handle.title = "Kéo để đổi thứ tự";
+      handle.setAttribute("aria-hidden", "true");
 
-      var labelCell = document.createElement("td");
       var labelInput = makeInput("mme-field-label");
       labelInput.value = field.label || "";
-      labelCell.appendChild(labelInput);
+      labelInput.placeholder = "Nhãn, ví dụ: Họ và tên";
+      labelInput.setAttribute("aria-label", "Nhãn trường");
 
-      var nameCell = document.createElement("td");
-      var nameInput = makeInput("mme-field-name");
-      nameInput.value = field.name || "";
-      nameCell.appendChild(nameInput);
+      var typeSelect = makeSelect("mme-field-type", TYPES, field.type || "text", "Loại trường");
+      var widthSelect = makeSelect("mme-field-width", [["100", "Cả dòng"], ["50", "Nửa dòng"]], field.width || "100", "Độ rộng");
 
-      var widthCell = document.createElement("td");
-      var widthSelect = document.createElement("select");
-      widthSelect.className = "mme-field-width";
-      [
-        ["100", "1 cột (100%)"],
-        ["50", "2 cột (50%)"],
-      ].forEach(function (option) {
-        var node = document.createElement("option");
-        node.value = option[0];
-        node.textContent = option[1];
-        node.selected = (field.width || "100") === option[0];
-        widthSelect.appendChild(node);
+      var requiredInput = makeInput("mme-field-required", "checkbox");
+      requiredInput.checked = Boolean(field.required);
+      var requiredLabel = document.createElement("label");
+      requiredLabel.className = "mme-fcard__required";
+      requiredLabel.appendChild(requiredInput);
+      requiredLabel.appendChild(document.createTextNode("Bắt buộc"));
+
+      var removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.className = "mme-fcard__remove mme-remove-field";
+      removeButton.title = "Xoá trường";
+      removeButton.setAttribute("aria-label", "Xoá trường");
+      removeButton.innerHTML = '<span class="dashicons dashicons-trash" aria-hidden="true"></span>';
+
+      var head = document.createElement("div");
+      head.className = "mme-fcard__head";
+      [handle, labelInput, typeSelect, widthSelect, requiredLabel, removeButton].forEach(function (node) {
+        head.appendChild(node);
       });
-      widthCell.appendChild(widthSelect);
 
-      var typeCell = document.createElement("td");
-      var typeSelect = document.createElement("select");
-      typeSelect.className = "mme-field-type";
-      [
-        ["text", "Text"],
-        ["email", "Email"],
-        ["tel", "Phone"],
-        ["date", "Date"],
-        ["time", "Time"],
-        ["textarea", "Text area"],
-        ["select", "Dropdown"],
-        ["radio", "Radio"],
-      ].forEach(function (option) {
-        var node = document.createElement("option");
-        node.value = option[0];
-        node.textContent = option[1];
-        node.selected = (field.type || "text") === option[0];
-        typeSelect.appendChild(node);
-      });
-      typeCell.appendChild(typeSelect);
-
-      var detailsCell = document.createElement("td");
       var placeholderInput = makeInput("mme-field-placeholder");
-      placeholderInput.placeholder = "Placeholder";
       placeholderInput.value = field.placeholder || "";
+      placeholderInput.placeholder = "Ví dụ: Nguyễn Văn A";
       var optionsInput = document.createElement("textarea");
       optionsInput.className = "mme-field-options";
       optionsInput.rows = 3;
-      optionsInput.placeholder = "Mỗi option một dòng";
+      optionsInput.placeholder = "Mỗi lựa chọn một dòng";
       optionsInput.value = Array.isArray(field.options) ? field.options.join("\n") : "";
-      detailsCell.appendChild(placeholderInput);
-      detailsCell.appendChild(optionsInput);
+      var nameInput = makeInput("mme-field-name");
+      nameInput.value = field.name || "";
+      nameInput.placeholder = "tu_dong_tu_nhan";
 
-      var requiredCell = document.createElement("td");
-      var requiredInput = makeInput("mme-field-required", "checkbox");
-      requiredInput.checked = Boolean(field.required);
-      requiredCell.appendChild(requiredInput);
+      var placeholderWrap = makeLabelled("Chữ gợi ý trong ô", placeholderInput);
+      var optionsWrap = makeLabelled("Các lựa chọn", optionsInput, "mme-fcard__field--options");
+      var nameWrap = makeLabelled("Tên biến (Sheets / CRM)", nameInput, "mme-fcard__field--name");
 
-      var removeCell = document.createElement("td");
-      var removeButton = document.createElement("button");
-      removeButton.type = "button";
-      removeButton.className = "button-link-delete mme-remove-field";
-      removeButton.textContent = "Xóa";
-      removeCell.appendChild(removeButton);
-
-      [handleCell, labelCell, nameCell, widthCell, typeCell, detailsCell, requiredCell, removeCell].forEach(function (cell) {
-        row.appendChild(cell);
+      var bodyRow = document.createElement("div");
+      bodyRow.className = "mme-fcard__body";
+      [placeholderWrap, optionsWrap, nameWrap].forEach(function (node) {
+        bodyRow.appendChild(node);
       });
+
+      row.appendChild(head);
+      row.appendChild(bodyRow);
 
       function updateDetailsVisibility() {
         var needsOptions = typeSelect.value === "select" || typeSelect.value === "radio";
-        optionsInput.hidden = !needsOptions;
-        placeholderInput.hidden = typeSelect.value === "radio";
+        optionsWrap.hidden = !needsOptions;
+        placeholderWrap.hidden = typeSelect.value === "radio" || typeSelect.value === "date" || typeSelect.value === "time";
+        row.dataset.type = typeSelect.value;
       }
 
       labelInput.addEventListener("input", function () {
@@ -149,18 +165,23 @@
       });
       typeSelect.addEventListener("change", updateDetailsVisibility);
       removeButton.addEventListener("click", function () {
+        var label = labelInput.value || "trường này";
+        if (!window.confirm('Xoá "' + label + '"?')) return;
         row.remove();
         serialize();
       });
       row.addEventListener("input", serialize);
       row.addEventListener("change", serialize);
 
+      // Chỉ kéo được khi cầm tay nắm, để vẫn bôi chọn chữ trong ô nhập bình thường
+      handle.addEventListener("mousedown", function () { row.draggable = true; });
       row.addEventListener("dragstart", function () {
         draggedRow = row;
         row.classList.add("is-dragging");
       });
       row.addEventListener("dragend", function () {
         draggedRow = null;
+        row.draggable = false;
         row.classList.remove("is-dragging");
         serialize();
       });
@@ -192,7 +213,11 @@
             .filter(Boolean),
         };
       });
-      hidden.value = JSON.stringify(nextFields);
+      var json = JSON.stringify(nextFields);
+      if (hidden.value !== json) {
+        hidden.value = json;
+        hidden.dispatchEvent(new Event("change", { bubbles: true }));
+      }
     }
 
     fields.forEach(function (field) {
@@ -417,126 +442,185 @@
       });
     });
 
-    // Modal Live Preview Handler
-    var previewModal = document.getElementById("mme-preview-modal");
-    var openPreviewBtn = document.getElementById("mme-open-preview-modal-btn");
-    if (previewModal && openPreviewBtn) {
-      var previewIframe = document.getElementById("mme-preview-iframe");
-      var previewClose = previewModal.querySelector(".mme-modal-close");
-      var previewBackdrop = previewModal.querySelector(".mme-modal-backdrop");
-      var modeButtons = previewModal.querySelectorAll(".mme-btn-mode");
-      var bgButtons = previewModal.querySelectorAll(".mme-btn-bg");
-      var modalBody = document.getElementById("mme-modal-body-wrapper");
-
-      var currentMode = "full";
-      var currentBg = "white";
-
-      function getPreviewUrl() {
-        var base = previewModal.dataset.baseUrl || "";
-        var delim = base.indexOf("?") !== -1 ? "&" : "?";
-        return base + delim + "mode=" + currentMode + "&bg_sim=" + currentBg;
-      }
-
-      function updatePreview() {
-        if (!previewIframe) return;
-        previewIframe.src = getPreviewUrl();
-        if (modalBody) {
-          var bgColors = {
-            white: "#ffffff",
-            gray: "#e2e8f0",
-            dark: "#0f172a",
-          };
-          modalBody.style.backgroundColor = bgColors[currentBg] || "#ffffff";
-        }
-      }
-
-      function openModal() {
-        previewModal.style.display = "flex";
-        previewModal.setAttribute("aria-hidden", "false");
-        document.body.style.overflow = "hidden";
-        updatePreview();
-      }
-
-      function closeModal() {
-        previewModal.style.display = "none";
-        previewModal.setAttribute("aria-hidden", "true");
-        document.body.style.overflow = "";
-        if (previewIframe) {
-          previewIframe.src = "about:blank";
-        }
-      }
-
-      openPreviewBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        openModal();
-      });
-
-      if (previewClose) {
-        previewClose.addEventListener("click", closeModal);
-      }
-      if (previewBackdrop) {
-        previewBackdrop.addEventListener("click", closeModal);
-      }
-
-      document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape" && previewModal.style.display !== "none") {
-          closeModal();
-        }
-      });
-
-      modeButtons.forEach(function (mBtn) {
-        mBtn.addEventListener("click", function (e) {
-          e.preventDefault();
-          modeButtons.forEach(function (b) { b.classList.remove("is-active"); });
-          mBtn.classList.add("is-active");
-          currentMode = mBtn.dataset.mode || "full";
-          updatePreview();
-        });
-      });
-
-      bgButtons.forEach(function (bBtn) {
-        bBtn.addEventListener("click", function (e) {
-          e.preventDefault();
-          bgButtons.forEach(function (b) { b.classList.remove("is-active"); });
-          bBtn.classList.add("is-active");
-          currentBg = bBtn.dataset.bg || "white";
-          updatePreview();
-        });
-      });
-    }
   });
 
-  // Appearance Box Tab Navigation
+  // Trình sửa form: tab, nút Lưu, bộ màu nhanh, xem trước trực tiếp
   ready(function () {
-    var navTabs = document.querySelectorAll(".mme-tab-nav .nav-tab");
-    if (!navTabs.length) return;
+    var editor = document.querySelector(".mme-editor");
+    if (!editor) return;
 
-    navTabs.forEach(function (tab) {
-      tab.addEventListener("click", function (e) {
-        e.preventDefault();
-        var targetId = tab.dataset.tab;
-        if (!targetId) return;
+    var postForm = document.getElementById("post");
+    var tabs = editor.querySelectorAll(".mme-editor__tab");
+    var panes = editor.querySelectorAll(".mme-editor__pane");
+    var STORE = "mmeFormEditor";
 
-        navTabs.forEach(function (t) {
-          t.classList.remove("nav-tab-active");
+    function store(key, value) {
+      try {
+        var data = JSON.parse(localStorage.getItem(STORE) || "{}");
+        if (value === undefined) return data[key];
+        data[key] = value;
+        localStorage.setItem(STORE, JSON.stringify(data));
+      } catch (e) {
+        return undefined;
+      }
+    }
+
+    function openPane(name) {
+      var found = false;
+      tabs.forEach(function (tab) {
+        var active = tab.dataset.pane === name;
+        found = found || active;
+        tab.classList.toggle("is-active", active);
+        tab.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      if (!found) return;
+      panes.forEach(function (pane) {
+        pane.hidden = pane.dataset.pane !== name;
+        pane.classList.toggle("is-active", pane.dataset.pane === name);
+      });
+      store("pane", name);
+    }
+
+    tabs.forEach(function (tab) {
+      tab.addEventListener("click", function () { openPane(tab.dataset.pane); });
+    });
+    document.addEventListener("click", function (e) {
+      var link = e.target.closest("[data-mme-open-pane]");
+      if (!link) return;
+      e.preventDefault();
+      openPane(link.dataset.mmeOpenPane);
+      editor.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    openPane(store("pane") || "fields");
+
+    // Nút Lưu trong trình sửa = nút Cập nhật / Đăng của WordPress (bị ẩn khi mở xem trước)
+    var saveBtn = editor.querySelector("[data-mme-save]");
+    if (saveBtn) {
+      saveBtn.addEventListener("click", function () {
+        var publish = document.getElementById("publish") || document.getElementById("save-post");
+        if (publish) publish.click();
+      });
+    }
+
+    // Bộ màu nhanh
+    editor.querySelectorAll("[data-mme-preset]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var values = {};
+        try { values = JSON.parse(button.dataset.mmePreset); } catch (e) { return; }
+        Object.keys(values).forEach(function (key) {
+          var input = editor.querySelector('[name="mme_settings[' + key + ']"]');
+          if (!input) return;
+          input.value = values[key];
+          input.dispatchEvent(new Event("change", { bubbles: true }));
         });
-        tab.classList.add("nav-tab-active");
+        editor.querySelectorAll(".mme-preset").forEach(function (b) { b.classList.toggle("is-active", b === button); });
+      });
+    });
 
-        var wrapper = tab.closest(".mme-admin-tabs-wrapper");
-        if (!wrapper) return;
-        var panes = wrapper.querySelectorAll(".mme-tab-pane");
-        panes.forEach(function (pane) {
-          if (pane.id === targetId) {
-            pane.style.display = "block";
-            pane.classList.add("is-active");
+    /* Xem trước trực tiếp: POST trường + cài đặt chưa lưu vào iframe, tự cập nhật sau mỗi thay đổi */
+    var preview = editor.querySelector(".mme-editor__preview");
+    var frame = editor.querySelector(".mme-preview-frame");
+    var stage = editor.querySelector(".mme-preview-stage");
+    var toggles = document.querySelectorAll("[data-mme-preview-toggle]");
+    var options = { mode: "full", device: "desktop", bg: "white" };
+    var timer = null;
+    var open = false;
+
+    function previewUrl() {
+      var url = editor.dataset.previewUrl;
+      return url + (url.indexOf("?") === -1 ? "?" : "&") + "mode=" + options.mode + "&bg_sim=" + options.bg;
+    }
+
+    function refresh() {
+      if (!open || !postForm) return;
+      clearTimeout(timer);
+      var data = new FormData(postForm);
+      var shadow = document.createElement("form");
+      shadow.method = "POST";
+      shadow.action = previewUrl();
+      shadow.target = "mme-live-preview";
+      shadow.hidden = true;
+      function add(name, value) {
+        var input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = value;
+        shadow.appendChild(input);
+      }
+      add("mme_preview", "1");
+      add("_mme_preview_nonce", editor.dataset.previewNonce);
+      data.forEach(function (value, key) {
+        if (key === "mme_form_fields_json" || key.indexOf("mme_settings[") === 0) add(key, value);
+      });
+      document.body.appendChild(shadow);
+      stage.classList.add("is-loading");
+      shadow.submit();
+      shadow.remove();
+    }
+
+    function schedule() {
+      if (!open) return;
+      clearTimeout(timer);
+      timer = setTimeout(refresh, 450);
+    }
+
+    if (frame) {
+      frame.addEventListener("load", function () { stage.classList.remove("is-loading"); });
+    }
+
+    function setOpen(next) {
+      open = next;
+      preview.hidden = !open;
+      document.body.classList.toggle("mme-editor-split", open);
+      toggles.forEach(function (t) {
+        t.setAttribute("aria-pressed", open ? "true" : "false");
+        var label = t.querySelector(".mme-preview-toggle__label");
+        if (label) label.textContent = open ? "Đóng xem trước" : "Xem trước";
+      });
+      store("preview", open);
+      if (open) {
+        refresh();
+        editor.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else if (frame) {
+        frame.src = "about:blank";
+      }
+    }
+
+    toggles.forEach(function (t) {
+      t.addEventListener("click", function () { setOpen(!open); });
+    });
+
+    editor.querySelectorAll("[data-mme-preview-opt]").forEach(function (group) {
+      var key = group.dataset.mmePreviewOpt;
+      group.querySelectorAll("button").forEach(function (button) {
+        button.addEventListener("click", function () {
+          group.querySelectorAll("button").forEach(function (b) { b.classList.toggle("is-active", b === button); });
+          options[key] = button.dataset.value;
+          if (key === "device") {
+            stage.classList.toggle("is-mobile", options.device === "mobile");
           } else {
-            pane.style.display = "none";
-            pane.classList.remove("is-active");
+            refresh();
           }
         });
       });
     });
 
+    if (postForm) {
+      postForm.addEventListener("input", function (e) {
+        if (editor.contains(e.target)) schedule();
+      });
+      postForm.addEventListener("change", function (e) {
+        if (editor.contains(e.target) || e.target.id === "mme-form-fields-json") schedule();
+      });
+    }
+
+    // Màn hình rộng: mở lại xem trước nếu lần trước để mở
+    if (store("preview") && window.matchMedia("(min-width: 1280px)").matches) {
+      setOpen(true);
+    }
+  });
+
+  ready(function () {
     // Sync Card Style Options (Hide card background/border/shadow when transparent)
     var cardStyleSelect = document.getElementById("mme-fields-card-style");
     var cardOptionsGroup = document.getElementById("mme-card-options-group");

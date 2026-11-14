@@ -85,6 +85,95 @@
     status.textContent = message;
   }
 
+  /* Kiểm tra từng ô và báo lỗi ngay dưới ô (thay bong bóng mặc định của trình duyệt) */
+
+  function fieldLabel(field) {
+    var label = field.querySelector(":scope > label");
+    var text = label ? label.textContent.replace("*", "").trim() : "";
+    return text ? text.charAt(0).toLocaleLowerCase("vi") + text.slice(1) : "thông tin này";
+  }
+
+  function fieldControls(field) {
+    // Bỏ ô tìm kiếm quốc gia mà intl-tel-input chèn vào cạnh ô số điện thoại
+    return Array.prototype.slice.call(field.querySelectorAll("input:not([type=hidden]):not([type=search]):not(.iti__search-input), textarea, select"));
+  }
+
+  function setFieldError(field, message) {
+    var error = field.querySelector(".mme-field-error");
+    var controls = fieldControls(field);
+    if (!error && message) {
+      error = document.createElement("p");
+      error.className = "mme-field-error";
+      error.id = (controls[0] && controls[0].id ? controls[0].id : "mme-field-" + Date.now()) + "-error";
+      field.appendChild(error);
+    }
+    field.classList.toggle("has-error", !!message);
+    if (error) {
+      error.textContent = message || "";
+      error.hidden = !message;
+    }
+    controls.forEach(function (control) {
+      if (message) {
+        control.setAttribute("aria-invalid", "true");
+        control.setAttribute("aria-describedby", error.id);
+      } else {
+        control.removeAttribute("aria-invalid");
+        if (error && control.getAttribute("aria-describedby") === error.id) control.removeAttribute("aria-describedby");
+      }
+    });
+  }
+
+  function fieldMessage(field, itiInstances) {
+    var controls = fieldControls(field);
+    if (!controls.length) return "";
+    var first = controls[0];
+
+    if (first.type === "radio") {
+      var required = controls.some(function (c) { return c.required; });
+      var checked = controls.some(function (c) { return c.checked; });
+      return required && !checked ? "Vui lòng chọn " + fieldLabel(field) + "." : "";
+    }
+
+    var value = first.value.trim();
+    if (first.required && !value) {
+      return (first.tagName === "SELECT" ? "Vui lòng chọn " : "Vui lòng nhập ") + fieldLabel(field) + ".";
+    }
+    if (!value) return "";
+    if (first.type === "email" && first.validity && first.validity.typeMismatch) {
+      return "Email chưa đúng, ví dụ: ten@congty.vn.";
+    }
+    if (first.type === "tel") {
+      // isValidNumber() trả về null khi thư viện utils chưa tải xong: khi đó không chặn khách
+      var instance = itiInstances.find(function (item) { return item.input === first; });
+      if (instance && instance.iti.isValidNumber() === false) {
+        return "Số điện thoại chưa đúng, vui lòng kiểm tra lại.";
+      }
+    }
+    return first.validity && !first.validity.valid ? "Thông tin chưa hợp lệ, vui lòng kiểm tra lại." : "";
+  }
+
+  /** Báo lỗi mọi ô sai; trả về ô sai đầu tiên (hoặc null). */
+  function validateFields(form, itiInstances) {
+    var firstInvalid = null;
+    form.querySelectorAll(".mme-form-field").forEach(function (field) {
+      var message = fieldMessage(field, itiInstances);
+      setFieldError(field, message);
+      if (message && !firstInvalid) firstInvalid = field;
+    });
+    return firstInvalid;
+  }
+
+  function watchFieldErrors(form, itiInstances) {
+    function recheck(event) {
+      var field = event.target.closest && event.target.closest(".mme-form-field");
+      if (field && field.classList.contains("has-error")) {
+        setFieldError(field, fieldMessage(field, itiInstances));
+      }
+    }
+    form.addEventListener("input", recheck);
+    form.addEventListener("change", recheck);
+  }
+
   function decodeJwtPayload(token) {
     try {
       var base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
@@ -285,6 +374,7 @@
       }
     });
 
+    watchFieldErrors(form, itiInstances);
     openChat(shell, sourceUrl);
     emitTracking("mme_form_view", Object.assign({ form_id: formId }, sourceParts(sourceUrl)));
 
@@ -315,15 +405,12 @@
       event.preventDefault();
       showStatus(status, "", "");
       if (auth) auth.showError("");
-      if (!form.reportValidity()) return;
-
-      // isValidNumber() trả về null khi thư viện utils chưa tải xong — khi đó không chặn khách
-      var badPhone = itiInstances.find(function (instance) {
-        return instance.input.value.trim() !== "" && instance.iti.isValidNumber() === false;
-      });
-      if (badPhone) {
-        showStatus(status, "is-error", "Số điện thoại chưa đúng, vui lòng kiểm tra lại.");
-        badPhone.input.focus();
+      var invalidField = validateFields(form, itiInstances);
+      if (invalidField) {
+        var control = fieldControls(invalidField)[0];
+        invalidField.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (control) control.focus({ preventScroll: true });
+        resizeParent(formId);
         return;
       }
       itiInstances.forEach(function (instance) {
@@ -331,6 +418,12 @@
           instance.input.value = instance.iti.getNumber();
         }
       });
+
+      // Khung xem trước trong trình sửa form: kiểm tra như thật nhưng không gửi đi
+      if (form.dataset.preview) {
+        showStatus(status, "is-success", "Bản xem trước: form hợp lệ, nhưng không gửi đi.");
+        return;
+      }
 
       if (auth && !auth.credential()) {
         auth.showError("Vui lòng bấm \"Xác minh bằng Zalo\" trước khi gửi.");

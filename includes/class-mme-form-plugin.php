@@ -230,6 +230,19 @@ final class MME_Form_Plugin
             'embed' => true,
             'parent_url' => $parent_url,
         );
+
+        // Xem trước trực tiếp: trình sửa form POST trường và cài đặt chưa lưu tới đây
+        if (isset($_POST['mme_preview'], $_POST['_mme_preview_nonce'])
+            && current_user_can('edit_post', $form_id)
+            && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_mme_preview_nonce'])), 'mme_form_preview_' . $form_id)
+        ) {
+            $admin = MME_Form_Admin::instance();
+            $render_args['preview'] = true;
+            $render_args['preview_fields'] = $admin->sanitize_fields_input(wp_unslash((string) ($_POST['mme_form_fields_json'] ?? '[]')));
+            $submitted = isset($_POST['mme_settings']) && is_array($_POST['mme_settings']) ? wp_unslash($_POST['mme_settings']) : array();
+            $render_args['preview_settings'] = $admin->sanitize_settings_input($submitted, $admin->stored_settings($form_id));
+            $in_modal = true;
+        }
         if ($mode === 'fields_only' || $mode === 'form_only') {
             $render_args['fields_only'] = true;
         }
@@ -314,6 +327,19 @@ final class MME_Form_Plugin
             display: flex;
             align-items: center;
             gap: 8px;
+            white-space: nowrap;
+        }
+        /* Màn hình hẹp: thanh cuộn ngang thay vì vỡ chữ, ẩn nhãn phụ */
+        @media (max-width: 1023px) {
+            .mme-preview-topbar {
+                justify-content: flex-start;
+                gap: 16px;
+                overflow-x: auto;
+                scrollbar-width: none;
+            }
+            .mme-preview-topbar-group > span {
+                display: none;
+            }
         }
     </style>
 </head>

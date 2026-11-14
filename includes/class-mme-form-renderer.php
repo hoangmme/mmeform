@@ -16,7 +16,8 @@ final class MME_Form_Renderer
                 : '';
         }
 
-        $fields = get_post_meta($form_id, '_mme_form_fields', true);
+        // Xem trước trực tiếp trong trình sửa form: dùng trường / cài đặt chưa lưu
+        $fields = isset($args['preview_fields']) ? $args['preview_fields'] : get_post_meta($form_id, '_mme_form_fields', true);
         $fields = is_array($fields) && $fields ? $fields : MME_Form_Plugin::default_fields();
         
         $has_tel = false;
@@ -42,6 +43,9 @@ final class MME_Form_Renderer
         }
         $defaults = MME_Form_Plugin::default_settings();
         $settings = MME_Form_Plugin::form_settings($form_id);
+        if (isset($args['preview_settings']) && is_array($args['preview_settings'])) {
+            $settings = array_merge($settings, $args['preview_settings']);
+        }
         $mmeauth = MME_Form_MMeAuth::is_enabled($settings);
         foreach (array('chatbot_base_url', 'chatbot_tenant', 'chatbot_button_text', 'button_text', 'success_message') as $k) {
             if (empty($settings[$k])) {
@@ -262,6 +266,7 @@ final class MME_Form_Renderer
                         <form
                             class="mme-form"
                             data-endpoint="<?php echo esc_url(rest_url('mme-form/v1/submit/' . $form_id)); ?>"
+                            <?php if (!empty($args['preview'])) : ?>data-preview="1"<?php endif; ?>
                             <?php if ($mmeauth) : ?>data-mmeauth-url="<?php echo esc_url(MME_Form_MMeAuth::gateway_url($settings)); ?>" data-mmeauth-site="<?php echo esc_attr($settings['mmeauth_site_key']); ?>"<?php endif; ?>
                             novalidate
                         >

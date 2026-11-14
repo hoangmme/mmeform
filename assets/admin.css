@@ -332,3 +332,810 @@ body.mme-modal-open {
 
 
 
+
+/* ==================================================================
+ * v0.7 Trình sửa form: tab, thẻ trường, bộ màu, xem trước trực tiếp
+ * ================================================================== */
+#mme-form-editor .inside {
+  margin: 0;
+  padding: 0;
+}
+
+#mme-form-editor .postbox-header {
+  display: none;
+}
+
+.mme-editor {
+  --mme-ink: #0f172a;
+  --mme-muted: #64748b;
+  --mme-line: #e2e8f0;
+  --mme-soft: #f8fafc;
+  --mme-brand: #2563eb;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  color: #1e293b;
+}
+
+.mme-editor__main {
+  min-width: 0;
+  container: mme-editor / inline-size;
+}
+
+.mme-editor__bar {
+  position: sticky;
+  top: 32px;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 12px 0;
+  background: #fff;
+  border-bottom: 1px solid var(--mme-line);
+}
+
+.mme-editor__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.mme-editor__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 -1px;
+  padding: 10px 12px;
+  color: var(--mme-muted);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mme-editor__tab .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.mme-editor__tab:hover {
+  color: var(--mme-ink);
+}
+
+.mme-editor__tab.is-active {
+  color: var(--mme-brand);
+  border-bottom-color: var(--mme-brand);
+}
+
+.mme-editor__tab:focus-visible {
+  outline: 2px solid var(--mme-brand);
+  outline-offset: -2px;
+}
+
+.mme-editor__actions {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
+.mme-editor__actions .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mme-editor__actions .button .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.mme-preview-toggle[aria-pressed="true"] {
+  color: #fff;
+  background: var(--mme-ink);
+  border-color: var(--mme-ink);
+}
+
+.mme-editor__pane {
+  padding: 20px;
+}
+
+.mme-editor__pane[hidden] {
+  display: none;
+}
+
+.mme-pane-intro {
+  margin: 0 0 18px;
+  color: var(--mme-muted);
+  font-size: 13px;
+}
+
+.mme-section {
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid var(--mme-line);
+  border-radius: 10px;
+}
+
+.mme-section__title {
+  margin: 0 0 12px;
+  color: var(--mme-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mme-details > summary {
+  margin: 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.mme-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.mme-details > summary::before {
+  content: "▸";
+  display: inline-block;
+  width: 16px;
+  color: var(--mme-muted);
+  transition: transform 0.15s;
+}
+
+.mme-details[open] > summary {
+  margin-bottom: 12px;
+}
+
+.mme-details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.mme-admin-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mme-subgroup {
+  margin-top: 14px;
+  padding: 14px;
+  background: var(--mme-soft);
+  border-radius: 8px;
+}
+
+.mme-admin-field > span {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mme-admin-field input[type="color"] {
+  width: 56px;
+  height: 34px;
+  padding: 2px;
+  border: 1px solid var(--mme-line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Bộ màu nhanh */
+.mme-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.mme-preset {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  color: var(--mme-ink);
+  background: #fff;
+  border: 1px solid var(--mme-line);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.mme-preset:hover,
+.mme-preset.is-active {
+  border-color: var(--mme-brand);
+  box-shadow: 0 0 0 1px var(--mme-brand);
+}
+
+.mme-preset__swatch {
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, var(--a) 50%, var(--b) 50%);
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+}
+
+/* Thẻ trường */
+.mme-fcards {
+  display: grid;
+  gap: 10px;
+}
+
+.mme-fcard {
+  background: #fff;
+  border: 1px solid var(--mme-line);
+  border-radius: 10px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.mme-fcard:hover,
+.mme-fcard:focus-within {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px -4px rgba(15, 23, 42, 0.15);
+}
+
+.mme-fcard.is-dragging {
+  opacity: 0.4;
+}
+
+.mme-fcard__head {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 150px 110px auto 32px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.mme-fcard .mme-drag-handle {
+  color: #94a3b8;
+  font-size: 16px;
+  text-align: center;
+  cursor: grab;
+  user-select: none;
+}
+
+.mme-fcard .mme-field-label {
+  width: 100%;
+  font-weight: 600;
+}
+
+.mme-fcard select {
+  width: 100%;
+  max-width: none;
+}
+
+.mme-fcard__required {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.mme-fcard__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: #94a3b8;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.mme-fcard__remove:hover {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.mme-fcard__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 200px;
+  gap: 10px;
+  padding: 0 12px 12px 40px;
+}
+
+.mme-fcard__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mme-fcard__field[hidden] {
+  display: none;
+}
+
+.mme-fcard__field > span {
+  color: var(--mme-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.mme-fcard__field input,
+.mme-fcard__field textarea {
+  width: 100%;
+}
+
+.mme-fcard__field--options {
+  grid-row: span 2;
+}
+
+.mme-fcard__field--name input {
+  color: var(--mme-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.mme-fields-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.mme-fields-actions .button-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Hàng copy, bảng tuỳ chọn, ghi chú */
+.mme-copy-row {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.mme-copy-row--end {
+  justify-content: flex-end;
+}
+
+.mme-attr-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.mme-attr-table td {
+  padding: 6px 8px;
+  border-top: 1px solid var(--mme-line);
+  font-size: 13px;
+}
+
+.mme-attr-table td:first-child {
+  width: 220px;
+  white-space: nowrap;
+}
+
+.mme-callout {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.mme-callout.is-ok {
+  color: #065f46;
+  background: #ecfdf5;
+}
+
+.mme-callout.is-warn {
+  color: #92400e;
+  background: #fffbeb;
+}
+
+.mme-checklist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mme-checklist li {
+  position: relative;
+  margin: 0 0 6px;
+  padding-left: 22px;
+}
+
+.mme-checklist li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #10b981;
+  font-weight: 700;
+}
+
+.mme-editor .mme-integration-card {
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid var(--mme-line);
+  border-radius: 10px;
+}
+
+.mme-editor .mme-integration-card h3 {
+  font-size: 14px;
+}
+
+/* Xem trước trực tiếp */
+.mme-editor__preview {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #f1f5f9;
+  border-left: 1px solid var(--mme-line);
+}
+
+.mme-editor__preview[hidden] {
+  display: none;
+}
+
+.mme-preview-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  border-bottom: 1px solid var(--mme-line);
+}
+
+.mme-seg {
+  display: inline-flex;
+  padding: 2px;
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+.mme-seg button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 28px;
+  padding: 0 10px;
+  color: var(--mme-muted);
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mme-seg button.is-active {
+  color: var(--mme-ink);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+.mme-seg button .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.mme-seg button i {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+}
+
+.mme-preview-stage {
+  position: sticky;
+  top: 90px;
+  height: calc(100vh - 170px);
+  min-height: 480px;
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+
+.mme-preview-frame {
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  border: 1px solid var(--mme-line);
+  border-radius: 10px;
+  transition: width 0.25s, opacity 0.2s;
+}
+
+.mme-preview-stage.is-mobile .mme-preview-frame {
+  width: 390px;
+  max-width: 100%;
+}
+
+.mme-preview-stage.is-loading .mme-preview-frame {
+  opacity: 0.55;
+}
+
+.mme-preview-loading {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #cbd5e1;
+  border-top-color: var(--mme-brand);
+  border-radius: 50%;
+  opacity: 0;
+  animation: mme-spin 0.8s linear infinite;
+}
+
+.mme-preview-stage.is-loading .mme-preview-loading {
+  opacity: 1;
+}
+
+.mme-preview-note {
+  margin: 0;
+  padding: 0 12px 12px;
+  color: var(--mme-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* Khi mở xem trước: ẩn cột bên phải của WordPress, chia đôi trình sửa */
+body.mme-editor-split #post-body.columns-2 {
+  margin-right: 0;
+}
+
+body.mme-editor-split #post-body.columns-2 #postbox-container-1 {
+  display: none;
+}
+
+body.mme-editor-split #post-body.columns-2 #post-body-content,
+body.mme-editor-split #post-body.columns-2 #postbox-container-2 {
+  float: none;
+  width: 100%;
+}
+
+body.mme-editor-split .mme-editor {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 44%);
+}
+
+.mme-editor-save {
+  display: none !important;
+}
+
+body.mme-editor-split .mme-editor-save {
+  display: inline-flex !important;
+}
+
+/* Hộp bên phải: xem trước & nhúng */
+.mme-side-preview {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.mme-side-link {
+  display: inline-block;
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
+.mme-side-block {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.mme-side-version {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+/* Co giãn theo độ rộng của cột sửa (hẹp lại khi mở xem trước), không theo màn hình */
+@container mme-editor (max-width: 760px) {
+  .mme-fcard__head {
+    grid-template-columns: 20px minmax(0, 1fr) 32px;
+  }
+
+  .mme-fcard__head .mme-field-type,
+  .mme-fcard__head .mme-field-width,
+  .mme-fcard__head .mme-fcard__required {
+    grid-row: 2;
+  }
+
+  .mme-fcard__head .mme-field-type {
+    grid-column: 2 / span 2;
+  }
+
+  .mme-fcard__head .mme-field-width {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .mme-fcard__head .mme-fcard__required {
+    grid-column: 2 / span 2;
+    grid-row: 4;
+  }
+
+  .mme-fcard__body {
+    grid-template-columns: 1fr;
+  }
+
+  .mme-fcard__field--options {
+    grid-row: auto;
+  }
+
+  .mme-admin-grid--3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container mme-editor (min-width: 480px) and (max-width: 760px) {
+  .mme-fcard__head {
+    grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+
+  .mme-fcard__head .mme-field-label {
+    grid-column: 2 / span 2;
+  }
+
+  .mme-fcard__head .mme-fcard__remove {
+    grid-column: 4;
+    grid-row: 1;
+  }
+
+  .mme-fcard__head .mme-field-type {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .mme-fcard__head .mme-field-width {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  .mme-fcard__head .mme-fcard__required {
+    grid-column: 4;
+    grid-row: 2;
+  }
+
+  .mme-fcard__body {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@container mme-editor (max-width: 560px) {
+  .mme-admin-grid,
+  .mme-admin-grid--3 {
+    grid-template-columns: 1fr;
+  }
+
+  .mme-admin-span-2 {
+    grid-column: auto;
+  }
+
+  .mme-fcard__body {
+    padding-left: 12px;
+  }
+}
+
+@media (max-width: 960px) {
+  body.mme-editor-split .mme-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .mme-preview-stage {
+    position: relative;
+    top: 0;
+    height: 640px;
+  }
+}
+
+@media (max-width: 782px) {
+  .mme-editor__bar {
+    top: 46px;
+  }
+
+  .mme-editor__tab {
+    padding: 8px;
+  }
+
+  .mme-admin-grid--3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==================================================================
+ * v0.7 Trang cài đặt (Tích hợp chung, Chatbot & nội dung): dạng thẻ
+ * ================================================================== */
+.mme-settings-page {
+  max-width: 960px;
+}
+
+.mme-settings-page > h1 {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.mme-settings-intro {
+  margin: 0 0 20px;
+  color: #64748b;
+}
+
+.mme-settings-page h2 {
+  margin: 20px 0 0;
+  padding: 14px 20px;
+  color: #0f172a;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.mme-settings-page h2 + p,
+.mme-settings-page h2 + .description {
+  margin: 0;
+  padding: 0 20px 4px;
+  background: #fff;
+  border-left: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  color: #64748b;
+}
+
+.mme-settings-page .form-table {
+  margin: 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-top: 1px solid #f1f5f9;
+  border-radius: 0 0 12px 12px;
+  border-collapse: separate;
+}
+
+.mme-settings-page .form-table th {
+  width: 200px;
+  padding: 16px 12px 16px 20px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.mme-settings-page .form-table td {
+  padding: 12px 20px 12px 8px;
+}
+
+.mme-settings-page .form-table input.regular-text {
+  width: 100%;
+  max-width: 420px;
+}
+
+.mme-settings-page .submit {
+  margin-top: 8px;
+}
+
+/* Dữ liệu gửi: nút xuất CSV */
+.mme-export-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 4px;
+}
+
+.mme-export-btn .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 782px) {
+  .mme-settings-page .form-table th {
+    width: auto;
+    padding-bottom: 0;
+  }
+}

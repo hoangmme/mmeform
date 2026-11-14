@@ -209,7 +209,7 @@ function mme_chatbot_current_page_context($mode = 'editor') {
 if (!function_exists('mme_form_chatbot_admin_menu')) {
     add_action('admin_menu', 'mme_form_chatbot_admin_menu');
     function mme_form_chatbot_admin_menu() {
-        add_submenu_page('edit.php?post_type=mme_form', 'Cài đặt chung', 'Cài đặt chung', 'manage_options', 'mme_chatbot', 'mme_form_chatbot_options_page');
+        add_submenu_page('edit.php?post_type=mme_form', 'Chatbot & nội dung', 'Chatbot & nội dung', 'manage_options', 'mme_chatbot', 'mme_form_chatbot_options_page');
     }
 }
 if (!function_exists('mme_chatbot_add_admin_menu')) {
@@ -221,8 +221,9 @@ if (!function_exists('mme_chatbot_add_admin_menu')) {
 if (!function_exists('mme_form_chatbot_options_page')) {
 function mme_form_chatbot_options_page() {
     ?>
-    <div class="wrap">
-        <h2>MME Chatbot Settings</h2>
+    <div class="wrap mme-settings-page">
+        <h1>Chatbot &amp; nội dung</h1>
+        <p class="mme-settings-intro">Kết nối MME Chatbot và đồng bộ nội dung từ GitHub. Không ảnh hưởng tới form — cài đặt form nằm trong từng form và ở Tích hợp chung.</p>
         <form action="options.php" method="post">
             <?php
             settings_fields('mme_chatbot_options');
