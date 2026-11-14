@@ -852,9 +852,10 @@
             btn.innerHTML =
               '<span class="dashicons dashicons-yes-alt" style="color: #10b981; margin-top: 2px;"></span> ' +
               (res.data.message || "Cập nhật thành công!") + " Đang tải lại...";
+            // Bản git clone: máy chủ chạy git pull sau khi nhận lệnh, nên chờ lâu hơn
             setTimeout(function () {
               location.reload();
-            }, 1200);
+            }, res.data.git ? 6000 : 1200);
           } else {
             alert("Cập nhật thất bại: " + (res.data || "Lỗi không xác định"));
             btn.innerHTML = originalHtml;

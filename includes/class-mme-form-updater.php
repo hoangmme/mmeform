@@ -171,10 +171,36 @@ final class MME_Form_Updater
         return !empty($info['version']) && version_compare($info['version'], MME_FORM_VERSION, '>');
     }
 
+    /** Plugin cài bằng git clone: cập nhật bằng git pull (deploy daemon), không thay thư mục bằng zip. */
+    public function is_git_install(): bool
+    {
+        return is_dir(MME_FORM_DIR . '.git');
+    }
+
+    /**
+     * Nhờ deploy daemon trên máy chủ (cổng 8989) chạy git pull cho tên miền này.
+     *
+     * @return array{success: bool, message?: string, error?: string, git?: bool}
+     */
+    private function trigger_git_deploy(): array
+    {
+        $domain = preg_replace('/^www\./', '', (string) wp_parse_url(home_url(), PHP_URL_HOST));
+        if ($domain === '') {
+            return array('success' => false, 'error' => 'Không xác định được tên miền.');
+        }
+        wp_remote_post('http://127.0.0.1:8989/hooks/' . rawurlencode($domain), array('timeout' => 5, 'blocking' => false));
+        return array(
+            'success' => true,
+            'git' => true,
+            'message' => 'Plugin cài bằng git: đã nhờ máy chủ chạy git pull cho ' . $domain . '. Tải lại trang sau vài giây.',
+        );
+    }
+
     /** Đưa MME Form vào danh sách cập nhật của WordPress. */
     public function inject_update($transient)
     {
-        if (!is_object($transient) || empty($transient->checked)) {
+        // Bản git clone: gói zip sẽ xoá thư mục .git, nên không để WordPress đề xuất cập nhật
+        if (!is_object($transient) || empty($transient->checked) || $this->is_git_install()) {
             return $transient;
         }
 
@@ -264,6 +290,10 @@ final class MME_Form_Updater
         require_once ABSPATH . 'wp-admin/includes/misc.php';
         require_once ABSPATH . 'wp-admin/includes/plugin.php';
         require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+
+        if ($this->is_git_install()) {
+            return $this->trigger_git_deploy();
+        }
 
         $info = $this->remote_info(true);
         if (!empty($info['error'])) {

@@ -1139,3 +1139,78 @@ body.mme-editor-split .mme-editor-save {
     padding-bottom: 0;
   }
 }
+
+/* Trang Chatbot & nội dung: khối cập nhật và công cụ */
+.mme-settings-page h2.mme-tools-title {
+  margin: 28px 0 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
+.mme-version-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin: 12px 0 0;
+  padding: 16px 20px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.mme-version-card.has-update {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.mme-version-card__info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  color: #0f172a;
+}
+
+.mme-version-card__badge {
+  padding: 2px 8px;
+  color: #0369a1;
+  background: #e0f2fe;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.mme-version-card__meta {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.mme-version-card__new {
+  padding: 2px 8px;
+  color: #92400e;
+  background: #fde68a;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mme-version-card__ok {
+  margin-right: 8px;
+  color: #059669;
+  font-weight: 600;
+}
+
+.mme-version-card .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mme-version-card .button .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}

@@ -232,15 +232,7 @@ function mme_form_chatbot_options_page() {
             ?>
         </form>
         
-        <hr style="margin: 30px 0;">
-        <h2>Phát triển & Cập nhật</h2>
-        
-        <div style="margin-bottom: 25px; padding: 15px; background: #fff; border: 1px solid #ccd0d4; border-left: 4px solid #007cba; border-radius: 4px;">
-            <h3 style="margin-top: 0; color: #007cba;">✨ Copy Prompt cho AI (ChatGPT, Claude, Copilot)</h3>
-            <p style="margin-bottom: 12px;">Nếu bạn muốn nhờ AI code Landing Page bằng PHP template tự động tích hợp form MME mà không nhớ cú pháp, hãy bấm nút dưới đây để copy câu lệnh hướng dẫn AI:</p>
-            <button type="button" id="mme-copy-ai-prompt-btn" class="button button-primary">📋 Copy Prompt hướng dẫn AI Code Landing Page</button>
-            <span id="mme-copy-ai-prompt-status" style="margin-left: 10px; color: #10b981; font-weight: 600; display: none;">✔ Đã copy vào clipboard!</span>
-        </div>
+        <h2 class="mme-tools-title">Cập nhật &amp; công cụ</h2>
 
         <?php
         $build_info = class_exists('MME_Form_Plugin') ? MME_Form_Plugin::get_build_info() : array(
@@ -250,36 +242,42 @@ function mme_form_chatbot_options_page() {
             'branch'  => 'main',
         );
         ?>
-        <div style="margin-bottom: 25px; padding: 16px 20px; background: #fff; border: 1px solid #ccd0d4; border-left: 4px solid #0284c7; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
-                <div style="font-size: 13px; color: #0f172a; line-height: 1.6;">
-                    📦 <strong>Phiên bản hiện tại:</strong> 
-                    <span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: 700; margin: 0 4px;">
-                        v<?php echo esc_html($build_info['version']); ?>
-                    </span>
-                    &bull; Bản cập nhật: <strong><?php echo esc_html($build_info['date']); ?></strong>
+        <?php
+        $mme_updater = class_exists('MME_Form_Updater') ? MME_Form_Updater::instance() : null;
+        $mme_remote = $mme_updater ? get_site_transient(MME_Form_Updater::CACHE) : null;
+        $mme_has_update = $mme_updater && $mme_updater->has_update(false);
+        ?>
+        <div class="mme-version-card<?php echo $mme_has_update ? ' has-update' : ''; ?>">
+            <div class="mme-version-card__info">
+                <strong>MME Form</strong>
+                <span class="mme-version-card__badge">v<?php echo esc_html($build_info['version']); ?></span>
+                <span class="mme-version-card__meta">
+                    Bản cập nhật <?php echo esc_html($build_info['date']); ?>
                     <?php if (!empty($build_info['commit'])) : ?>
-                        &bull; Git Commit: <code><?php echo esc_html($build_info['commit']); ?></code> (<?php echo esc_html($build_info['branch']); ?>)
+                        · git <code><?php echo esc_html($build_info['commit']); ?></code>
                     <?php endif; ?>
-                </div>
-                <div>
-                    <button type="button" class="button button-primary mme-force-update-btn" style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
-                        <span class="dashicons dashicons-update" style="margin-top: 2px;"></span> Cập nhật từ GitHub (1-Click)
-                    </button>
-                </div>
+                </span>
+                <?php if ($mme_has_update) : ?>
+                    <span class="mme-version-card__new">Có bản <?php echo esc_html($mme_remote['version']); ?></span>
+                <?php endif; ?>
             </div>
-
-            <p style="margin: 0 0 12px; font-size: 13px; color: #475569;">
-                Tính năng dưới đây giúp bạn đồng bộ (pull) mã nguồn mới nhất của plugin <strong>MME Form</strong> từ GitHub về máy chủ ngay lập tức.
-            </p>
-
-            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                <button type="button" id="mme-form-git-pull-btn" class="button button-secondary">
-                    Đồng bộ code MME Form từ GitHub (Git Pull)
+            <?php if (current_user_can('update_plugins')) : ?>
+                <button type="button" class="button <?php echo $mme_has_update ? 'button-primary' : ''; ?> mme-force-update-btn">
+                    <span class="dashicons dashicons-update" aria-hidden="true"></span>
+                    <?php echo $mme_has_update ? esc_html('Cập nhật lên ' . $mme_remote['version']) : 'Kiểm tra cập nhật'; ?>
                 </button>
-            </div>
+            <?php endif; ?>
+        </div>
 
-            <div id="mme-form-git-pull-result" style="margin-top: 15px; padding: 15px; background: #1e1e1e; color: #00ff00; font-family: monospace; border-radius: 4px; display: none; white-space: pre-wrap;"></div>
+        <div class="mme-version-card">
+            <div class="mme-version-card__info">
+                <strong>Prompt cho AI code landing page</strong>
+                <span class="mme-version-card__meta">Hướng dẫn ChatGPT / Claude dùng <code>mme_form_auto()</code> để nhúng form vào template PHP.</span>
+            </div>
+            <span>
+                <span id="mme-copy-ai-prompt-status" class="mme-version-card__ok" style="display: none;">Đã copy</span>
+                <button type="button" id="mme-copy-ai-prompt-btn" class="button">Copy prompt</button>
+            </span>
         </div>
 
         <textarea id="mme-ai-prompt-content" style="display: none;"><?php echo esc_textarea("Khi code Landing Page WordPress bằng PHP template, hãy sử dụng hàm PHP mme_form_auto(\$slug, \$title, \$json_fields) của plugin MME Form để hiển thị form.\nHàm này tự động kiểm tra/tạo form và trả về shortcode Chỉ Form (ẩn cột thông tin bên trái để lọt vào khung giao diện của bạn).\n\nQuy tắc viết mảng \$json_fields (JSON array các object):\n- Các thuộc tính hỗ trợ:\n  + type: text, email, tel, textarea, select, hoặc radio.\n  + name: Tên biến (viết thường, không dấu, dùng dấu gạch dưới, VD: full_name, phone).\n  + label: Nhãn hiển thị (VD: \"Họ và tên\").\n  + placeholder: Gợi ý mờ trong ô nhập.\n  + width: \"100\" (Full dòng) hoặc \"50\" (Chia đôi dòng).\n  + required: true hoặc false.\n  + options: Chỉ cho select/radio, các lựa chọn cách nhau bằng \\n (xuống dòng).\n\nVí dụ PHP:\n<" . "?php\n\$fields = '[\n  {\"type\":\"text\", \"name\":\"fullname\", \"label\":\"Họ tên\", \"placeholder\":\"Nhập tên...\", \"required\":true, \"width\":\"100\"},\n  {\"type\":\"tel\", \"name\":\"phone\", \"label\":\"Số điện thoại\", \"placeholder\":\"09xx...\", \"required\":true, \"width\":\"50\"}\n]';\nif (function_exists('mme_form_auto')) {\n    echo mme_form_auto('landing-su-kien-2026', 'Form Sự Kiện', \$fields);\n}\n?" . ">\nLưu ý: Bạn hãy tự thiết kế Container/Card giao diện cho form đẹp mắt theo bố cục website rồi gọi echo mme_form_auto(...) vào đúng vị trí!"); ?></textarea>
@@ -300,57 +298,6 @@ function mme_form_chatbot_options_page() {
             });
         }
 
-        var gitPullBtn = document.getElementById('mme-form-git-pull-btn');
-        if (gitPullBtn) {
-            gitPullBtn.addEventListener('click', function() {
-                var btn = this;
-                var resultDiv = document.getElementById('mme-form-git-pull-result');
-                
-                btn.disabled = true;
-                btn.textContent = 'Đang đồng bộ...';
-                if (resultDiv) {
-                    resultDiv.style.display = 'block';
-                    resultDiv.textContent = 'Đang tải bản cập nhật mới nhất từ GitHub...';
-                }
-
-                var formData = new FormData();
-                formData.append('action', 'mme_form_git_pull');
-                formData.append('_ajax_nonce', '<?php echo wp_create_nonce('mme_form_git_pull_nonce'); ?>');
-
-                var ajaxUrl = typeof ajaxurl !== 'undefined' ? ajaxurl : '<?php echo esc_url(admin_url('admin-ajax.php')); ?>';
-
-                fetch(ajaxUrl, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(function(response) { return response.json(); })
-                .then(function(data) {
-                    if (data.success) {
-                        if (resultDiv) {
-                            resultDiv.textContent = data.data;
-                            resultDiv.style.color = '#00ff00';
-                            resultDiv.textContent += '\n\n[INFO] Đang tải lại trang sau 2 giây để cập nhật phiên bản mới...';
-                        }
-                        setTimeout(function() { location.reload(); }, 2000);
-                    } else {
-                        if (resultDiv) {
-                            resultDiv.textContent = 'Lỗi: ' + (data.data || 'Không rõ nguyên nhân');
-                            resultDiv.style.color = '#ff5555';
-                        }
-                    }
-                })
-                .catch(function(error) {
-                    if (resultDiv) {
-                        resultDiv.textContent = 'Lỗi kết nối: ' + error;
-                        resultDiv.style.color = '#ff5555';
-                    }
-                })
-                .finally(function() {
-                    btn.disabled = false;
-                    btn.textContent = 'Đồng bộ code MME Form từ GitHub (Git Pull)';
-                });
-            });
-        }
         </script>
 
         <?php mme_chatbot_render_content_status(); ?>
@@ -905,48 +852,4 @@ function mme_chatbot_render_backend() {
 }
 }
 
-// Thêm AJAX handler cho nút Git Pull / Đồng bộ
-if (!function_exists('mme_form_git_pull_handler')) {
-add_action('wp_ajax_mme_form_git_pull', 'mme_form_git_pull_handler');
-function mme_form_git_pull_handler() {
-    check_ajax_referer('mme_form_git_pull_nonce');
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error('Không đủ quyền hạn');
-    }
-
-    // 1. Ưu tiên cập nhật in-place chuẩn qua MME_Form_Updater (tải ZIP từ GitHub)
-    if (class_exists('MME_Form_Updater')) {
-        $update_res = MME_Form_Updater::instance()->perform_update();
-        if (!empty($update_res['success'])) {
-            $version_str = defined('MME_FORM_VERSION') ? MME_FORM_VERSION : 'mới nhất';
-            wp_send_json_success('✅ Đã tải và cập nhật thành công MME Form (v' . $version_str . ') trực tiếp từ GitHub!');
-        }
-    }
-
-    // 2. Fallback: Nếu không ghi đè file được, ping webhook daemon (cổng 8989)
-    $domain = $_SERVER['HTTP_HOST'] ?? '';
-    $domain = preg_replace('/^www\./', '', $domain);
-
-    if (empty($domain)) {
-        wp_send_json_error('Không thể xác định tên miền.');
-    }
-
-    $daemon_url = "http://127.0.0.1:8989/hooks/" . urlencode($domain);
-
-    $args = array(
-        'method'      => 'POST',
-        'timeout'     => 5,
-        'redirection' => 5,
-        'httpversion' => '1.0',
-        'blocking'    => false,
-        'headers'     => array(),
-        'body'        => '',
-        'cookies'     => array()
-    );
-
-    wp_remote_post($daemon_url, $args);
-    
-    wp_send_json_success('Đã gửi lệnh kích hoạt Deploy cho domain: ' . $domain . '. Vui lòng chờ vài giây để server tự động cập nhật!');
-}
-}
 
