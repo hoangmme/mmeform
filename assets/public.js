@@ -186,161 +186,93 @@
     }
   }
 
+  /* Bản nháp form khi khách sang Zalo xác nhận: điện thoại có thể tải lại trang lúc quay về */
+
+  function draftKey(formId) {
+    return "mme_form_draft_" + formId;
+  }
+
+  function saveDraft(form, formId) {
+    var values = [];
+    form.querySelectorAll('[name^="fields["]').forEach(function (control) {
+      if ((control.type === "radio" || control.type === "checkbox") && !control.checked) return;
+      values.push([control.name, control.value]);
+    });
+    try { window.sessionStorage.setItem(draftKey(formId), JSON.stringify(values)); } catch (error) {}
+  }
+
+  function clearDraft(formId) {
+    try { window.sessionStorage.removeItem(draftKey(formId)); } catch (error) {}
+  }
+
+  function restoreDraft(form, formId) {
+    var values = null;
+    try { values = JSON.parse(window.sessionStorage.getItem(draftKey(formId)) || "null"); } catch (error) {}
+    if (!Array.isArray(values)) return false;
+    values.forEach(function (pair) {
+      form.querySelectorAll('[name="' + String(pair[0]).replace(/"/g, "") + '"]').forEach(function (control) {
+        if (control.type === "radio" || control.type === "checkbox") control.checked = control.value === pair[1];
+        else control.value = pair[1];
+      });
+    });
+    return true;
+  }
+
   /**
-   * "Xác minh bằng Zalo" qua MMeAuth: tạo phiên ở gateway → QR (máy tính) hoặc mở Zalo (điện thoại)
-   * → chờ khách xác nhận trong Mini App → nhận id_token. Máy chủ WordPress tự kiểm tra chữ ký token;
-   * dữ liệu giải mã ở đây chỉ để hiển thị và điền sẵn SĐT/họ tên.
+   * Xác minh qua MMeAuth gộp vào nút gửi: bấm gửi → popup của SDK auth.mme.vn/sdk/v1.js
+   * (QR trên máy tính, "Mở Zalo" trên điện thoại) → khách xác nhận trong Mini App → nhận id_token → gửi form.
+   * Họ tên và số điện thoại lấy từ token; máy chủ WordPress tự kiểm tra chữ ký token.
    */
-  function setupMMeAuth(form, formId, fillPhone) {
+  function setupMMeAuth(form, formId) {
     var gateway = form.dataset.mmeauthUrl;
     var siteKey = form.dataset.mmeauthSite;
-    var box = form.querySelector(".mme-auth-box");
-    if (!gateway || !siteKey || !box) return null;
+    if (!gateway || !siteKey) return null;
+    var persist = "mme-form-" + formId;
+    var token = "";
+    var profile = null;
 
-    var tokenInput = box.querySelector('input[name="mmeauth_token"]');
-    var signedOut = box.querySelector(".mme-auth-signed-out");
-    var signedIn = box.querySelector(".mme-auth-signed-in");
-    var startBtn = box.querySelector(".mme-auth-start");
-    var pending = box.querySelector(".mme-auth-pending");
-    var qrEl = box.querySelector(".mme-auth-qr");
-    var openLink = box.querySelector(".mme-auth-open");
-    var errorEl = box.querySelector(".mme-auth-error");
-    var phoneInputs = form.querySelectorAll('input[type="tel"]');
-    var nameInput = form.querySelector('[name="fields[full_name]"], [name="fields[name]"], [name="fields[ho_ten]"]');
-    var isMobile = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-    var session = null;
-    var pollTimer = null;
-
-    function showError(message) {
-      errorEl.textContent = message;
-      errorEl.hidden = !message;
-      resizeParent(formId);
+    function sdk() {
+      return window.MMeAuth && typeof window.MMeAuth.prompt === "function" ? window.MMeAuth : null;
     }
 
-    function stopPolling() {
-      if (pollTimer) clearTimeout(pollTimer);
-      pollTimer = null;
-      session = null;
+    /** Token còn dùng được (chưa gửi thành công, còn hạn ít nhất 30 giây). */
+    function usable() {
+      if (!token) return false;
+      var claims = decodeJwtPayload(token) || {};
+      return !claims.exp || claims.exp * 1000 > Date.now() + 30000;
     }
 
-    function showStart() {
-      stopPolling();
-      pending.hidden = true;
-      startBtn.hidden = false;
-      startBtn.disabled = false;
-      resizeParent(formId);
+    function verify(resume) {
+      if (usable()) return Promise.resolve({ token: token, profile: profile });
+      var api = sdk();
+      if (!api) return Promise.reject(new Error("Không tải được xác minh Zalo. Vui lòng tải lại trang rồi thử lại."));
+      return api.prompt({
+        site: siteKey,
+        gateway: gateway,
+        purpose: "form",
+        anchor: form.querySelector(".mme-form-submit-wrap"),
+        persist: persist,
+        resume: resume || null,
+      }).then(function (result) {
+        token = result.token;
+        profile = result.profile || {};
+        return result;
+      });
     }
-
-    function reset() {
-      showStart();
-      tokenInput.value = "";
-      box.dataset.state = "signed-out";
-      signedIn.hidden = true;
-      signedOut.hidden = false;
-      phoneInputs.forEach(function (input) { input.readOnly = false; });
-      resizeParent(formId);
-    }
-
-    function onVerified(idToken, profile) {
-      var claims = decodeJwtPayload(idToken) || {};
-      stopPolling();
-      tokenInput.value = idToken;
-      box.dataset.state = "signed-in";
-      box.querySelector(".mme-auth-name").textContent = (profile && profile.name) || claims.name || "Đã xác minh";
-      box.querySelector(".mme-auth-phone").textContent = "Đã xác minh qua Zalo · " + ((profile && profile.phone_masked) || "");
-      var avatar = box.querySelector(".mme-auth-avatar");
-      var picture = (profile && profile.avatar) || claims.picture || "";
-      avatar.hidden = !picture;
-      if (picture) avatar.src = picture;
-      if (claims.phone) {
-        fillPhone(claims.phone);
-        phoneInputs.forEach(function (input) { input.readOnly = true; });
-      }
-      if (nameInput && !nameInput.value && claims.name) nameInput.value = claims.name;
-      showError("");
-      pending.hidden = true;
-      signedOut.hidden = true;
-      signedIn.hidden = false;
-      resizeParent(formId);
-    }
-
-    function poll() {
-      if (!session) return;
-      var current = session;
-      fetch(gateway + "/api/sessions/" + encodeURIComponent(current.sid) + "/status", {
-        headers: { Authorization: "Bearer " + current.poll_token },
-      })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-          if (session !== current) return;
-          if (data.status === "verified" && data.id_token) {
-            onVerified(data.id_token, data.profile);
-          } else if (data.status === "pending") {
-            pollTimer = setTimeout(poll, (current.poll_interval || 2) * 1000);
-          } else {
-            showStart();
-            showError(data.status === "expired" ? "Mã xác minh đã hết hạn, vui lòng bấm xác minh lại." : (data.error || "Không xác minh được, vui lòng thử lại."));
-          }
-        })
-        .catch(function () {
-          // Mất mạng tạm thời (điện thoại chuyển sang Zalo) — thử lại chậm hơn
-          if (session === current) pollTimer = setTimeout(poll, 4000);
-        });
-    }
-
-    startBtn.addEventListener("click", function () {
-      showError("");
-      startBtn.disabled = true;
-      fetch(gateway + "/api/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ site_key: siteKey, purpose: "form" }),
-      })
-        .then(function (res) {
-          return res.json().then(function (data) {
-            if (!res.ok) throw new Error(data.error || "Không tạo được phiên xác minh.");
-            return data;
-          });
-        })
-        .then(function (data) {
-          session = data;
-          openLink.href = data.link;
-          qrEl.innerHTML = "";
-          if (!isMobile) {
-            // SVG dạng ảnh: không chạy được script dù nội dung đến từ máy chủ khác
-            var img = document.createElement("img");
-            img.alt = "Mã QR xác minh Zalo";
-            img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(data.qr_svg);
-            qrEl.appendChild(img);
-          }
-          qrEl.hidden = isMobile;
-          box.querySelector(".mme-auth-qr-note").hidden = isMobile;
-          openLink.hidden = !isMobile;
-          startBtn.hidden = true;
-          pending.hidden = false;
-          resizeParent(formId);
-          pollTimer = setTimeout(poll, (data.poll_interval || 2) * 1000);
-        })
-        .catch(function (error) {
-          startBtn.disabled = false;
-          showError(error && error.message ? error.message : "Không kết nối được MMeAuth, vui lòng thử lại.");
-        });
-    });
-
-    box.querySelector(".mme-auth-cancel").addEventListener("click", showStart);
-    box.querySelector(".mme-auth-switch").addEventListener("click", reset);
-    document.addEventListener("visibilitychange", function () {
-      // Khách quay lại từ Zalo: hỏi kết quả ngay thay vì chờ hết nhịp poll
-      if (document.visibilityState === "visible" && session) {
-        if (pollTimer) clearTimeout(pollTimer);
-        poll();
-      }
-    });
 
     return {
-      credential: function () { return tokenInput.value; },
-      reset: reset,
-      showError: showError,
+      verify: verify,
+      credential: function () { return token; },
+      profile: function () { return profile; },
+      /** Phiên đang chờ từ lần trước (trang bị tải lại khi khách ở Zalo). */
+      pending: function () {
+        var api = sdk();
+        return api && api.pending ? api.pending(persist) : null;
+      },
+      reset: function () {
+        token = "";
+        profile = null;
+      },
     };
   }
 
@@ -378,13 +310,7 @@
     openChat(shell, sourceUrl);
     emitTracking("mme_form_view", Object.assign({ form_id: formId }, sourceParts(sourceUrl)));
 
-    var auth = setupMMeAuth(form, formId, function (phone) {
-      form.querySelectorAll('input[type="tel"]').forEach(function (input) {
-        var instance = itiInstances.find(function (item) { return item.input === input; });
-        if (instance) instance.iti.setNumber(phone);
-        else input.value = phone;
-      });
-    });
+    var auth = setupMMeAuth(form, formId);
 
     var parentOrigin = "";
     try {
@@ -401,39 +327,11 @@
       }
     });
 
-    form.addEventListener("submit", async function (event) {
-      event.preventDefault();
-      showStatus(status, "", "");
-      if (auth) auth.showError("");
-      var invalidField = validateFields(form, itiInstances);
-      if (invalidField) {
-        var control = fieldControls(invalidField)[0];
-        invalidField.scrollIntoView({ behavior: "smooth", block: "center" });
-        if (control) control.focus({ preventScroll: true });
-        resizeParent(formId);
-        return;
-      }
-      itiInstances.forEach(function (instance) {
-        if (instance.iti.isValidNumber()) {
-          instance.input.value = instance.iti.getNumber();
-        }
-      });
-
-      // Khung xem trước trong trình sửa form: kiểm tra như thật nhưng không gửi đi
-      if (form.dataset.preview) {
-        showStatus(status, "is-success", "Bản xem trước: form hợp lệ, nhưng không gửi đi.");
-        return;
-      }
-
-      if (auth && !auth.credential()) {
-        auth.showError("Vui lòng bấm \"Xác minh bằng Zalo\" trước khi gửi.");
-        form.querySelector(".mme-auth-box").scrollIntoView({ behavior: "smooth", block: "center" });
-        return;
-      }
-
+    async function send(identity) {
       submit.disabled = true;
       form.classList.add("is-submitting");
-      showStatus(status, "", "Đang gửi...");
+      var who = identity && identity.profile && identity.profile.name ? identity.profile.name + " · " : "";
+      showStatus(status, "", identity ? "Đã xác minh " + who + "đang gửi..." : "Đang gửi...");
 
       var formData = new FormData(form);
       var values = {};
@@ -448,7 +346,7 @@
         referrer_url: referrerInput.value,
         started_at: Number(startedInput.value),
         website: formData.get("website") || "",
-        mmeauth_token: auth ? auth.credential() : "",
+        mmeauth_token: identity ? identity.token : "",
         attribution: attribution(currentInput.value || sourceUrl),
       };
 
@@ -466,6 +364,7 @@
         });
         var data = await response.json().catch(function () { return {}; });
         if (!response.ok) {
+          // Token hỏng / đã dùng / hết hạn: lần bấm sau sẽ mở xác minh lại
           if (auth && data.data && data.data.auth_required) auth.reset();
           throw new Error(data.message || "Không thể gửi form.");
         }
@@ -473,6 +372,7 @@
         showStatus(status, "is-success", data.message || status.dataset.success);
         emitTracking("mme_form_submit_success", Object.assign({ form_id: formId, event_id: data.event_id }, sourceParts(currentInput.value || sourceUrl)));
         form.reset();
+        clearDraft(formId);
         if (auth) auth.reset();
         currentInput.value = sourceUrl;
         referrerInput.value = document.referrer || "";
@@ -495,7 +395,65 @@
         form.classList.remove("is-submitting");
         resizeParent(formId);
       }
+    }
+
+    /** Xác minh Zalo (nếu form bật) rồi gửi. Khách đóng popup thì dừng, không báo lỗi. */
+    function verifyThenSend(resume) {
+      if (!auth) return send(null);
+      submit.disabled = true;
+      saveDraft(form, formId);
+      return auth.verify(resume)
+        .then(function (identity) {
+          return send(identity);
+        }, function (error) {
+          submit.disabled = false;
+          if (!error || error.code !== "cancelled") {
+            showStatus(status, "is-error", error && error.message ? error.message : "Không xác minh được, vui lòng thử lại.");
+          } else {
+            clearDraft(formId);
+          }
+          resizeParent(formId);
+        });
+    }
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      if (submit.disabled) return;
+      showStatus(status, "", "");
+      var invalidField = validateFields(form, itiInstances);
+      if (invalidField) {
+        var control = fieldControls(invalidField)[0];
+        invalidField.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (control) control.focus({ preventScroll: true });
+        resizeParent(formId);
+        return;
+      }
+      itiInstances.forEach(function (instance) {
+        if (instance.iti.isValidNumber()) {
+          instance.input.value = instance.iti.getNumber();
+        }
+      });
+
+      // Khung xem trước trong trình sửa form: kiểm tra như thật nhưng không gửi đi
+      if (form.dataset.preview) {
+        showStatus(status, "is-success", auth
+          ? "Bản xem trước: form hợp lệ. Khi chạy thật, bấm gửi sẽ mở xác minh Zalo rồi tự gửi."
+          : "Bản xem trước: form hợp lệ, nhưng không gửi đi.");
+        return;
+      }
+
+      verifyThenSend(null);
     });
+
+    // Quay lại từ Zalo mà trang đã bị tải lại: điền lại form và chờ tiếp phiên xác minh cũ
+    if (auth && !form.dataset.preview) {
+      var resume = auth.pending();
+      if (resume && restoreDraft(form, formId)) {
+        verifyThenSend(resume);
+      } else {
+        clearDraft(formId);
+      }
+    }
 
     if (window.ResizeObserver) {
       new ResizeObserver(function () { resizeParent(formId); }).observe(shell);

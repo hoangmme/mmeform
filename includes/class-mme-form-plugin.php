@@ -367,6 +367,10 @@ final class MME_Form_Plugin
 <?php endif; ?>
 
 <?php echo MME_Form_Renderer::render($form_id, $render_args); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+<?php $embed_settings = array_merge(self::form_settings($form_id), $render_args['preview_settings'] ?? array()); ?>
+<?php if (MME_Form_MMeAuth::is_enabled($embed_settings) && empty($render_args['preview'])) : ?>
+<script src="<?php echo esc_url(MME_Form_MMeAuth::sdk_url($embed_settings)); ?>"></script>
+<?php endif; ?>
 <script src="<?php echo esc_url(MME_FORM_URL . 'assets/public.js?ver=' . MME_FORM_VERSION); ?>"></script>
 </body>
 </html><?php

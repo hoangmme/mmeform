@@ -19,7 +19,23 @@ final class MME_Form_Renderer
         // Xem trước trực tiếp trong trình sửa form: dùng trường / cài đặt chưa lưu
         $fields = isset($args['preview_fields']) ? $args['preview_fields'] : get_post_meta($form_id, '_mme_form_fields', true);
         $fields = is_array($fields) && $fields ? $fields : MME_Form_Plugin::default_fields();
-        
+
+        $defaults = MME_Form_Plugin::default_settings();
+        $settings = MME_Form_Plugin::form_settings($form_id);
+        if (isset($args['preview_settings']) && is_array($args['preview_settings'])) {
+            $settings = array_merge($settings, $args['preview_settings']);
+        }
+        $mmeauth = MME_Form_MMeAuth::is_enabled($settings);
+        if ($mmeauth) {
+            // Họ tên và số điện thoại do Zalo gửi khi khách xác nhận: không bắt khách gõ lại
+            $fields = array_values(array_filter($fields, function ($field) {
+                return !MME_Form_MMeAuth::covers_field((array) $field);
+            }));
+            if (empty($args['embed'])) {
+                wp_enqueue_script('mmeauth-sdk', MME_Form_MMeAuth::sdk_url($settings), array(), null, true);
+            }
+        }
+
         $has_tel = false;
         foreach ($fields as $field) {
             if (isset($field['type']) && $field['type'] === 'tel') {
@@ -41,12 +57,6 @@ final class MME_Form_Renderer
                 $assets_printed = true;
             }
         }
-        $defaults = MME_Form_Plugin::default_settings();
-        $settings = MME_Form_Plugin::form_settings($form_id);
-        if (isset($args['preview_settings']) && is_array($args['preview_settings'])) {
-            $settings = array_merge($settings, $args['preview_settings']);
-        }
-        $mmeauth = MME_Form_MMeAuth::is_enabled($settings);
         foreach (array('chatbot_base_url', 'chatbot_tenant', 'chatbot_button_text', 'button_text', 'success_message') as $k) {
             if (empty($settings[$k])) {
                 $settings[$k] = $defaults[$k];
@@ -276,38 +286,6 @@ final class MME_Form_Renderer
                             <input type="hidden" name="started_at" value="">
                             <input type="text" class="mme-form-honeypot" name="website" value="" tabindex="-1" autocomplete="off" aria-hidden="true">
 
-                            <?php if ($mmeauth) : ?>
-                                <div class="mme-auth-box" data-state="signed-out">
-                                    <input type="hidden" name="mmeauth_token" value="">
-                                    <div class="mme-auth-signed-out">
-                                        <p class="mme-auth-title">Xác minh số điện thoại qua Zalo</p>
-                                        <p class="mme-auth-hint">Không cần mã OTP — bấm nút, xác nhận trong Zalo là xong.</p>
-                                        <button type="button" class="mme-auth-start">
-                                            <span class="mme-auth-zalo-mark" aria-hidden="true">Zalo</span>
-                                            <span>Xác minh bằng Zalo</span>
-                                        </button>
-                                        <div class="mme-auth-pending" hidden>
-                                            <div class="mme-auth-qr" aria-label="Mã QR mở Zalo"></div>
-                                            <div class="mme-auth-pending-text">
-                                                <strong class="mme-auth-qr-note">Quét mã bằng ứng dụng Zalo trên điện thoại</strong>
-                                                <a class="mme-auth-open" href="#" target="_blank" rel="noopener">Mở Zalo để xác minh</a>
-                                                <span class="mme-auth-waiting">Đang chờ bạn xác nhận trong Zalo…</span>
-                                                <button type="button" class="mme-auth-cancel">Huỷ</button>
-                                            </div>
-                                        </div>
-                                        <p class="mme-auth-error" hidden></p>
-                                    </div>
-                                    <div class="mme-auth-signed-in" hidden>
-                                        <img class="mme-auth-avatar" alt="" referrerpolicy="no-referrer">
-                                        <div class="mme-auth-who">
-                                            <strong class="mme-auth-name"></strong>
-                                            <span class="mme-auth-phone"></span>
-                                        </div>
-                                        <button type="button" class="mme-auth-switch">Xác minh số khác</button>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-
                             <div class="mme-form-grid">
                                 <?php foreach ($fields as $field) : ?>
                                     <?php echo self::render_field($field, $settings); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -319,6 +297,12 @@ final class MME_Form_Renderer
                                     <span><?php echo esc_html($settings['button_text']); ?></span>
                                     <?php echo self::icon('arrow'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                                 </button>
+                                <?php if ($mmeauth) : ?>
+                                    <p class="mme-auth-note">
+                                        <span class="mme-auth-zalo-mark" aria-hidden="true">Zalo</span>
+                                        <span>Bấm gửi rồi xác nhận qua Zalo: tên và số điện thoại được điền tự động, không cần OTP.</span>
+                                    </p>
+                                <?php endif; ?>
                             </div>
                             
                             <?php if (!empty($settings['form_footer'])) : ?>

@@ -471,175 +471,31 @@
 }
 
 /* Xác minh SĐT qua Zalo (MMeAuth) */
-.mme-auth-box {
-  margin-bottom: 16px;
-  padding: 14px 16px;
-  border: 1px dashed var(--mme-field-border, #e2e8f0);
-  border-radius: 12px;
-  background: var(--mme-field-bg, #f8fafc);
-}
-
-.mme-auth-box[data-state="signed-in"] {
-  border-style: solid;
-  border-color: color-mix(in srgb, var(--mme-secondary, #10b981) 55%, transparent);
-}
-
-.mme-auth-title {
-  margin: 0 0 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--mme-field-label-color, #1e293b);
-}
-
-.mme-auth-hint {
-  margin: -6px 0 10px;
-  font-size: 12px;
-  opacity: 0.7;
-  color: var(--mme-field-label-color, #1e293b);
-}
-
-.mme-auth-start {
-  display: inline-flex;
+/* Form bật xác minh Zalo: dòng giải thích dưới nút gửi (popup do SDK auth.mme.vn/sdk/v1.js vẽ) */
+.mme-auth-note {
+  display: flex;
   align-items: center;
-  gap: 10px;
-  height: 44px;
-  padding: 0 18px 0 6px;
-  border: 0;
-  border-radius: 999px;
-  background: #0068ff;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.mme-auth-start:disabled {
-  opacity: 0.6;
-  cursor: wait;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--mme-field-label-color, #475569);
+  opacity: 0.85;
+  text-align: left;
 }
 
 .mme-auth-zalo-mark {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  justify-content: center;
-  height: 32px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #0068ff;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.mme-auth-pending {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.mme-auth-qr img {
-  display: block;
-  width: 148px;
-  height: 148px;
-  background: #ffffff;
-  border-radius: 8px;
-}
-
-.mme-auth-pending-text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--mme-field-text, #1e293b);
-}
-
-.mme-auth-open {
-  display: inline-flex;
-  align-items: center;
-  height: 40px;
-  padding: 0 16px;
+  height: 20px;
+  padding: 0 7px;
   border-radius: 999px;
   background: #0068ff;
-  color: #ffffff !important;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.mme-auth-waiting {
-  opacity: 0.7;
-}
-
-.mme-auth-cancel {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  font-size: 12px;
-  color: inherit;
-  opacity: 0.6;
-  cursor: pointer;
-}
-
-.mme-auth-pending[hidden],
-.mme-auth-start[hidden],
-.mme-auth-qr[hidden],
-.mme-auth-qr-note[hidden],
-.mme-auth-open[hidden] {
-  display: none;
-}
-
-.mme-auth-error {
-  margin: 8px 0 0;
-  font-size: 12px;
-  line-height: 1.4;
-  color: #dc2626;
-}
-
-.mme-auth-signed-in {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.mme-auth-signed-in[hidden],
-.mme-auth-signed-out[hidden],
-.mme-auth-error[hidden],
-.mme-auth-avatar[hidden] {
-  display: none;
-}
-
-.mme-auth-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.mme-auth-who {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-  font-size: 13px;
-  color: var(--mme-field-text, #1e293b);
-}
-
-.mme-auth-who span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  opacity: 0.75;
-}
-
-.mme-auth-switch {
-  border: 0;
-  background: transparent;
-  color: var(--mme-button);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 6px 4px;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
 }
 
 .mme-form input[readonly] {

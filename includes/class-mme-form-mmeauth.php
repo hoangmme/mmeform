@@ -21,10 +21,35 @@ final class MME_Form_MMeAuth
         return untrailingslashit($url !== '' ? $url : self::DEFAULT_URL);
     }
 
+    /** SDK dùng chung của gateway: popup QR / "Mở Zalo" khi bấm nút gửi. */
+    public static function sdk_url(array $settings): string
+    {
+        return self::gateway_url($settings) . '/sdk/v1.js';
+    }
+
     /** Form bật MMeAuth và site đã có site key thì mới bắt xác thực. */
     public static function is_enabled(array $settings): bool
     {
         return ($settings['mmeauth_enabled'] ?? 'no') === 'yes' && trim((string) ($settings['mmeauth_site_key'] ?? '')) !== '';
+    }
+
+    /** Tên trường coi là "họ tên" (khớp extract_contact của submissions). */
+    public const NAME_FIELDS = array('full_name', 'name', 'fullname', 'ho_ten', 'hoten');
+
+    /**
+     * Ô do Zalo cung cấp khi bật xác minh: mọi ô số điện thoại và ô họ tên.
+     * Các ô này được ẩn trên form và máy chủ điền từ token đã kiểm chữ ký.
+     */
+    public static function covers_field(array $field): bool
+    {
+        $type = sanitize_key($field['type'] ?? 'text');
+        if ($type === 'tel') {
+            return true;
+        }
+        $name = strtolower(trim(preg_replace('/\s+/', '_', sanitize_text_field($field['name'] ?? ''))));
+        $covers = $type === 'text' && in_array($name, self::NAME_FIELDS, true);
+        /** Cho phép giữ lại ô họ tên (trả về false) hoặc ẩn thêm ô khác. */
+        return (bool) apply_filters('mme_form_mmeauth_covers_field', $covers, $field);
     }
 
     /**

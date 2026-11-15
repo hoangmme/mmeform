@@ -87,11 +87,20 @@ final class MME_Form_Submissions
         $raw_values = isset($input['fields']) && is_array($input['fields']) ? $input['fields'] : array();
         $values = array();
         $errors = array();
+        $settings = MME_Form_Plugin::form_settings($form_id);
+        $auth_on = MME_Form_MMeAuth::is_enabled($settings);
+        $covered = array();
 
         foreach ($fields as $field) {
             $name = sanitize_text_field($field['name'] ?? '');
             $field_name = trim(preg_replace('/\s+/', '_', $name));
             if (!$field_name) {
+                continue;
+            }
+            // Họ tên / SĐT không hiện trên form khi bật xác minh: lấy từ token Zalo bên dưới
+            if ($auth_on && MME_Form_MMeAuth::covers_field((array) $field)) {
+                $covered[$name] = sanitize_key($field['type'] ?? 'text') === 'tel' ? 'phone' : 'name';
+                $values[$name] = '';
                 continue;
             }
             $type = sanitize_key($field['type'] ?? 'text');
@@ -129,9 +138,8 @@ final class MME_Form_Submissions
             return new WP_Error('mme_form_validation_failed', $error_msg, array('status' => 400, 'errors' => $errors));
         }
 
-        $settings = MME_Form_Plugin::form_settings($form_id);
         $identity = null;
-        if (MME_Form_MMeAuth::is_enabled($settings)) {
+        if ($auth_on) {
             $token = isset($input['mmeauth_token']) && is_string($input['mmeauth_token']) ? trim($input['mmeauth_token']) : '';
             if ($token === '') {
                 return new WP_Error('mme_form_auth_required', 'Vui lòng xác minh số điện thoại qua Zalo trước khi gửi.', array('status' => 400, 'auth_required' => true));
@@ -143,11 +151,9 @@ final class MME_Form_Submissions
             if (MME_Form_MMeAuth::is_used($identity)) {
                 return new WP_Error('mme_form_auth_reused', 'Phiên xác minh này đã được dùng, vui lòng xác minh lại.', array('status' => 400, 'auth_required' => true));
             }
-            // SĐT đã xác minh luôn thắng giá trị khách tự gõ
-            foreach ($fields as $f) {
-                if (($f['type'] ?? '') === 'tel') {
-                    $values[sanitize_text_field($f['name'] ?? '')] = $identity['phone'];
-                }
+            // Ô họ tên / SĐT lấy từ token đã kiểm chữ ký (khách không sửa được)
+            foreach ($covered as $name => $kind) {
+                $values[$name] = $kind === 'phone' ? $identity['phone'] : $identity['name'];
             }
         }
 

@@ -373,10 +373,10 @@ final class MME_Form_Admin
         $site_key = MME_Form_Plugin::global_settings()['mmeauth_site_key'];
         $settings_url = admin_url('edit.php?post_type=mme_form&page=mme-form-settings');
         ?>
-        <p class="mme-pane-intro">Chặn lead ảo: khách bấm "Xác minh bằng Zalo", quét QR (máy tính) hoặc mở Zalo (điện thoại) rồi xác nhận một chạm. Số điện thoại do Zalo xác minh được điền sẵn, không cần OTP.</p>
+        <p class="mme-pane-intro">Chặn lead ảo: khách bấm nút gửi form, quét QR (máy tính) hoặc mở Zalo (điện thoại) rồi xác nhận một chạm; form tự gửi. Họ tên và số điện thoại do Zalo gửi nên form ẩn hai ô này, không cần OTP.</p>
 
         <div class="mme-section">
-            <?php $this->toggle('mmeauth_enabled', 'Bắt buộc xác minh số điện thoại qua Zalo trước khi gửi', $settings['mmeauth_enabled'] ?? 'no'); ?>
+            <?php $this->toggle('mmeauth_enabled', 'Bắt buộc xác minh số điện thoại qua Zalo khi gửi (ẩn ô Họ tên, Số điện thoại)', $settings['mmeauth_enabled'] ?? 'no'); ?>
             <div class="mme-callout <?php echo $site_key ? 'is-ok' : 'is-warn'; ?>">
                 <?php if ($site_key) : ?>
                     Site key MMeAuth: <code><?php echo esc_html($site_key); ?></code> · <a href="<?php echo esc_url($settings_url); ?>">Tích hợp chung</a>
