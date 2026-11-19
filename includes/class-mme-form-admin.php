@@ -1027,6 +1027,7 @@ function doPost(e) {
                         <label><input type="checkbox" name="mme_login[woocommerce_form]" value="yes" <?php checked($login['woocommerce_form'], 'yes'); ?>> Form đăng nhập WooCommerce (Tài khoản, Thanh toán)</label><br>
                         <label><input type="checkbox" name="mme_login[wp_login_form]" value="yes" <?php checked($login['wp_login_form'], 'yes'); ?>> Trang đăng nhập WordPress</label>
                     </td></tr>
+                    <tr><th scope="row">Cho phép quản trị</th><td><label><input type="checkbox" name="mme_login[allow_privileged]" value="yes" <?php checked($login['allow_privileged'], 'yes'); ?>> Tài khoản quản trị / biên tập đăng nhập được bằng Zalo</label><p class="description">Chỉ áp dụng cho tài khoản mà <strong>chính chủ đã bấm "Liên kết Zalo"</strong> trong Hồ sơ. Lưu ý: ai chiếm được Zalo/SIM của quản trị sẽ vào được wp-admin — vẫn nên giữ đăng nhập mật khẩu làm dự phòng.</p></td></tr>
                     <tr><th scope="row"><label for="mme-login-redirect">Sau khi đăng nhập</label></th><td><input class="regular-text" id="mme-login-redirect" type="url" name="mme_login[redirect]" value="<?php echo esc_attr($login['redirect']); ?>" placeholder="Để trống: quay lại trang đang xem"></td></tr>
                 </table>
 
@@ -1089,6 +1090,7 @@ function doPost(e) {
             'woocommerce_form' => !empty($login_in['woocommerce_form']) ? 'yes' : 'no',
             'wp_login_form' => !empty($login_in['wp_login_form']) ? 'yes' : 'no',
             'redirect' => esc_url_raw($login_in['redirect'] ?? ''),
+            'allow_privileged' => !empty($login_in['allow_privileged']) ? 'yes' : 'no',
         ), false);
 
         wp_safe_redirect(add_query_arg('updated', '1', admin_url('edit.php?post_type=mme_form&page=mme-form-settings')));

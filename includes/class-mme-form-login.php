@@ -24,6 +24,8 @@ final class MME_Form_Login
     public const OPTION = 'mme_form_login';
     public const META_PHONE = 'mme_phone';
     public const META_SUB = 'mme_zalo_sub';
+    /** Chủ tài khoản tự liên kết bằng Zalo (không phải quản trị gõ số hộ) — điều kiện để tài khoản quản trị đăng nhập bằng Zalo. */
+    public const META_SELF = 'mme_zalo_self_linked';
 
     private static ?MME_Form_Login $instance = null;
 
@@ -44,6 +46,7 @@ final class MME_Form_Login
             'woocommerce_form' => 'yes',
             'wp_login_form' => 'no',
             'redirect' => '',
+            'allow_privileged' => 'no',
         );
     }
 
@@ -82,6 +85,7 @@ final class MME_Form_Login
         add_shortcode('mme_login', array($this, 'shortcode'));
         add_action('wp_enqueue_scripts', array($this, 'register_assets'));
         add_action('login_enqueue_scripts', array($this, 'register_assets'));
+        add_action('admin_enqueue_scripts', array($this, 'register_assets'));
 
         if (!self::is_enabled()) {
             return;
@@ -96,6 +100,18 @@ final class MME_Form_Login
         add_action('show_user_profile', array($this, 'profile_field'));
         add_action('edit_user_profile', array($this, 'profile_field'));
         add_action('edit_user_profile_update', array($this, 'save_profile_field'));
+        add_action('personal_options_update', array($this, 'save_own_profile'));
+    }
+
+    public static function is_privileged($user): bool
+    {
+        return $user instanceof WP_User && user_can($user, 'edit_posts');
+    }
+
+    /** Tài khoản quản trị được đăng nhập bằng Zalo: bật tuỳ chọn + chính chủ đã tự liên kết. */
+    public static function privileged_allowed(WP_User $user): bool
+    {
+        return self::settings()['allow_privileged'] === 'yes' && (bool) get_user_meta($user->ID, self::META_SELF, true);
     }
 
     public function register_assets(): void
@@ -106,6 +122,8 @@ final class MME_Form_Login
         wp_localize_script('mme-form-login', 'MMEFormLogin', array(
             'site' => (string) $global['mmeauth_site_key'],
             'endpoint' => esc_url_raw(rest_url('mme-form/v1/login')),
+            'linkEndpoint' => esc_url_raw(rest_url('mme-form/v1/link')),
+            'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
             'i18n' => array(
                 'error' => 'Đăng nhập chưa thành công, vui lòng thử lại.',
                 'working' => 'Đang đăng nhập…',
@@ -184,9 +202,18 @@ final class MME_Form_Login
                 'redirect' => array('type' => 'string', 'required' => false),
             ),
         ));
+        register_rest_route('mme-form/v1', '/link', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'rest_link'),
+            'permission_callback' => 'is_user_logged_in',
+            'args' => array(
+                'token' => array('type' => 'string', 'required' => true),
+            ),
+        ));
     }
 
-    public function rest_login(WP_REST_Request $request)
+    /** Kiểm token đăng nhập/liên kết dùng chung. @return array|WP_Error */
+    private function checked_identity(WP_REST_Request $request)
     {
         if (!self::is_enabled()) {
             return new WP_Error('mme_login_disabled', 'Website chưa bật đăng nhập bằng Zalo.', array('status' => 403));
@@ -197,7 +224,6 @@ final class MME_Form_Login
         if (!$this->rate_ok()) {
             return new WP_Error('mme_login_rate', 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.', array('status' => 429));
         }
-
         $identity = MME_Form_MMeAuth::verify((string) $request->get_param('token'), MME_Form_Plugin::global_settings());
         if (is_wp_error($identity)) {
             $identity->add_data(array('status' => 401));
@@ -209,10 +235,62 @@ final class MME_Form_Login
         if (MME_Form_MMeAuth::is_used($identity)) {
             return new WP_Error('mme_login_reused', 'Phiên xác minh đã được dùng, vui lòng xác minh lại.', array('status' => 401));
         }
-
         $identity['phone'] = self::normalize_phone($identity['phone']);
         if ($identity['phone'] === '') {
             return new WP_Error('mme_login_phone', 'Không lấy được số điện thoại từ Zalo.', array('status' => 401));
+        }
+        return $identity;
+    }
+
+    /**
+     * Người đang đăng nhập tự liên kết Zalo cho tài khoản của mình.
+     * Số / Zalo id đang gắn với tài khoản khác (vd. tài khoản khách tạo tự động trước đó) được chuyển sang tài khoản này.
+     */
+    public function rest_link(WP_REST_Request $request)
+    {
+        $identity = $this->checked_identity($request);
+        if (is_wp_error($identity)) {
+            return $identity;
+        }
+        $user_id = get_current_user_id();
+        $moved = array();
+        foreach (array(self::META_SUB => $identity['sub'], self::META_PHONE => $identity['phone']) as $key => $value) {
+            if ($value === '') {
+                continue;
+            }
+            foreach (get_users(array('meta_key' => $key, 'meta_value' => $value, 'fields' => 'ID', 'exclude' => array($user_id))) as $other) {
+                delete_user_meta((int) $other, self::META_PHONE);
+                delete_user_meta((int) $other, self::META_SUB);
+                delete_user_meta((int) $other, self::META_SELF);
+                $moved[(int) $other] = true;
+            }
+        }
+        update_user_meta($user_id, self::META_PHONE, $identity['phone']);
+        if ($identity['sub'] !== '') {
+            update_user_meta($user_id, self::META_SUB, $identity['sub']);
+        }
+        update_user_meta($user_id, self::META_SELF, time());
+        MME_Form_MMeAuth::mark_used($identity);
+        do_action('mme_form_login_linked', $user_id, $identity, array_keys($moved));
+
+        $names = array_map(static function ($id) {
+            $u = get_userdata($id);
+            return $u ? $u->user_login : '#' . $id;
+        }, array_keys($moved));
+
+        return rest_ensure_response(array(
+            'ok' => true,
+            'phone' => $identity['phone'],
+            'moved_from' => $names,
+            'redirect' => esc_url_raw((string) wp_get_referer() ?: admin_url('profile.php')),
+        ));
+    }
+
+    public function rest_login(WP_REST_Request $request)
+    {
+        $identity = $this->checked_identity($request);
+        if (is_wp_error($identity)) {
+            return $identity;
         }
 
         $user_id = self::find_user($identity);
@@ -230,10 +308,15 @@ final class MME_Form_Login
         }
 
         $user = get_userdata($user_id);
-        $allowed = $user && !user_can($user, 'edit_posts');
-        /** Mở cho tài khoản có quyền biên tập (mặc định chặn để Zalo không thành cửa vào wp-admin). */
+        // Tài khoản quản trị: chỉ khi bật "Cho phép quản trị" và chính chủ đã tự liên kết. Đã tìm thấy tài khoản
+        // nên dù bị chặn cũng không tạo tài khoản khách trùng số.
+        $privileged = $user && self::is_privileged($user);
+        $allowed = $user && (!$privileged || self::privileged_allowed($user));
+        /** Quyết định cuối cùng (vd. mở / chặn theo vai trò). */
         if (!apply_filters('mme_form_login_allow_user', $allowed, $user, $identity)) {
-            return new WP_Error('mme_login_forbidden', 'Tài khoản này không đăng nhập bằng Zalo được.', array('status' => 403));
+            return $privileged
+                ? new WP_Error('mme_login_privileged', 'Tài khoản quản trị: vui lòng đăng nhập bằng mật khẩu.', array('status' => 403))
+                : new WP_Error('mme_login_forbidden', 'Tài khoản này không đăng nhập bằng Zalo được.', array('status' => 403));
         }
 
         update_user_meta($user_id, self::META_PHONE, $identity['phone']);
@@ -313,16 +396,31 @@ final class MME_Form_Login
     public function profile_field(WP_User $user): void
     {
         $phone = self::user_phone($user->ID);
-        $can_edit = current_user_can('edit_users');
+        $own = (int) $user->ID === get_current_user_id();
+        $self_linked = (bool) get_user_meta($user->ID, self::META_SELF, true);
         ?>
-        <h2>Đăng nhập bằng Zalo</h2>
+        <h2 id="mme-zalo">Đăng nhập bằng Zalo</h2>
         <table class="form-table" role="presentation">
             <tr>
-                <th><label for="mme_phone">SĐT đã xác minh</label></th>
+                <th><?php echo $own ? 'Zalo của bạn' : '<label for="mme_phone">SĐT đã xác minh</label>'; ?></th>
                 <td>
-                    <?php if ($can_edit && (int) $user->ID !== get_current_user_id()) : ?>
+                    <?php if ($own) : ?>
+                        <?php wp_enqueue_script('mme-form-login'); wp_enqueue_style('mme-form-login'); ?>
+                        <p><?php echo $phone !== '' ? 'Đã liên kết: <strong>' . esc_html($phone) . '</strong>' . ($self_linked ? '' : ' <em>(quản trị gắn hộ)</em>') : 'Chưa liên kết.'; ?></p>
+                        <p><button type="button" class="button mme-login-link" data-mme-link><span class="mme-login-label"><?php echo $phone !== '' && $self_linked ? 'Liên kết lại bằng Zalo' : 'Liên kết Zalo'; ?></span></button></p>
+                        <p class="mme-login-error" role="alert" hidden></p>
+                        <?php if ($phone !== '') : ?>
+                            <p><label><input type="checkbox" name="mme_zalo_unlink" value="1"> Gỡ liên kết Zalo khi lưu hồ sơ</label></p>
+                        <?php endif; ?>
+                        <p class="description">
+                            Quét mã bằng Zalo để gắn số điện thoại của bạn vào tài khoản này. Nếu số đó đang gắn với tài khoản khác (vd. tài khoản khách tạo khi đăng nhập Zalo trước đây), liên kết được chuyển sang đây.
+                            <?php if (self::is_privileged($user)) : ?>
+                                <br><?php echo self::settings()['allow_privileged'] === 'yes' ? 'Tài khoản quản trị đã tự liên kết sẽ đăng nhập được bằng Zalo.' : 'Tài khoản quản trị chỉ đăng nhập bằng Zalo khi bật "Cho phép quản trị" ở Form liên hệ → Tích hợp chung.'; ?>
+                            <?php endif; ?>
+                        </p>
+                    <?php elseif (current_user_can('edit_users')) : ?>
                         <input type="text" id="mme_phone" name="mme_phone" value="<?php echo esc_attr($phone); ?>" class="regular-text" autocomplete="off">
-                        <p class="description">Khách đăng nhập bằng Zalo với số này sẽ vào tài khoản này. Để trống để gỡ liên kết.</p>
+                        <p class="description">Khách đăng nhập bằng Zalo với số này sẽ vào tài khoản này. Để trống để gỡ liên kết.<?php echo self::is_privileged($user) ? ' Tài khoản quản trị phải tự liên kết trong Hồ sơ của mình mới đăng nhập bằng Zalo được.' : ''; ?></p>
                     <?php else : ?>
                         <code><?php echo esc_html($phone !== '' ? $phone : '—'); ?></code>
                     <?php endif; ?>
@@ -333,21 +431,39 @@ final class MME_Form_Login
         wp_nonce_field('mme_phone_' . $user->ID, '_mme_phone_nonce');
     }
 
+    /** Gỡ liên kết trong Hồ sơ của chính mình. */
+    public function save_own_profile(int $user_id): void
+    {
+        if (empty($_POST['mme_zalo_unlink']) || !isset($_POST['_mme_phone_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_mme_phone_nonce'])), 'mme_phone_' . $user_id)) {
+            return;
+        }
+        delete_user_meta($user_id, self::META_PHONE);
+        delete_user_meta($user_id, self::META_SUB);
+        delete_user_meta($user_id, self::META_SELF);
+    }
+
     public function save_profile_field(int $user_id): void
     {
         if (!current_user_can('edit_users') || !isset($_POST['_mme_phone_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_mme_phone_nonce'])), 'mme_phone_' . $user_id)) {
             return;
         }
-        $phone = self::normalize_phone(sanitize_text_field(wp_unslash($_POST['mme_phone'] ?? '')));
+        if (!isset($_POST['mme_phone'])) {
+            return;
+        }
+        $phone = self::normalize_phone(sanitize_text_field(wp_unslash($_POST['mme_phone'])));
+        if ($phone === self::user_phone($user_id)) {
+            return;
+        }
+        // Quản trị gắn/đổi số hộ: bỏ dấu "tự liên kết" (tài khoản quản trị sẽ không đăng nhập Zalo bằng số gõ tay).
+        delete_user_meta($user_id, self::META_SELF);
+        delete_user_meta($user_id, self::META_SUB);
         if ($phone === '') {
             delete_user_meta($user_id, self::META_PHONE);
-            delete_user_meta($user_id, self::META_SUB);
             return;
         }
         $other = get_users(array('meta_key' => self::META_PHONE, 'meta_value' => $phone, 'fields' => 'ID', 'number' => 1, 'exclude' => array($user_id)));
         if (!$other) {
             update_user_meta($user_id, self::META_PHONE, $phone);
-            delete_user_meta($user_id, self::META_SUB);
         }
     }
 

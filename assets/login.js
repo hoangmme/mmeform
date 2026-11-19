@@ -1,4 +1,5 @@
-/* MME Form – Đăng nhập bằng Zalo (MMeAuth). Nút: [data-mme-login]; API: window.MMEFormLogin.start({ purpose, redirect }). */
+/* MME Form – Đăng nhập bằng Zalo (MMeAuth). Nút: [data-mme-login] (đăng nhập), [data-mme-link] (liên kết Zalo cho tài khoản đang đăng nhập).
+   API: window.MMEFormLogin.start({ purpose, redirect, link }). */
 (function () {
   "use strict";
   var cfg = window.MMEFormLogin || {};
@@ -10,7 +11,11 @@
   }
 
   function showError(btn, msg) {
-    var box = btn && btn.nextElementSibling && btn.nextElementSibling.classList.contains("mme-login-error") ? btn.nextElementSibling : null;
+    var box = null;
+    if (btn) {
+      var next = btn.nextElementSibling || (btn.parentElement && btn.parentElement.nextElementSibling);
+      if (next && next.classList.contains("mme-login-error")) box = next;
+    }
     if (box) {
       box.textContent = msg;
       box.hidden = false;
@@ -19,11 +24,13 @@
     }
   }
 
-  function exchange(token, redirect) {
-    return fetch(cfg.endpoint, {
+  function exchange(token, redirect, link) {
+    var headers = { "Content-Type": "application/json" };
+    if (link && cfg.nonce) headers["X-WP-Nonce"] = cfg.nonce;
+    return fetch(link ? cfg.linkEndpoint : cfg.endpoint, {
       method: "POST",
       credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
+      headers: headers,
       body: JSON.stringify({ token: token, redirect: redirect || window.location.href }),
     }).then(function (res) {
       return res.json().then(function (data) {
@@ -49,27 +56,30 @@
     if (busy) return Promise.reject(new Error("busy"));
     busy = true;
     var redirect = opts.redirect || window.location.href;
-    remember(redirect);
-    var promptOpts = { site: cfg.site, purpose: opts.purpose === "register" ? "register" : "login", persist: PERSIST };
+    if (!opts.link) remember(redirect);
+    var promptOpts = { site: cfg.site, purpose: opts.purpose === "register" ? "register" : "login", persist: opts.link ? PERSIST + "-link" : PERSIST };
     if (opts.resume) promptOpts.resume = opts.resume;
     return auth.prompt(promptOpts)
-      .then(function (r) { return exchange(r.token, redirect); })
+      .then(function (r) { return exchange(r.token, redirect, !!opts.link); })
       .then(function (data) {
         try { window.sessionStorage.removeItem(PERSIST + ":redirect"); } catch (e) {}
-        if (opts.navigate !== false) window.location.assign(data.redirect || redirect);
+        if (opts.link) {
+          if (data.moved_from && data.moved_from.length) window.alert("Đã chuyển liên kết Zalo từ tài khoản: " + data.moved_from.join(", "));
+          window.location.reload();
+        } else if (opts.navigate !== false) window.location.assign(data.redirect || redirect);
         return data;
       })
       .finally(function () { busy = false; });
   }
 
   function onClick(e) {
-    var btn = e.target.closest("[data-mme-login]");
+    var btn = e.target.closest("[data-mme-login],[data-mme-link]");
     if (!btn) return;
     e.preventDefault();
     var label = btn.querySelector(".mme-login-label");
     var original = label ? label.textContent : "";
     showError(btn, "");
-    start({ purpose: btn.getAttribute("data-purpose"), redirect: btn.getAttribute("data-redirect") })
+    start({ purpose: btn.getAttribute("data-purpose"), redirect: btn.getAttribute("data-redirect"), link: btn.hasAttribute("data-mme-link") })
       .then(function () {
         if (label) label.textContent = cfg.i18n.working;
         btn.disabled = true;
