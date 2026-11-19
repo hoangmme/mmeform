@@ -3,7 +3,7 @@ Contributors: mme
 Tags: forms, crm, chatbot, webhook, google sheets, twenty
 Requires at least: 6.4
 Requires PHP: 7.4
-Stable tag: 0.9.1
+Stable tag: 0.9.2
 License: GPLv2 or later
 
 Compact WordPress form builder with external embeds, URL attribution, MME Chatbot, Google Sheets webhooks, Twenty CRM and Pancake CRM sync, and Zalo phone verification (MMeAuth).
@@ -20,6 +20,9 @@ Compact WordPress form builder with external embeds, URL attribution, MME Chatbo
 Updates come from github.com/hoangmme/mmeform (branch main) through the normal WordPress update screen. To release: raise "Version" and MME_FORM_VERSION in mme-form.php, add a changelog entry below, push to main.
 
 == Changelog ==
+
+= 0.9.2 =
+* Nút Đăng nhập bằng Zalo không rớt chữ xuống dòng (rộng theo nội dung, full chiều rộng trong form đăng nhập và trên màn hình nhỏ).
 
 = 0.9.1 =
 * Hồ sơ của chính mình có nút "Liên kết Zalo": quét Zalo để gắn SĐT đã xác minh vào tài khoản (REST POST /mme-form/v1/link). Số / Zalo id đang gắn với tài khoản khác (vd. tài khoản khách zalo_… tạo trước đó) được chuyển sang. Có ô "Gỡ liên kết".
