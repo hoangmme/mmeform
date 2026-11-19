@@ -3,7 +3,7 @@ Contributors: mme
 Tags: forms, crm, chatbot, webhook, google sheets, twenty
 Requires at least: 6.4
 Requires PHP: 7.4
-Stable tag: 0.8.0
+Stable tag: 0.9.0
 License: GPLv2 or later
 
 Compact WordPress form builder with external embeds, URL attribution, MME Chatbot, Google Sheets webhooks, Twenty CRM and Pancake CRM sync, and Zalo phone verification (MMeAuth).
@@ -20,6 +20,13 @@ Compact WordPress form builder with external embeds, URL attribution, MME Chatbo
 Updates come from github.com/hoangmme/mmeform (branch main) through the normal WordPress update screen. To release: raise "Version" and MME_FORM_VERSION in mme-form.php, add a changelog entry below, push to main.
 
 == Changelog ==
+
+= 0.9.0 =
+* Đăng nhập / đăng ký bằng Zalo (MMeAuth), không mật khẩu: Form liên hệ → Tích hợp chung → "Đăng nhập bằng Zalo". Nút ở form đăng nhập WooCommerce, trang đăng nhập WordPress (tuỳ chọn), shortcode [mme_login] và hàm mme_form_login_button().
+* Khớp tài khoản theo Zalo id / SĐT đã xác minh (meta mme_zalo_sub, mme_phone), không dùng billing_phone. Tài khoản quyền biên tập trở lên không đăng nhập bằng Zalo (filter mme_form_login_allow_user).
+* REST POST /wp-json/mme-form/v1/login, chặn dùng lại token, giới hạn 10 lần / 5 phút / IP, kiểm Origin.
+* Cho plugin khác: action mme_form_login (user_id, identity, is_new), filter mme_form_login_redirect, MME_Form_Login::normalize_phone(), MME_Form_Login::user_phone(), JS window.MMEFormLogin.start().
+* Hồ sơ người dùng hiện SĐT đã xác minh; quản trị viên sửa/gỡ liên kết được.
 
 = 0.8.0 =
 * Xác minh Zalo gộp vào nút gửi: form bật "Bắt buộc xác minh" ẩn ô Họ tên và Số điện thoại; khách bấm gửi thì hiện popup (mã QR trên máy tính, nút "Mở Zalo" trên điện thoại), xác nhận trong Zalo xong form tự gửi. Bỏ khung "Xác minh bằng Zalo" riêng phía trên form.

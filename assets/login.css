@@ -1,0 +1,38 @@
+.mme-login-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	width: 100%;
+	max-width: 360px;
+	padding: 12px 20px;
+	border: 0;
+	border-radius: var(--mme-login-radius, 999px);
+	background: var(--mme-login-bg, #0068ff);
+	color: var(--mme-login-color, #fff);
+	font: inherit;
+	font-weight: 600;
+	line-height: 1.2;
+	cursor: pointer;
+	transition: filter 0.15s ease;
+}
+.mme-login-btn:hover { filter: brightness(1.08); }
+.mme-login-btn:disabled { opacity: 0.7; cursor: progress; }
+.mme-login-mark {
+	display: inline-grid;
+	place-items: center;
+	min-width: 34px;
+	height: 22px;
+	padding: 0 6px;
+	border-radius: 6px;
+	background: #fff;
+	color: #0068ff;
+	font-size: 11px;
+	font-weight: 800;
+	letter-spacing: 0.02em;
+}
+.mme-login-error { margin: 8px 0 0; color: #b42318; font-size: 14px; }
+.mme-login-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0 14px; color: #8a8f87; font-size: 13px; }
+.mme-login-divider::before, .mme-login-divider::after { content: ""; flex: 1; height: 1px; background: currentColor; opacity: 0.3; }
+.mme-login-greeting { margin: 0; }
+#loginform .mme-login-btn { max-width: none; margin-bottom: 16px; }

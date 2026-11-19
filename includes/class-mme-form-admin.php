@@ -1016,6 +1016,20 @@ function doPost(e) {
                     <?php $field('mmeauth_url', 'Máy chủ MMeAuth', 'url', 'Để trống để dùng <code>' . esc_html(MME_Form_MMeAuth::DEFAULT_URL) . '</code>.'); ?>
                 </table>
 
+                <?php $login = MME_Form_Login::settings(); ?>
+                <h2>Đăng nhập bằng Zalo</h2>
+                <p class="description">Khách đăng nhập/đăng ký tài khoản bằng số điện thoại đã xác minh qua Zalo, không cần mật khẩu. Cần Site key ở trên. Nút: shortcode <code>[mme_login]</code> hoặc hàm <code>mme_form_login_button()</code>.</p>
+                <table class="form-table" role="presentation">
+                    <tr><th scope="row">Bật đăng nhập</th><td><label><input type="checkbox" name="mme_login[enabled]" value="yes" <?php checked($login['enabled'], 'yes'); ?>> Cho phép đăng nhập bằng Zalo</label></td></tr>
+                    <tr><th scope="row">Tự tạo tài khoản</th><td><label><input type="checkbox" name="mme_login[allow_register]" value="yes" <?php checked($login['allow_register'], 'yes'); ?>> Số điện thoại chưa có tài khoản thì tạo mới</label></td></tr>
+                    <tr><th scope="row"><label for="mme-login-role">Vai trò tài khoản mới</label></th><td><select id="mme-login-role" name="mme_login[role]"><option value="">Mặc định (customer nếu có WooCommerce)</option><?php foreach (array_diff_key(wp_roles()->get_names(), array_flip(array('administrator', 'editor', 'author', 'shop_manager'))) as $slug => $name) : ?><option value="<?php echo esc_attr($slug); ?>" <?php selected($login['role'], $slug); ?>><?php echo esc_html(translate_user_role($name)); ?></option><?php endforeach; ?></select><p class="description">Tài khoản có quyền biên tập trở lên không đăng nhập bằng Zalo.</p></td></tr>
+                    <tr><th scope="row">Hiện nút ở</th><td>
+                        <label><input type="checkbox" name="mme_login[woocommerce_form]" value="yes" <?php checked($login['woocommerce_form'], 'yes'); ?>> Form đăng nhập WooCommerce (Tài khoản, Thanh toán)</label><br>
+                        <label><input type="checkbox" name="mme_login[wp_login_form]" value="yes" <?php checked($login['wp_login_form'], 'yes'); ?>> Trang đăng nhập WordPress</label>
+                    </td></tr>
+                    <tr><th scope="row"><label for="mme-login-redirect">Sau khi đăng nhập</label></th><td><input class="regular-text" id="mme-login-redirect" type="url" name="mme_login[redirect]" value="<?php echo esc_attr($login['redirect']); ?>" placeholder="Để trống: quay lại trang đang xem"></td></tr>
+                </table>
+
                 <h2>Google Sheets / Webhook</h2>
                 <table class="form-table" role="presentation">
                     <?php $field('webhook_url', 'Webhook URL', 'url'); ?>
@@ -1065,6 +1079,17 @@ function doPost(e) {
             }
         }
         update_option('mme_form_global_settings', $settings, false);
+
+        $login_in = isset($_POST['mme_login']) && is_array($_POST['mme_login']) ? wp_unslash($_POST['mme_login']) : array();
+        $role = sanitize_key($login_in['role'] ?? '');
+        update_option(MME_Form_Login::OPTION, array(
+            'enabled' => !empty($login_in['enabled']) ? 'yes' : 'no',
+            'allow_register' => !empty($login_in['allow_register']) ? 'yes' : 'no',
+            'role' => in_array($role, array('administrator', 'editor', 'author', 'shop_manager'), true) ? '' : $role,
+            'woocommerce_form' => !empty($login_in['woocommerce_form']) ? 'yes' : 'no',
+            'wp_login_form' => !empty($login_in['wp_login_form']) ? 'yes' : 'no',
+            'redirect' => esc_url_raw($login_in['redirect'] ?? ''),
+        ), false);
 
         wp_safe_redirect(add_query_arg('updated', '1', admin_url('edit.php?post_type=mme_form&page=mme-form-settings')));
         exit;
